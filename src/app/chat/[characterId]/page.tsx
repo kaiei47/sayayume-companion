@@ -6,6 +6,8 @@ import ChatMessages, { ChatMessage } from '@/components/chat/ChatMessages';
 import ChatInput from '@/components/chat/ChatInput';
 import { CHARACTERS } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
+import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
 
 export default function ChatPage() {
   const params = useParams();
@@ -19,6 +21,7 @@ export default function ChatPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  const [userPlan, setUserPlan] = useState<string>('free');
   const menuRef = useRef<HTMLDivElement>(null);
 
   // メニュー外クリックで閉じる
@@ -37,6 +40,20 @@ export default function ChatPage() {
     setConversationId(null);
     setStreamingContent('');
     setShowMenu(false);
+  }, []);
+
+  // ユーザーのプランを取得
+  useEffect(() => {
+    async function loadPlan() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: dbUser } = await supabase.from('users').select('id').eq('auth_id', user.id).single();
+      if (!dbUser) return;
+      const { data: sub } = await supabase.from('subscriptions').select('plan').eq('user_id', dbUser.id).eq('status', 'active').single();
+      if (sub) setUserPlan(sub.plan);
+    }
+    loadPlan();
   }, []);
 
   // 会話履歴をロード
@@ -240,6 +257,15 @@ export default function ChatPage() {
             <p className="text-[11px] text-green-400/80">オンライン</p>
           </div>
         </div>
+        {/* フリープランのアップグレードバッジ */}
+        {userPlan === 'free' && (
+          <Link
+            href="/pricing"
+            className="text-[10px] font-medium bg-blue-600/20 text-blue-400 px-2 py-1 rounded-full hover:bg-blue-600/30 transition-colors"
+          >
+            PRO
+          </Link>
+        )}
         {/* メニューボタン */}
         <div className="relative" ref={menuRef}>
           <button
