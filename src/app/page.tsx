@@ -7,13 +7,39 @@ import { CHARACTERS } from '@/lib/characters';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
+interface LastMessage {
+  content: string;
+  created_at: string;
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
+  const [lastMessages, setLastMessages] = useState<Record<string, LastMessage>>({});
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
+      if (user) {
+        // 各キャラの最新メッセージを取得
+        Object.keys(CHARACTERS).forEach(async (charId) => {
+          try {
+            const res = await fetch(`/api/conversations?character_id=${charId}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.messages?.length > 0) {
+                const last = data.messages[data.messages.length - 1];
+                setLastMessages((prev) => ({
+                  ...prev,
+                  [charId]: { content: last.content, created_at: last.created_at },
+                }));
+              }
+            }
+          } catch {
+            // 無視
+          }
+        });
+      }
     });
   }, []);
 
@@ -76,14 +102,25 @@ export default function Home() {
                 />
                 <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
               </div>
-              <div className="flex-1">
-                <h2 className="font-semibold group-hover:text-primary">
-                  {char.nameJa}
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    {char.name}
-                  </span>
-                </h2>
-                <p className="text-sm text-muted-foreground">{char.tagline}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 className="font-semibold group-hover:text-primary">
+                    {char.nameJa}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {char.name}
+                    </span>
+                  </h2>
+                  {lastMessages[char.id] && (
+                    <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">
+                      {formatRelativeTime(lastMessages[char.id].created_at)}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground truncate">
+                  {lastMessages[char.id]
+                    ? lastMessages[char.id].content
+                    : char.tagline}
+                </p>
               </div>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -115,4 +152,19 @@ export default function Home() {
       </div>
     </div>
   );
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffMin < 1) return '今';
+  if (diffMin < 60) return `${diffMin}分前`;
+  if (diffHour < 24) return `${diffHour}時間前`;
+  if (diffDay < 7) return `${diffDay}日前`;
+  return `${date.getMonth() + 1}/${date.getDate()}`;
 }
