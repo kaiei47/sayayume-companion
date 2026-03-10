@@ -117,7 +117,7 @@ function PricingContent() {
 
   const plans: { key: PlanKey; popular?: boolean }[] = [
     { key: 'free' },
-    { key: 'basic', popular: true },
+    { key: 'basic', popular: currentPlan === 'free' },
     { key: 'premium' },
   ];
 
