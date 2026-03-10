@@ -71,4 +71,4 @@ export interface TokenBalance {
   total_consumed: number;
 }
 
-export type CharacterId = 'saya' | 'yume';
+export type CharacterId = 'saya' | 'yume' | 'duo';

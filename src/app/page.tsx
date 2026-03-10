@@ -94,7 +94,7 @@ export default function Home() {
 
         {/* キャラ選択カード */}
         <div className="grid gap-4">
-          {Object.values(CHARACTERS).map((char) => (
+          {Object.values(CHARACTERS).filter(c => c.id !== 'duo').map((char) => (
             <Link
               key={char.id}
               href={`/chat/${char.id}`}
@@ -132,6 +132,45 @@ export default function Home() {
               </div>
             </Link>
           ))}
+
+          {/* さやゆめモード（デュオ） */}
+          <Link
+            href="/chat/duo"
+            className="group relative flex items-center gap-4 rounded-2xl p-[1px] transition-all overflow-hidden"
+          >
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:from-pink-500/60 group-hover:via-purple-500/60 group-hover:to-blue-500/60 transition-all" />
+            <div className="relative flex items-center gap-4 rounded-[15px] bg-background/95 p-4 w-full">
+              <div className="relative flex-shrink-0">
+                <Image
+                  src="/avatars/saya.jpg"
+                  alt="さや"
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 rounded-full object-cover"
+                />
+                <Image
+                  src="/avatars/yume.jpg"
+                  alt="ゆめ"
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 rounded-full object-cover absolute -right-4 top-0 ring-2 ring-background"
+                />
+              </div>
+              <div className="flex-1 min-w-0 ml-3">
+                <div className="flex items-baseline gap-2">
+                  <h2 className="font-semibold group-hover:text-primary">
+                    さやゆめモード
+                  </h2>
+                  <span className="text-[10px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-2 py-0.5 rounded-full">
+                    PREMIUM
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground truncate">
+                  双子と3人で同時チャット♡
+                </p>
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* プランリンク */}
