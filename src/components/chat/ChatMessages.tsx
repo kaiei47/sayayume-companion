@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { CharacterConfig } from '@/lib/characters';
@@ -69,13 +69,16 @@ export default function ChatMessages({
         {/* メッセージ一覧 */}
         {messages.map((msg, i) => {
           const prevMsg = messages[i - 1];
+          const nextMsg = messages[i + 1];
           const isConsecutive = prevMsg && prevMsg.role === msg.role;
+          const isLastInGroup = !nextMsg || nextMsg.role !== msg.role;
           return (
             <MessageBubble
               key={msg.id}
               message={msg}
               character={character}
               isConsecutive={isConsecutive}
+              isLastInGroup={isLastInGroup}
             />
           );
         })}
@@ -91,6 +94,7 @@ export default function ChatMessages({
             }}
             character={character}
             isConsecutive={messages.length > 0 && messages[messages.length - 1].role === 'assistant'}
+            isLastInGroup
           />
         )}
 
@@ -132,63 +136,114 @@ function formatTime(dateStr: string): string {
   return `${date.getMonth() + 1}/${date.getDate()} ${time}`;
 }
 
+function ImageViewer({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/70 hover:text-white p-2"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+          <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+        </svg>
+      </button>
+      <img
+        src={src}
+        alt="Full size"
+        className="max-w-full max-h-full object-contain rounded-lg"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
 function MessageBubble({
   message,
   character,
   isConsecutive,
+  isLastInGroup,
 }: {
   message: ChatMessage;
   character: CharacterConfig;
   isConsecutive?: boolean;
+  isLastInGroup?: boolean;
 }) {
   const isUser = message.role === 'user';
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   return (
-    <div
-      className={cn(
-        'flex items-end gap-2',
-        isUser ? 'flex-row-reverse' : 'flex-row',
-        isConsecutive ? 'mt-0.5' : 'mt-3'
+    <>
+      {viewerOpen && message.image_url && (
+        <ImageViewer src={message.image_url} onClose={() => setViewerOpen(false)} />
       )}
-    >
-      {/* アバター（連続メッセージなら非表示でスペース確保） */}
-      {!isUser && (
-        <Avatar className={cn('h-7 w-7 flex-shrink-0', isConsecutive && 'invisible')}>
-          <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
-          <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
-        </Avatar>
-      )}
-
-      <div className={cn(
-        'flex flex-col gap-0.5',
-        isUser ? 'items-end' : 'items-start',
-        'max-w-[78%]'
-      )}>
-        <div
-          className={cn(
-            'rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed',
-            isUser
-              ? 'bg-blue-600 text-white rounded-br-md'
-              : 'bg-muted rounded-bl-md'
-          )}
-        >
-          {/* 画像があれば表示 */}
-          {message.image_url && (
-            <img
-              src={message.image_url}
-              alt="Generated"
-              className="rounded-lg mb-2 max-w-full"
-            />
-          )}
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
-        </div>
-        {/* タイムスタンプ（連続メッセージ以外で表示） */}
-        {!isConsecutive && (
-          <span className="text-[10px] text-muted-foreground/40 px-1">
-            {formatTime(message.created_at)}
-          </span>
+      <div
+        className={cn(
+          'flex items-end gap-2',
+          isUser ? 'flex-row-reverse' : 'flex-row',
+          isConsecutive ? 'mt-0.5' : 'mt-3'
         )}
+      >
+        {/* アバター（連続メッセージなら非表示でスペース確保） */}
+        {!isUser && (
+          <Avatar className={cn('h-7 w-7 flex-shrink-0', isConsecutive && 'invisible')}>
+            <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
+            <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
+          </Avatar>
+        )}
+
+        <div className={cn(
+          'flex flex-col gap-1',
+          isUser ? 'items-end' : 'items-start',
+          'max-w-[78%]'
+        )}>
+          {/* テキストバブル */}
+          {message.content && (
+            <div
+              className={cn(
+                'rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed',
+                isUser
+                  ? 'bg-blue-600 text-white rounded-br-md'
+                  : 'bg-muted rounded-bl-md'
+              )}
+            >
+              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+            </div>
+          )}
+
+          {/* 画像（バブルとは別に表示） */}
+          {message.image_url && (
+            <div
+              className="cursor-pointer overflow-hidden rounded-2xl"
+              onClick={() => setViewerOpen(true)}
+            >
+              <img
+                src={message.image_url}
+                alt="Photo"
+                className="max-w-[240px] rounded-2xl object-cover transition-transform hover:scale-[1.02]"
+                loading="lazy"
+              />
+            </div>
+          )}
+
+          {/* タイムスタンプ + 既読（グループの最後のメッセージのみ） */}
+          {isLastInGroup && (
+            <div className={cn(
+              'flex items-center gap-1 px-1',
+              isUser ? 'flex-row-reverse' : 'flex-row'
+            )}>
+              <span className="text-[10px] text-muted-foreground/40">
+                {formatTime(message.created_at)}
+              </span>
+              {isUser && (
+                <span className="text-[10px] text-blue-400/60">既読</span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

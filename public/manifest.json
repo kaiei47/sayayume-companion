@@ -4,13 +4,22 @@
   "description": "東京の双子AIガールフレンド♡",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#1a1a1a",
   "theme_color": "#1a1a1a",
+  "categories": ["entertainment", "social"],
   "icons": [
     {
-      "src": "/avatars/saya.jpg",
-      "sizes": "200x200",
-      "type": "image/jpeg"
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

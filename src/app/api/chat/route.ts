@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCharacter } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
 import { extractImageTags, buildImagePrompt, generateImage } from '@/lib/gemini-image';
+import { uploadChatImage } from '@/lib/supabase/storage';
 
 // 画像生成を含むため60秒に延長
 export const maxDuration = 60;
@@ -202,7 +203,17 @@ export async function POST(req: NextRequest) {
             const result = await generateImage(imgPrompt);
 
             if (result) {
-              imageUrl = `data:${result.mimeType};base64,${result.base64}`;
+              // 認証ユーザー: Supabase Storageに保存して永続URL取得
+              if (dbUserId && conversation_id && !conversation_id.startsWith('guest-')) {
+                const publicUrl = await uploadChatImage(result.base64, result.mimeType, conversation_id);
+                if (publicUrl) {
+                  imageUrl = publicUrl;
+                }
+              }
+              // ゲストまたはアップロード失敗: base64 data URLにフォールバック
+              if (!imageUrl) {
+                imageUrl = `data:${result.mimeType};base64,${result.base64}`;
+              }
 
               controller.enqueue(
                 encoder.encode(
@@ -218,7 +229,8 @@ export async function POST(req: NextRequest) {
               conversation_id,
               role: 'assistant',
               content: savedContent,
-              content_type: 'text',
+              content_type: imageUrl ? 'image' : 'text',
+              image_url: imageUrl && !imageUrl.startsWith('data:') ? imageUrl : null,
               model_used: GEMINI_MODEL,
             });
 
