@@ -5,7 +5,7 @@
  */
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
-const IMAGE_MODEL = 'gemini-2.0-flash-preview-image-generation';
+const IMAGE_MODEL = 'gemini-2.0-flash-exp-image-generation';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 interface GenerateImageResult {

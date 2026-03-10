@@ -4,6 +4,9 @@ import { getCharacter } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
 import { extractImageTags, buildImagePrompt, generateImage } from '@/lib/gemini-image';
 
+// 画像生成を含むため60秒に延長
+export const maxDuration = 60;
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
@@ -189,7 +192,6 @@ export async function POST(req: NextRequest) {
             savedContent = cleanText;
 
             // テキスト部分をクリーンに送り直す（[IMAGE:]タグを除去）
-            // (ストリーミング中はタグ込みで送られてるので、完了時にクリーンテキストを通知)
             controller.enqueue(
               encoder.encode(
                 `event: clean_text\ndata: ${JSON.stringify({ content: cleanText })}\n\n`
