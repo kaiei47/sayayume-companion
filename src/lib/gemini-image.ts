@@ -1,27 +1,71 @@
 /**
  * Gemini Image Generation (REST API)
  * Uses gemini-3.1-flash-image-preview for fast, cheap chat selfie generation.
- * $0.039/image at 1K size. Face consistency comparable to Pro.
+ * Sends a reference image for face consistency.
  */
+
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 const IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+// Cache reference images in memory (base64) to avoid reading from disk every time
+const referenceImageCache = new Map<string, { base64: string; mimeType: string }>();
+
+function loadReferenceImage(relativePath: string): { base64: string; mimeType: string } | null {
+  const cached = referenceImageCache.get(relativePath);
+  if (cached) return cached;
+
+  try {
+    const fullPath = join(process.cwd(), relativePath);
+    const buffer = readFileSync(fullPath);
+    const base64 = buffer.toString('base64');
+    const mimeType = relativePath.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    const result = { base64, mimeType };
+    referenceImageCache.set(relativePath, result);
+    return result;
+  } catch (error) {
+    console.error('Failed to load reference image:', relativePath, error);
+    return null;
+  }
+}
 
 interface GenerateImageResult {
   base64: string;
   mimeType: string;
 }
 
-export async function generateImage(prompt: string): Promise<GenerateImageResult | null> {
+export async function generateImage(
+  prompt: string,
+  referenceImagePath?: string
+): Promise<GenerateImageResult | null> {
   try {
+    // Build parts: reference image (if available) + text prompt
+    const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+    if (referenceImagePath) {
+      const refImage = loadReferenceImage(referenceImagePath);
+      if (refImage) {
+        parts.push({
+          inlineData: {
+            mimeType: refImage.mimeType,
+            data: refImage.base64,
+          },
+        });
+      }
+    }
+
+    parts.push({ text: prompt });
+
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [
           {
-            parts: [{ text: prompt }],
+            parts,
           },
         ],
         generationConfig: {
@@ -52,10 +96,10 @@ export async function generateImage(prompt: string): Promise<GenerateImageResult
       return null;
     }
 
-    const parts = candidate.content?.parts;
-    if (!parts) return null;
+    const resultParts = candidate.content?.parts;
+    if (!resultParts) return null;
 
-    for (const part of parts) {
+    for (const part of resultParts) {
       if (part.inlineData?.mimeType?.startsWith('image/')) {
         return {
           base64: part.inlineData.data,
@@ -94,10 +138,15 @@ export function extractImageTags(text: string): {
 
 /**
  * Build a full image generation prompt from the character config and description.
+ * When a reference image is provided, the prompt instructs Gemini to match the face.
  */
 export function buildImagePrompt(
   characterPromptBase: string,
-  imageDescription: string
+  imageDescription: string,
+  hasReferenceImage: boolean = false
 ): string {
+  if (hasReferenceImage) {
+    return `Generate a new selfie-style photo of this exact same person shown in the reference image. Keep the same face, facial features, and hair style. Scene: ${imageDescription}. ${characterPromptBase}. The image should look like a candid selfie or photo shared in a chat conversation. Soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, upper body shot.`;
+  }
   return `Generate a selfie-style photo. ${characterPromptBase}. Scene: ${imageDescription}. The image should look like a candid selfie or photo shared in a chat conversation. Soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, upper body shot.`;
 }

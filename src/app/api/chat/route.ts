@@ -205,9 +205,13 @@ export async function POST(req: NextRequest) {
               )
             );
 
-            // 画像生成（最初の1つだけ）
-            const imgPrompt = buildImagePrompt(character.imagePromptBase, imageDescriptions[0]);
-            const result = await generateImage(imgPrompt);
+            // 画像生成（最初の1つだけ）— 参照画像付きで顔の一貫性を保つ
+            const imgPrompt = buildImagePrompt(
+              character.imagePromptBase,
+              imageDescriptions[0],
+              !!character.referenceImagePath
+            );
+            const result = await generateImage(imgPrompt, character.referenceImagePath);
 
             if (result) {
               // 認証ユーザー: Supabase Storageに保存して永続URL取得

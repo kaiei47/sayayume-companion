@@ -6,6 +6,7 @@ export interface CharacterConfig {
   nameJa: string;
   tagline: string;
   avatarUrl: string;
+  referenceImagePath: string; // 画像生成時の顔参照画像
   systemPrompt: string;
   imagePromptBase: string;
   color: string; // テーマカラー
@@ -91,6 +92,7 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     nameJa: 'さや',
     tagline: '元気いっぱいギャル系♡',
     avatarUrl: '/avatars/saya.jpg',
+    referenceImagePath: 'public/references/saya.jpg',
     systemPrompt: SAYA_SYSTEM_PROMPT,
     imagePromptBase: 'young Japanese woman with light brown straight hair, sweet natural smile, soft frontal beauty lighting, cinematic',
     color: '#1a1a1a', // 黒系
@@ -101,6 +103,7 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     nameJa: 'ゆめ',
     tagline: '清楚で優しい読書家♡',
     avatarUrl: '/avatars/yume.jpg',
+    referenceImagePath: 'public/references/yume.jpg',
     systemPrompt: YUME_SYSTEM_PROMPT,
     imagePromptBase: 'young Japanese woman with dark glossy hair and bangs in a loose low bun, gentle smile, soft frontal beauty lighting, cinematic',
     color: '#f5f0eb', // 白系
