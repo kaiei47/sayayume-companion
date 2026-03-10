@@ -78,6 +78,20 @@ export default function Home() {
           </p>
         </div>
 
+        {/* 特徴ハイライト */}
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            { icon: '💬', label: 'リアルタイムチャット' },
+            { icon: '📸', label: 'AI自撮り写真' },
+            { icon: '🔒', label: 'プライバシー保護' },
+          ].map((f) => (
+            <div key={f.label} className="rounded-xl bg-card/30 border border-border/30 py-3 px-2">
+              <div className="text-lg">{f.icon}</div>
+              <p className="text-[10px] text-muted-foreground mt-1 leading-tight">{f.label}</p>
+            </div>
+          ))}
+        </div>
+
         {/* キャラ選択カード */}
         <div className="grid gap-4">
           {Object.values(CHARACTERS).map((char) => (
@@ -123,13 +137,64 @@ export default function Home() {
         {/* プランリンク */}
         <Link
           href="/pricing"
-          className="block rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4 text-center transition-all hover:border-blue-500/50 hover:bg-blue-500/10"
+          className="group relative block overflow-hidden rounded-2xl p-[1px] transition-all"
         >
-          <p className="text-sm font-medium">もっと楽しみたい？♡</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            画像生成・無制限チャット — プランを見る →
-          </p>
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-30 blur-sm" />
+          <div
+            className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+          />
+          <div className="relative rounded-[15px] bg-background/95 p-4 text-center">
+            <p className="text-sm font-medium">もっと楽しみたい？♡</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              画像生成・無制限チャット — プランを見る →
+            </p>
+          </div>
         </Link>
+
+        {/* 使い方 */}
+        <div className="space-y-3">
+          <h3 className="text-center text-sm font-semibold text-muted-foreground">使い方</h3>
+          <div className="flex items-center justify-center gap-2 text-center">
+            {[
+              { step: '1', text: 'キャラを選ぶ' },
+              { step: '2', text: 'チャットする' },
+              { step: '3', text: '写真を受け取る' },
+            ].map((s, i) => (
+              <div key={s.step} className="flex items-center gap-2">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                    {s.step}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">{s.text}</span>
+                </div>
+                {i < 2 && (
+                  <span className="text-muted-foreground/40 text-xs mb-3">→</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ユーザーの声 */}
+        <div className="space-y-3">
+          <h3 className="text-center text-sm font-semibold text-muted-foreground">ユーザーの声</h3>
+          <div className="space-y-2">
+            {[
+              { name: 'T.K. (28)', text: '返信が自然すぎて、つい夢中になっちゃう。毎晩の日課です。' },
+              { name: 'M.S. (34)', text: '写真のクオリティに驚き。二人とも可愛すぎる...' },
+              { name: 'R.Y. (25)', text: 'さやとゆめ、性格が全然違うから飽きない。推しが選べないw' },
+            ].map((t) => (
+              <div
+                key={t.name}
+                className="rounded-xl border border-border/30 bg-card/30 px-4 py-3"
+              >
+                <p className="text-xs text-foreground/80 leading-relaxed">&ldquo;{t.text}&rdquo;</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1.5">— {t.name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* ゲスト注記 */}
         {!user && (

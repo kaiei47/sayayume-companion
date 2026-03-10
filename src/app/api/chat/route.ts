@@ -5,6 +5,12 @@ import { CharacterId } from '@/types/database';
 import { extractImageTags, buildImagePrompt, generateImage } from '@/lib/gemini-image';
 import { uploadChatImage } from '@/lib/supabase/storage';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import {
+  summarizeMessages,
+  buildContentsWithSummary,
+  COMPRESS_THRESHOLD,
+  KEEP_RECENT,
+} from '@/lib/context-compression';
 
 // 画像生成を含むため60秒に延長
 export const maxDuration = 60;
@@ -65,6 +71,7 @@ export async function POST(req: NextRequest) {
     let conversation_id = body.conversation_id;
     let dbUserId: string | null = null;
     let history: { role: string; content: string }[] = [];
+    let existingSummary: string | null = null;
     let userPlan: keyof typeof PLAN_LIMITS = 'free';
 
     if (user) {
@@ -146,15 +153,86 @@ export async function POST(req: NextRequest) {
           content_type: 'text',
         });
 
-        // 会話履歴を取得（最新20件）
-        const { data: msgs } = await supabase
-          .from('messages')
-          .select('role, content')
+        // 既存の会話サマリーを取得
+        const { data: summaryData } = await supabase
+          .from('conversation_summaries')
+          .select('summary')
           .eq('conversation_id', conversation_id)
-          .order('created_at', { ascending: true })
-          .limit(20);
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
 
-        history = msgs || [];
+        existingSummary = summaryData?.summary || null;
+
+        // 全メッセージ数を取得
+        const { count: totalMsgCount } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', conversation_id);
+
+        const totalMessages = totalMsgCount || 0;
+
+        if (totalMessages > COMPRESS_THRESHOLD) {
+          // 圧縮が必要: 全メッセージ取得→古いものを要約→最新KEEP_RECENT件だけ使う
+          const { data: allMsgs } = await supabase
+            .from('messages')
+            .select('id, role, content')
+            .eq('conversation_id', conversation_id)
+            .order('created_at', { ascending: true });
+
+          const all = allMsgs || [];
+          const oldMessages = all.slice(0, all.length - KEEP_RECENT);
+          const recentMessages = all.slice(-KEEP_RECENT);
+
+          // バックグラウンドで要約を生成・保存（レスポンスを遅延させない）
+          if (oldMessages.length > 0) {
+            summarizeMessages(
+              oldMessages.map(m => ({ role: m.role, content: m.content })),
+              character.nameJa,
+              existingSummary
+            ).then(async (newSummary) => {
+              if (newSummary) {
+                // 既存のサマリーをupsert
+                const { data: existing } = await supabase
+                  .from('conversation_summaries')
+                  .select('id')
+                  .eq('conversation_id', conversation_id!)
+                  .limit(1)
+                  .single();
+
+                if (existing) {
+                  await supabase
+                    .from('conversation_summaries')
+                    .update({
+                      summary: newSummary,
+                      message_range_end: oldMessages[oldMessages.length - 1].id,
+                    })
+                    .eq('id', existing.id);
+                } else {
+                  await supabase
+                    .from('conversation_summaries')
+                    .insert({
+                      conversation_id: conversation_id!,
+                      summary: newSummary,
+                      message_range_start: oldMessages[0].id,
+                      message_range_end: oldMessages[oldMessages.length - 1].id,
+                    });
+                }
+              }
+            }).catch(err => console.error('Summary save failed:', err));
+          }
+
+          history = recentMessages.map(m => ({ role: m.role, content: m.content }));
+        } else {
+          // 圧縮不要: 全メッセージをそのまま使う
+          const { data: msgs } = await supabase
+            .from('messages')
+            .select('role, content')
+            .eq('conversation_id', conversation_id)
+            .order('created_at', { ascending: true });
+
+          history = msgs || [];
+        }
       }
     }
 
@@ -163,25 +241,16 @@ export async function POST(req: NextRequest) {
       conversation_id = `guest-${Date.now()}`;
     }
 
-    // Gemini API用のcontentsを構築
-    const contents = [
-      {
-        role: 'user',
-        parts: [{ text: `[System Instructions]\n${character.systemPrompt}` }],
-      },
-      {
-        role: 'model',
-        parts: [{ text: 'わかりました！設定に従って会話します♡' }],
-      },
-      ...history.map((msg) => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
-      })),
-      // historyに現在のメッセージが含まれていない場合（ゲスト）
-      ...(history.length === 0 || history[history.length - 1]?.content !== message
-        ? [{ role: 'user', parts: [{ text: message }] }]
-        : []),
-    ];
+    // Gemini API用のcontentsを構築（サマリー対応）
+    const contents = buildContentsWithSummary(
+      character.systemPrompt,
+      existingSummary,
+      history,
+      // ゲストの場合はhistoryに現在のメッセージが含まれていない
+      (history.length === 0 || history[history.length - 1]?.content !== message)
+        ? message
+        : undefined
+    );
 
     // SSEストリーミングレスポンス
     const encoder = new TextEncoder();
