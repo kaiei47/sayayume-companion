@@ -156,13 +156,23 @@ function PricingContent() {
             return (
               <div
                 key={key}
-                className={`relative rounded-2xl border p-6 flex flex-col ${
-                  popular
-                    ? 'border-blue-500/50 bg-blue-500/5'
-                    : 'border-border/50 bg-card/50'
+                className={`relative rounded-2xl border p-6 flex flex-col transition-all ${
+                  isCurrent
+                    ? 'border-green-500/50 bg-green-500/5 ring-1 ring-green-500/30'
+                    : popular
+                      ? 'border-blue-500/50 bg-blue-500/5'
+                      : 'border-border/50 bg-card/50'
                 }`}
               >
-                {popular && (
+                {isCurrent && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-green-600 px-3 py-0.5 text-xs font-medium text-white flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
+                      <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                    </svg>
+                    現在のプラン
+                  </div>
+                )}
+                {!isCurrent && popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-0.5 text-xs font-medium text-white">
                     人気
                   </div>
@@ -201,12 +211,11 @@ function PricingContent() {
                 </ul>
 
                 {isCurrent ? (
-                  <button
-                    disabled
-                    className="w-full rounded-xl py-2.5 text-sm font-medium bg-muted/50 text-muted-foreground cursor-default"
+                  <div
+                    className="w-full rounded-xl py-2.5 text-sm font-medium bg-green-500/10 text-green-400 text-center border border-green-500/20"
                   >
-                    現在のプラン
-                  </button>
+                    ご利用中
+                  </div>
                 ) : key === 'free' ? (
                   hasActiveSub ? (
                     <button
