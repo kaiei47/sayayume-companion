@@ -40,7 +40,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: ChatInputPr
   };
 
   return (
-    <div className="border-t bg-background px-4 py-3">
+    <div className="border-t bg-background px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto max-w-2xl flex items-end gap-2">
         <textarea
           ref={textareaRef}

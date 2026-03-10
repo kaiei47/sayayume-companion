@@ -150,14 +150,14 @@ export default function ChatPage() {
 
   if (!character) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-dvh items-center justify-center">
         <p>キャラクターが見つかりません</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-dvh flex-col bg-background">
       {/* ヘッダー */}
       <header className="flex items-center gap-3 border-b px-4 py-3">
         <a href="/" className="text-muted-foreground hover:text-foreground">

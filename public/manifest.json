@@ -1,0 +1,16 @@
+{
+  "name": "さやゆめ - AIコンパニオン",
+  "short_name": "さやゆめ",
+  "description": "東京の双子AIガールフレンド♡",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/avatars/saya.jpg",
+      "sizes": "200x200",
+      "type": "image/jpeg"
+    }
+  ]
+}
