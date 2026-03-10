@@ -198,6 +198,13 @@ export async function POST(req: NextRequest) {
               )
             );
 
+            // 撮影中イベントを送信（フロントで表示）
+            controller.enqueue(
+              encoder.encode(
+                `event: generating_image\ndata: ${JSON.stringify({ status: 'started' })}\n\n`
+              )
+            );
+
             // 画像生成（最初の1つだけ）
             const imgPrompt = buildImagePrompt(character.imagePromptBase, imageDescriptions[0]);
             const result = await generateImage(imgPrompt);

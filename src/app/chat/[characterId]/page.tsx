@@ -15,6 +15,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
@@ -138,12 +139,16 @@ export default function ChatPage() {
 
                 if (currentEvent === 'clean_text' && data.content !== undefined) {
                   cleanedText = data.content;
-                  // ストリーミング中のテキストもクリーンに更新
                   setStreamingContent(data.content);
+                }
+
+                if (currentEvent === 'generating_image') {
+                  setIsGeneratingImage(true);
                 }
 
                 if (currentEvent === 'image' && data.image_url) {
                   imageUrlFromStream = data.image_url;
+                  setIsGeneratingImage(false);
                 }
               } catch {
                 // パースエラーは無視
@@ -178,6 +183,7 @@ export default function ChatPage() {
         setStreamingContent('');
       } finally {
         setIsLoading(false);
+        setIsGeneratingImage(false);
       }
     },
     [isLoading, conversationId, characterId]
@@ -247,6 +253,7 @@ export default function ChatPage() {
         character={character}
         isLoading={isLoading}
         isLoadingHistory={isLoadingHistory}
+        isGeneratingImage={isGeneratingImage}
       />
 
       {/* 入力エリア */}

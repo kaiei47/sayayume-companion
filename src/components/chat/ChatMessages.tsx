@@ -19,6 +19,7 @@ interface ChatMessagesProps {
   character: CharacterConfig;
   isLoading: boolean;
   isLoadingHistory?: boolean;
+  isGeneratingImage?: boolean;
 }
 
 export default function ChatMessages({
@@ -27,6 +28,7 @@ export default function ChatMessages({
   character,
   isLoading,
   isLoadingHistory = false,
+  isGeneratingImage = false,
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -99,7 +101,7 @@ export default function ChatMessages({
         )}
 
         {/* タイピングインジケータ */}
-        {isLoading && !streamingContent && (
+        {isLoading && !streamingContent && !isGeneratingImage && (
           <div className="flex items-end gap-2">
             <Avatar className="h-7 w-7 flex-shrink-0">
               <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
@@ -107,6 +109,25 @@ export default function ChatMessages({
             </Avatar>
             <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
               <TypingDots />
+            </div>
+          </div>
+        )}
+
+        {/* 撮影中インジケータ */}
+        {isGeneratingImage && (
+          <div className="flex items-end gap-2">
+            <Avatar className="h-7 w-7 flex-shrink-0">
+              <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
+              <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
+            </Avatar>
+            <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 animate-pulse text-pink-400">
+                  <path d="M12 9a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 9Z" />
+                  <path fillRule="evenodd" d="M9.344 3.071a49.52 49.52 0 0 1 5.312 0c.967.052 1.83.585 2.332 1.39l.821 1.317c.24.383.645.643 1.11.71.386.054.77.113 1.152.177 1.432.239 2.429 1.493 2.429 2.909V18a3 3 0 0 1-3 3H4.5a3 3 0 0 1-3-3V9.574c0-1.416.997-2.67 2.429-2.909.382-.064.766-.123 1.151-.178a1.56 1.56 0 0 0 1.11-.71l.822-1.315a2.942 2.942 0 0 1 2.332-1.39ZM6.75 12.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Zm12-1.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clipRule="evenodd" />
+                </svg>
+                <span className="animate-pulse">自撮り撮影中...</span>
+              </div>
             </div>
           </div>
         )}
