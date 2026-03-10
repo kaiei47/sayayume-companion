@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCharacter } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
+import { extractImageTags, buildImagePrompt, generateImage } from '@/lib/gemini-image';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 const GEMINI_MODEL = 'gemini-2.0-flash';
@@ -179,12 +180,44 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          // [IMAGE: ...] タグを検出して画像生成
+          let imageUrl: string | null = null;
+          let savedContent = fullResponse;
+          const { cleanText, imageDescriptions } = extractImageTags(fullResponse);
+
+          if (imageDescriptions.length > 0) {
+            savedContent = cleanText;
+
+            // テキスト部分をクリーンに送り直す（[IMAGE:]タグを除去）
+            // (ストリーミング中はタグ込みで送られてるので、完了時にクリーンテキストを通知)
+            controller.enqueue(
+              encoder.encode(
+                `event: clean_text\ndata: ${JSON.stringify({ content: cleanText })}\n\n`
+              )
+            );
+
+            // 画像生成（最初の1つだけ）
+            const imgPrompt = buildImagePrompt(character.imagePromptBase, imageDescriptions[0]);
+            const result = await generateImage(imgPrompt);
+
+            if (result) {
+              // Base64データURLとして返す（MVPではStorageスキップ）
+              imageUrl = `data:${result.mimeType};base64,${result.base64}`;
+
+              controller.enqueue(
+                encoder.encode(
+                  `event: image\ndata: ${JSON.stringify({ image_url: imageUrl })}\n\n`
+                )
+              );
+            }
+          }
+
           // 認証ユーザーの場合: アシスタントメッセージをDB保存
           if (dbUserId && fullResponse && conversation_id && !conversation_id.startsWith('guest-')) {
             await supabase.from('messages').insert({
               conversation_id,
               role: 'assistant',
-              content: fullResponse,
+              content: savedContent,
               content_type: 'text',
               model_used: GEMINI_MODEL,
             });

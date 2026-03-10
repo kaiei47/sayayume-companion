@@ -103,6 +103,8 @@ export default function ChatPage() {
         const decoder = new TextDecoder();
         let accumulated = '';
         let buffer = '';
+        let cleanedText = '';
+        let imageUrlFromStream: string | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -112,9 +114,10 @@ export default function ChatPage() {
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 
+          let currentEvent = '';
           for (const line of lines) {
             if (line.startsWith('event: ')) {
-              // イベントタイプを取得
+              currentEvent = line.slice(7).trim();
               continue;
             }
             if (line.startsWith('data: ')) {
@@ -128,13 +131,24 @@ export default function ChatPage() {
                   setConversationId(data.conversation_id);
                 }
 
-                if (data.content) {
+                if (currentEvent === 'token' && data.content) {
                   accumulated += data.content;
                   setStreamingContent(accumulated);
+                }
+
+                if (currentEvent === 'clean_text' && data.content !== undefined) {
+                  cleanedText = data.content;
+                  // ストリーミング中のテキストもクリーンに更新
+                  setStreamingContent(data.content);
+                }
+
+                if (currentEvent === 'image' && data.image_url) {
+                  imageUrlFromStream = data.image_url;
                 }
               } catch {
                 // パースエラーは無視
               }
+              currentEvent = '';
             }
           }
         }
@@ -144,7 +158,8 @@ export default function ChatPage() {
           const assistantMessage: ChatMessage = {
             id: `assistant-${Date.now()}`,
             role: 'assistant',
-            content: accumulated,
+            content: cleanedText || accumulated,
+            image_url: imageUrlFromStream,
             created_at: new Date().toISOString(),
           };
           setMessages((prev) => [...prev, assistantMessage]);
