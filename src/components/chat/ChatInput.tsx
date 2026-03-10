@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface ChatInputProps {
@@ -13,18 +13,28 @@ export default function ChatInput({ onSend, disabled, placeholder }: ChatInputPr
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // AI応答完了後に自動フォーカス
+  useEffect(() => {
+    if (!disabled) {
+      textareaRef.current?.focus();
+    }
+  }, [disabled]);
+
   const handleSend = () => {
     const trimmed = input.trim();
     if (!trimmed || disabled) return;
     onSend(trimmed);
     setInput('');
-    // テキストエリアの高さをリセット
+    // テキストエリアの高さをリセット＆フォーカス維持
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
+      textareaRef.current.focus();
     }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // IME変換中のEnterは無視（日本語入力の確定操作）
+    if (e.nativeEvent.isComposing) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
