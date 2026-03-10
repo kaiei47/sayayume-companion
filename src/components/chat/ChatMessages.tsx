@@ -50,22 +50,33 @@ export default function ChatMessages({
 
         {/* ウェルカムメッセージ */}
         {!isLoadingHistory && messages.length === 0 && !streamingContent && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="relative mb-5">
-              <Avatar className="h-24 w-24 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
-                <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
-                <AvatarFallback className="text-2xl">
-                  {character.nameJa[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
+          <>
+            <div className="flex flex-col items-center justify-center pt-8 pb-4 text-center">
+              <div className="relative mb-4">
+                <Avatar className="h-20 w-20 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
+                  <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
+                  <AvatarFallback className="text-2xl">
+                    {character.nameJa[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
+              </div>
+              <h2 className="text-lg font-semibold mb-0.5">{character.nameJa}</h2>
+              <p className="text-muted-foreground text-xs">{character.tagline}</p>
             </div>
-            <h2 className="text-xl font-semibold mb-1">{character.nameJa}</h2>
-            <p className="text-muted-foreground text-sm">{character.tagline}</p>
-            <p className="text-muted-foreground/60 text-xs mt-6">
-              メッセージを送って会話を始めよう
-            </p>
-          </div>
+            {/* キャラの挨拶吹き出し */}
+            <div className="flex items-end gap-2 mt-2">
+              <Avatar className="h-7 w-7 flex-shrink-0">
+                <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
+                <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
+              </Avatar>
+              <div className="bg-muted rounded-2xl rounded-bl-md px-3.5 py-2 max-w-[78%]">
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed">
+                  {character.welcomeMessage}
+                </p>
+              </div>
+            </div>
+          </>
         )}
 
         {/* メッセージ一覧 */}

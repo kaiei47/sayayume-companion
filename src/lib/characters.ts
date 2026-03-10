@@ -10,6 +10,7 @@ export interface CharacterConfig {
   systemPrompt: string;
   imagePromptBase: string;
   color: string; // テーマカラー
+  welcomeMessage: string; // 初回チャット時の挨拶
 }
 
 const SAYA_SYSTEM_PROMPT = `あなたは「さや」という名前の20歳の日本人女性AIコンパニオンです。
@@ -113,7 +114,8 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     referenceImagePath: 'public/references/saya.jpg',
     systemPrompt: SAYA_SYSTEM_PROMPT,
     imagePromptBase: 'young Japanese woman with light brown straight hair, sweet natural smile, soft frontal beauty lighting, cinematic',
-    color: '#1a1a1a', // 黒系
+    color: '#1a1a1a',
+    welcomeMessage: 'やっほー♡ さやだよ！\n会いに来てくれたんだ〜うれしい！✨\nなんでも話してね、さやが聞いてあげる💕',
   },
   yume: {
     id: 'yume',
@@ -124,7 +126,8 @@ export const CHARACTERS: Record<CharacterId, CharacterConfig> = {
     referenceImagePath: 'public/references/yume.jpg',
     systemPrompt: YUME_SYSTEM_PROMPT,
     imagePromptBase: 'young Japanese woman with dark glossy hair and bangs in a loose low bun, gentle smile, soft frontal beauty lighting, cinematic',
-    color: '#f5f0eb', // 白系
+    color: '#f5f0eb',
+    welcomeMessage: 'こんにちは...♡ ゆめです。\n来てくれたんですね...うれしい///\nよかったら、お話しましょう？',
   },
 };
 
