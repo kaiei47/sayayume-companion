@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCharacter } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
-import { extractImageTags, buildImagePrompt, generateImage } from '@/lib/gemini-image';
+import { extractImageTags, buildImagePrompt, generateImage, buildDuoImagePrompt, generateDuoImage } from '@/lib/gemini-image';
+import { CHARACTERS } from '@/lib/characters';
 import { uploadChatImage } from '@/lib/supabase/storage';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import {
@@ -333,7 +334,6 @@ export async function POST(req: NextRequest) {
           let savedContent = fullResponse;
           const { cleanText, imageDescriptions } = extractImageTags(fullResponse);
           const canGenerateImages = PLAN_LIMITS[userPlan]?.imageGeneration !== false;
-
           if (imageDescriptions.length > 0 && canGenerateImages) {
             savedContent = cleanText;
 
@@ -351,18 +351,30 @@ export async function POST(req: NextRequest) {
             );
 
             // 画像生成（最初の1つだけ）— 参照画像付きで顔の一貫性を保つ
-            const imgPrompt = buildImagePrompt(
-              character.imagePromptBase,
-              imageDescriptions[0],
-              !!character.referenceImagePath
-            );
-            const result = await generateImage(imgPrompt, character.referenceImagePath);
+            let result;
+            if (character_id === 'duo') {
+              // Duo: 2人の参照画像を使って2ショット写真を生成
+              const sayaRef = CHARACTERS.saya.referenceImagePath;
+              const yumeRef = CHARACTERS.yume.referenceImagePath;
+              const imgPrompt = buildDuoImagePrompt(imageDescriptions[0]);
+              result = await generateDuoImage(imgPrompt, sayaRef, yumeRef);
+            } else {
+              const imgPrompt = buildImagePrompt(
+                character.imagePromptBase,
+                imageDescriptions[0],
+                !!character.referenceImagePath
+              );
+              result = await generateImage(imgPrompt, character.referenceImagePath);
+            }
 
             if (result) {
               // 認証ユーザー: Supabase Storageに保存して永続URL取得
-              if (dbUserId && conversation_id && !conversation_id.startsWith('guest-')) {
+              if (dbUserId) {
                 try {
-                  const publicUrl = await uploadChatImage(supabase, result.base64, result.mimeType, conversation_id);
+                  const storagePath = conversation_id && !conversation_id.startsWith('guest-')
+                    ? conversation_id
+                    : `user-${dbUserId}`;
+                  const publicUrl = await uploadChatImage(supabase, result.base64, result.mimeType, storagePath);
                   if (publicUrl) {
                     imageUrl = publicUrl;
                   }
@@ -375,11 +387,14 @@ export async function POST(req: NextRequest) {
                 imageUrl = `data:${result.mimeType};base64,${result.base64}`;
               }
 
-              controller.enqueue(
-                encoder.encode(
-                  `event: image\ndata: ${JSON.stringify({ image_url: imageUrl })}\n\n`
-                )
-              );
+              // SSEでは短いURLのみ送信（base64は大きすぎてSSE解析が失敗する）
+              if (imageUrl && !imageUrl.startsWith('data:')) {
+                controller.enqueue(
+                  encoder.encode(
+                    `event: image\ndata: ${JSON.stringify({ image_url: imageUrl })}\n\n`
+                  )
+                );
+              }
             } else {
               // 画像生成失敗（セーフティフィルター等）→ キャラっぽいフォールバックメッセージ
               const failMsg = '\n\nえ〜ん、その写真は怒られちゃった...😢 もうちょっと普通のやつなら撮れるかも！';
@@ -423,9 +438,11 @@ export async function POST(req: NextRequest) {
               .eq('id', conversation_id);
           }
 
+          // image_urlがStorage URL（短い）なら直接含める。base64は大きすぎるのでフラグのみ
+          const doneImageUrl = imageUrl && !imageUrl.startsWith('data:') ? imageUrl : null;
           controller.enqueue(
             encoder.encode(
-              `event: done\ndata: ${JSON.stringify({ conversation_id })}\n\n`
+              `event: done\ndata: ${JSON.stringify({ conversation_id, image_url: doneImageUrl })}\n\n`
             )
           );
         } catch (error) {

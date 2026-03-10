@@ -48,6 +48,7 @@ export default function DuoChatPage() {
   const [messages, setMessages] = useState<DuoMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [userPlan, setUserPlan] = useState<string>('free');
@@ -108,6 +109,7 @@ export default function DuoChatPage() {
                     id: `${msg.id}-saya`,
                     role: 'saya',
                     content: parsed.saya,
+                    image_url: msg.image_url,
                     created_at: msg.created_at,
                   });
                 }
@@ -125,6 +127,7 @@ export default function DuoChatPage() {
                     id: msg.id,
                     role: 'saya',
                     content: msg.content,
+                    image_url: msg.image_url,
                     created_at: msg.created_at,
                   });
                 }
@@ -187,6 +190,7 @@ export default function DuoChatPage() {
         let accumulated = '';
         let buffer = '';
         let currentEvent = '';
+        let receivedImageUrl: string | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -209,6 +213,10 @@ export default function DuoChatPage() {
                 if (data.conversation_id && !conversationId) {
                   setConversationId(data.conversation_id);
                 }
+                // image または done イベントからimage_urlを取得（短いURLのみ）
+                if ((currentEvent === 'image' || currentEvent === 'done') && data.image_url) {
+                  receivedImageUrl = data.image_url;
+                }
                 if (currentEvent === 'token' && data.content) {
                   accumulated += data.content;
                   setStreamingContent(accumulated);
@@ -217,8 +225,14 @@ export default function DuoChatPage() {
                   accumulated = data.content;
                   setStreamingContent(data.content);
                 }
+                if (currentEvent === 'generating_image') {
+                  setGeneratingImage(true);
+                }
+                if (currentEvent === 'image_failed') {
+                  setGeneratingImage(false);
+                }
               } catch {
-                // ignore
+                // SSE parse error — ignore
               }
               currentEvent = '';
             }
@@ -226,6 +240,7 @@ export default function DuoChatPage() {
         }
 
         // ストリーミング完了 → パースして2人のメッセージに分割
+        setGeneratingImage(false);
         if (accumulated) {
           const parsed = parseDuoResponse(accumulated);
           const now = new Date().toISOString();
@@ -241,7 +256,7 @@ export default function DuoChatPage() {
           }
           if (parsed.yume) {
             newMessages.push({
-              id: `yume-${Date.now()}`,
+              id: `yume-${Date.now() + 1}`,
               role: 'yume',
               content: parsed.yume,
               created_at: now,
@@ -255,6 +270,22 @@ export default function DuoChatPage() {
               content: accumulated,
               created_at: now,
             });
+          }
+
+          // 画像URLがSSEから取得できた場合、さやのメッセージに添付
+          if (receivedImageUrl && newMessages.length > 0) {
+            const sayaMsg = newMessages.find(m => m.role === 'saya');
+            if (sayaMsg) {
+              sayaMsg.image_url = receivedImageUrl;
+            } else {
+              newMessages.push({
+                id: `duo-img-${Date.now()}`,
+                role: 'saya',
+                content: '',
+                image_url: receivedImageUrl,
+                created_at: now,
+              });
+            }
           }
 
           setMessages((prev) => [...prev, ...newMessages]);
@@ -393,7 +424,7 @@ export default function DuoChatPage() {
 
           {/* メッセージ一覧 */}
           {messages.map((msg) => (
-            <DuoBubble key={msg.id} role={msg.role} content={msg.content} created_at={msg.created_at} />
+            <DuoBubble key={msg.id} role={msg.role} content={msg.content} image_url={msg.image_url} created_at={msg.created_at} />
           ))}
 
           {/* ストリーミング中（まだパースしないで raw 表示） */}
@@ -411,8 +442,30 @@ export default function DuoChatPage() {
             </div>
           )}
 
+          {/* 撮影中インジケーター */}
+          {generatingImage && (
+            <div className="flex items-end gap-2">
+              <div className="flex -space-x-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={saya.avatarUrl} alt="さや" />
+                  <AvatarFallback>さ</AvatarFallback>
+                </Avatar>
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={yume.avatarUrl} alt="ゆめ" />
+                  <AvatarFallback>ゆ</AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="animate-pulse">📸</span>
+                  <span>2ショット撮影中...</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* タイピング */}
-          {isLoading && !streamingContent && (
+          {isLoading && !streamingContent && !generatingImage && (
             <div className="flex items-end gap-2">
               <div className="flex -space-x-2">
                 <Avatar className="h-6 w-6">
@@ -461,10 +514,12 @@ function cleanStreamingContent(text: string): string {
 function DuoBubble({
   role,
   content,
+  image_url,
   created_at,
 }: {
   role: 'user' | 'saya' | 'yume';
   content: string;
+  image_url?: string | null;
   created_at?: string;
 }) {
   const isUser = role === 'user';
@@ -472,7 +527,8 @@ function DuoBubble({
   const char = isSaya ? saya : yume;
   const cleaned = cleanDisplayText(content);
 
-  if (!cleaned) return null;
+  // 画像もテキストもない場合は表示しない
+  if (!cleaned && !image_url) return null;
 
   return (
     <div
@@ -513,7 +569,18 @@ function DuoBubble({
                 : 'bg-blue-500/10 border border-blue-500/20 rounded-bl-md'
           )}
         >
-          <p className="whitespace-pre-wrap break-words">{cleaned}</p>
+          {cleaned && <p className="whitespace-pre-wrap break-words">{cleaned}</p>}
+          {image_url && (
+            <img
+              src={image_url}
+              alt="2ショット写真"
+              className={cn(
+                'rounded-xl max-w-full',
+                cleaned ? 'mt-2' : ''
+              )}
+              loading="lazy"
+            />
+          )}
         </div>
 
         {created_at && (

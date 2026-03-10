@@ -150,3 +150,83 @@ export function buildImagePrompt(
   }
   return `Generate a selfie-style photo. ${characterPromptBase}. Scene: ${imageDescription}. The image should look like a candid selfie or photo shared in a chat conversation. Soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, upper body shot.`;
 }
+
+/**
+ * Build a prompt for duo (2-shot) image generation.
+ * Takes two reference images and produces a photo with both characters together.
+ */
+export function buildDuoImagePrompt(imageDescription: string): string {
+  return `Generate a photo of these two women together in the same scene. The first reference image is Saya (light brown straight hair) and the second is Yume (dark hair with bangs in a low bun). Keep each person's exact face, facial features, and hair style from their respective reference images. Scene: ${imageDescription}. Two young Japanese women together, candid photo style, soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, upper body shot.`;
+}
+
+/**
+ * Generate a duo (2-shot) image with two reference images for face consistency.
+ */
+export async function generateDuoImage(
+  prompt: string,
+  referenceImagePath1: string,
+  referenceImagePath2: string
+): Promise<GenerateImageResult | null> {
+  try {
+    const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+    const ref1 = loadReferenceImage(referenceImagePath1);
+    if (ref1) {
+      parts.push({ inlineData: { mimeType: ref1.mimeType, data: ref1.base64 } });
+    }
+    const ref2 = loadReferenceImage(referenceImagePath2);
+    if (ref2) {
+      parts.push({ inlineData: { mimeType: ref2.mimeType, data: ref2.base64 } });
+    }
+
+    parts.push({ text: prompt });
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE'],
+          imageConfig: {
+            aspectRatio: '3:4',
+            imageSize: '512px',
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Duo image generation API error:', response.status, await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    const candidate = data.candidates?.[0];
+    if (!candidate) {
+      console.error('No candidates:', data.promptFeedback);
+      return null;
+    }
+    if (candidate.finishReason === 'IMAGE_SAFETY') {
+      console.error('Duo image blocked by safety filter');
+      return null;
+    }
+
+    const resultParts = candidate.content?.parts;
+    if (!resultParts) return null;
+
+    for (const part of resultParts) {
+      if (part.inlineData?.mimeType?.startsWith('image/')) {
+        return {
+          base64: part.inlineData.data,
+          mimeType: part.inlineData.mimeType,
+        };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Duo image generation failed:', error);
+    return null;
+  }
+}

@@ -192,13 +192,13 @@ export default function ChatPage() {
                   setIsGeneratingImage(true);
                 }
 
-                if (currentEvent === 'image' && data.image_url) {
+                // image または done イベントからimage_urlを取得（短いURLのみ）
+                if ((currentEvent === 'image' || currentEvent === 'done') && data.image_url) {
                   imageUrlFromStream = data.image_url;
                   setIsGeneratingImage(false);
                 }
 
                 if (currentEvent === 'image_failed' && data.fallback_text) {
-                  // セーフティフィルター等で画像生成失敗 → テキストに追加
                   cleanedText = (cleanedText || accumulated) + data.fallback_text;
                   setStreamingContent(cleanedText);
                   setIsGeneratingImage(false);
