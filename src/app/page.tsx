@@ -90,7 +90,7 @@ export default function Home() {
             <Link
               key={char.id}
               href={`/chat/${char.id}`}
-              className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-4 transition-all hover:border-primary/50 hover:bg-card"
+              className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-4 transition-all hover:border-primary/50 hover:bg-card overflow-hidden"
             >
               <div className="relative flex-shrink-0">
                 <Image
@@ -122,18 +122,6 @@ export default function Home() {
                     : char.tagline}
                 </p>
               </div>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="h-5 w-5 text-muted-foreground group-hover:text-primary"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.28 11.47a.75.75 0 0 1 0 1.06l-7.5 7.5a.75.75 0 0 1-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 0 1 1.06-1.06l7.5 7.5Z"
-                  clipRule="evenodd"
-                />
-              </svg>
             </Link>
           ))}
         </div>
