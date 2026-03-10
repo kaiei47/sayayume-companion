@@ -150,6 +150,13 @@ export default function ChatPage() {
                   imageUrlFromStream = data.image_url;
                   setIsGeneratingImage(false);
                 }
+
+                if (currentEvent === 'image_failed' && data.fallback_text) {
+                  // セーフティフィルター等で画像生成失敗 → テキストに追加
+                  cleanedText = (cleanedText || accumulated) + data.fallback_text;
+                  setStreamingContent(cleanedText);
+                  setIsGeneratingImage(false);
+                }
               } catch {
                 // パースエラーは無視
               }

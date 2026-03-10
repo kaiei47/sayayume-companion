@@ -235,6 +235,15 @@ export async function POST(req: NextRequest) {
                   `event: image\ndata: ${JSON.stringify({ image_url: imageUrl })}\n\n`
                 )
               );
+            } else {
+              // 画像生成失敗（セーフティフィルター等）→ キャラっぽいフォールバックメッセージ
+              const failMsg = '\n\nえ〜ん、その写真は怒られちゃった...😢 もうちょっと普通のやつなら撮れるかも！';
+              savedContent += failMsg;
+              controller.enqueue(
+                encoder.encode(
+                  `event: image_failed\ndata: ${JSON.stringify({ fallback_text: failMsg })}\n\n`
+                )
+              );
             }
           }
 
