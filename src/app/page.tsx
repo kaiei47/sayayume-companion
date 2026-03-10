@@ -64,7 +64,7 @@ export default function Home() {
             <Link
               key={char.id}
               href={`/chat/${char.id}`}
-              className="group flex items-center gap-4 rounded-2xl border p-4 transition-all hover:border-primary hover:shadow-md"
+              className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-4 transition-all hover:border-primary/50 hover:bg-card"
             >
               <div className="relative flex-shrink-0">
                 <Image

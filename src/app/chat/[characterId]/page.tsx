@@ -159,24 +159,24 @@ export default function ChatPage() {
   return (
     <div className="flex h-dvh flex-col bg-background">
       {/* ヘッダー */}
-      <header className="flex items-center gap-3 border-b px-4 py-3">
-        <a href="/" className="text-muted-foreground hover:text-foreground">
+      <header className="flex items-center gap-3 border-b border-border/50 bg-background/80 backdrop-blur-lg px-4 py-3">
+        <a href="/" className="text-muted-foreground hover:text-foreground transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
             <path fillRule="evenodd" d="M7.72 12.53a.75.75 0 0 1 0-1.06l7.5-7.5a.75.75 0 1 1 1.06 1.06L9.31 12l6.97 6.97a.75.75 0 1 1-1.06 1.06l-7.5-7.5Z" clipRule="evenodd" />
           </svg>
         </a>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 flex-1">
           <div className="relative">
             <img
               src={character.avatarUrl}
               alt={character.nameJa}
-              className="h-9 w-9 rounded-full object-cover"
+              className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10"
             />
             <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
           </div>
           <div>
             <h1 className="text-sm font-semibold">{character.nameJa}</h1>
-            <p className="text-xs text-muted-foreground">オンライン</p>
+            <p className="text-[11px] text-green-400/80">オンライン</p>
           </div>
         </div>
       </header>

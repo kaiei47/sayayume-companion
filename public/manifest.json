@@ -4,8 +4,8 @@
   "description": "東京の双子AIガールフレンド♡",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
   "icons": [
     {
       "src": "/avatars/saya.jpg",

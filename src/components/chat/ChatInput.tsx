@@ -40,7 +40,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: ChatInputPr
   };
 
   return (
-    <div className="border-t bg-background px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+    <div className="border-t border-border/50 bg-background/80 backdrop-blur-lg px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto max-w-2xl flex items-end gap-2">
         <textarea
           ref={textareaRef}
@@ -51,13 +51,13 @@ export default function ChatInput({ onSend, disabled, placeholder }: ChatInputPr
           placeholder={placeholder || 'メッセージを入力...'}
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none rounded-2xl border bg-muted/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+          className="flex-1 resize-none rounded-2xl border border-border/50 bg-muted/30 px-4 py-2.5 text-[15px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 disabled:opacity-50 transition-colors"
         />
         <Button
           onClick={handleSend}
           disabled={disabled || !input.trim()}
           size="icon"
-          className="h-10 w-10 rounded-full flex-shrink-0"
+          className="h-10 w-10 rounded-full flex-shrink-0 bg-blue-600 hover:bg-blue-500 disabled:bg-muted disabled:text-muted-foreground transition-colors"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

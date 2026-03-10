@@ -82,7 +82,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg border border-border/50 bg-muted/30 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
             />
           </div>
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
               placeholder="6文字以上"
               required
               minLength={6}
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg border border-border/50 bg-muted/30 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
             />
           </div>
 
@@ -113,7 +113,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-foreground text-background py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+            className="w-full rounded-lg bg-blue-600 text-white py-2.5 text-sm font-medium hover:bg-blue-500 disabled:opacity-50 transition-colors"
           >
             {loading ? '処理中...' : isSignUp ? 'アカウント作成' : 'ログイン'}
           </button>
