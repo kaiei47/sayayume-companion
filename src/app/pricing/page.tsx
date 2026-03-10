@@ -83,7 +83,13 @@ function PricingContent() {
 
       const data = await res.json();
       if (data.url) {
+        // 新規サブスク → Stripe Checkoutにリダイレクト
         window.location.href = data.url;
+      } else if (data.success && data.redirect) {
+        // プラン変更成功 → 成功画面にリダイレクト
+        setCurrentPlan(plan);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 5000);
       } else {
         alert(data.error || '決済の開始に失敗しました');
       }
@@ -206,16 +212,14 @@ function PricingContent() {
                     <button
                       onClick={handleManage}
                       disabled={loading !== null}
-                      className="w-full rounded-xl py-2.5 text-sm font-medium border border-border/50 hover:bg-muted/50 transition-colors"
+                      className="w-full rounded-xl py-2.5 text-sm font-medium border border-border/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
                     >
-                      ダウングレード
+                      {loading ? '処理中...' : '解約する'}
                     </button>
                   ) : null
                 ) : (
                   <button
-                    onClick={() =>
-                      hasActiveSub ? handleManage() : handleSubscribe(key)
-                    }
+                    onClick={() => handleSubscribe(key)}
                     disabled={loading !== null}
                     className={`w-full rounded-xl py-2.5 text-sm font-medium transition-colors ${
                       popular
@@ -225,9 +229,9 @@ function PricingContent() {
                   >
                     {loading === key
                       ? '処理中...'
-                      : isUpgrade
-                        ? `${plan.nameJa}にアップグレード`
-                        : 'プラン変更'}
+                      : hasActiveSub
+                        ? 'プランを変更'
+                        : `${plan.nameJa}にアップグレード`}
                   </button>
                 )}
               </div>
