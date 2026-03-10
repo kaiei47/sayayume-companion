@@ -14,9 +14,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const APP_URL = process.env.APP_URL || "https://sayayume-companion.vercel.app";
+
 export const metadata: Metadata = {
-  title: "さやゆめ - AIコンパニオン",
-  description: "東京の双子AIガールフレンド♡ さやとゆめに会いに来て！",
+  title: {
+    default: "さやゆめ - AIコンパニオン",
+    template: "%s | さやゆめ",
+  },
+  description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真。日本語特化AIコンパニオンアプリ。",
+  keywords: ["AI", "コンパニオン", "AIガールフレンド", "チャットボット", "AI美女", "さやゆめ", "日本語AI"],
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192.png",
@@ -29,9 +35,29 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "さやゆめ - AIコンパニオン",
-    description: "東京の双子AIガールフレンド♡",
+    description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真",
     type: "website",
+    url: APP_URL,
+    siteName: "さやゆめ",
+    locale: "ja_JP",
+    images: [{
+      url: `${APP_URL}/og-image.png`,
+      width: 1200,
+      height: 630,
+      alt: "さやゆめ - AIコンパニオン",
+    }],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "さやゆめ - AIコンパニオン",
+    description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真",
+    images: [`${APP_URL}/og-image.png`],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  metadataBase: new URL(APP_URL),
 };
 
 export const viewport: Viewport = {
