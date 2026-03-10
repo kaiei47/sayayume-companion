@@ -4,6 +4,7 @@ import { getCharacter } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
 import { extractImageTags, buildImagePrompt, generateImage } from '@/lib/gemini-image';
 import { uploadChatImage } from '@/lib/supabase/storage';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 // 画像生成を含むため60秒に延長
 export const maxDuration = 60;
@@ -28,6 +29,27 @@ interface ChatRequest {
 
 export async function POST(req: NextRequest) {
   try {
+    // IPベースのレート制限: 1分あたり30リクエスト
+    const clientIp = getClientIp(req);
+    const rateLimitResult = rateLimit(`chat:${clientIp}`, 30, 60_000);
+    if (!rateLimitResult.success) {
+      return new Response(
+        JSON.stringify({
+          error: 'rate_limit',
+          message: 'リクエストが多すぎます。少し待ってからもう一度試してください。',
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

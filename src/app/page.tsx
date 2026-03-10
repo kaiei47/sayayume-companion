@@ -139,9 +139,24 @@ export default function Home() {
         )}
 
         {/* フッター */}
-        <p className="text-center text-xs text-muted-foreground">
-          18歳以上限定 · AI生成コンテンツ
-        </p>
+        <div className="text-center space-y-2">
+          <p className="text-xs text-muted-foreground">
+            18歳以上限定 · AI生成コンテンツ
+          </p>
+          <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
+            <Link href="/legal/terms" className="hover:text-muted-foreground transition-colors">
+              利用規約
+            </Link>
+            <span>·</span>
+            <Link href="/legal/privacy" className="hover:text-muted-foreground transition-colors">
+              プライバシー
+            </Link>
+            <span>·</span>
+            <Link href="/legal/tokushoho" className="hover:text-muted-foreground transition-colors">
+              特商法表記
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
