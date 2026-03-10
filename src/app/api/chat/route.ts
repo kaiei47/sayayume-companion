@@ -212,9 +212,13 @@ export async function POST(req: NextRequest) {
             if (result) {
               // 認証ユーザー: Supabase Storageに保存して永続URL取得
               if (dbUserId && conversation_id && !conversation_id.startsWith('guest-')) {
-                const publicUrl = await uploadChatImage(result.base64, result.mimeType, conversation_id);
-                if (publicUrl) {
-                  imageUrl = publicUrl;
+                try {
+                  const publicUrl = await uploadChatImage(supabase, result.base64, result.mimeType, conversation_id);
+                  if (publicUrl) {
+                    imageUrl = publicUrl;
+                  }
+                } catch (uploadErr) {
+                  console.error('Storage upload failed, falling back to base64:', uploadErr);
                 }
               }
               // ゲストまたはアップロード失敗: base64 data URLにフォールバック

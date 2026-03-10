@@ -1,19 +1,19 @@
-import { createClient } from './server';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 const BUCKET_NAME = 'chat-images';
 
 /**
  * Upload a base64 image to Supabase Storage.
+ * Accepts an existing Supabase client to avoid cookie context issues inside streams.
  * Returns the public URL of the uploaded image.
  */
 export async function uploadChatImage(
+  supabase: SupabaseClient,
   base64Data: string,
   mimeType: string,
   conversationId: string
 ): Promise<string | null> {
   try {
-    const supabase = await createClient();
-
     // Convert base64 to buffer
     const buffer = Buffer.from(base64Data, 'base64');
     const ext = mimeType.includes('png') ? 'png' : 'jpg';
