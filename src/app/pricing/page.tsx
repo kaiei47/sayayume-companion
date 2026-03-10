@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PLANS } from '@/lib/stripe';
+import { PLANS } from '@/lib/plans';
 import { createClient } from '@/lib/supabase/client';
 
 type PlanKey = 'free' | 'basic' | 'premium';

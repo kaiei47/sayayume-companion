@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { stripe, PLANS, PlanType } from '@/lib/stripe';
+import { stripe, PLANS, PlanType, STRIPE_PRICE_IDS } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '無効なプランです' }, { status: 400 });
     }
 
-    const planConfig = PLANS[plan];
-    if (!('stripePriceId' in planConfig)) {
+    const priceId = STRIPE_PRICE_IDS[plan as keyof typeof STRIPE_PRICE_IDS];
+    if (!priceId) {
       return NextResponse.json({ error: 'このプランは購入できません' }, { status: 400 });
     }
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: planConfig.stripePriceId,
+          price: priceId,
           quantity: 1,
         },
       ],
