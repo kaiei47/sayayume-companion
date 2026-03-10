@@ -28,7 +28,7 @@ export async function generateImage(prompt: string): Promise<GenerateImageResult
           responseModalities: ['TEXT', 'IMAGE'],
           imageConfig: {
             aspectRatio: '3:4',
-            imageSize: '1K',
+            imageSize: '512px',
           },
         },
       }),

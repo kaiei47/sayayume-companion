@@ -187,11 +187,11 @@ export async function POST(req: NextRequest) {
           let imageUrl: string | null = null;
           let savedContent = fullResponse;
           const { cleanText, imageDescriptions } = extractImageTags(fullResponse);
+          console.log('[IMAGE] tags found:', imageDescriptions.length, imageDescriptions);
 
           if (imageDescriptions.length > 0) {
             savedContent = cleanText;
 
-            // テキスト部分をクリーンに送り直す（[IMAGE:]タグを除去）
             controller.enqueue(
               encoder.encode(
                 `event: clean_text\ndata: ${JSON.stringify({ content: cleanText })}\n\n`
@@ -200,11 +200,13 @@ export async function POST(req: NextRequest) {
 
             // 画像生成（最初の1つだけ）
             const imgPrompt = buildImagePrompt(character.imagePromptBase, imageDescriptions[0]);
+            console.log('[IMAGE] generating with prompt:', imgPrompt.slice(0, 100));
             const result = await generateImage(imgPrompt);
+            console.log('[IMAGE] result:', result ? `base64_len=${result.base64.length} mime=${result.mimeType}` : 'null');
 
             if (result) {
-              // Base64データURLとして返す（MVPではStorageスキップ）
               imageUrl = `data:${result.mimeType};base64,${result.base64}`;
+              console.log('[IMAGE] sending SSE image event, url length:', imageUrl.length);
 
               controller.enqueue(
                 encoder.encode(
