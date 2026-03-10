@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { CHARACTERS } from '@/lib/characters';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -65,10 +66,14 @@ export default function Home() {
               href={`/chat/${char.id}`}
               className="group flex items-center gap-4 rounded-2xl border p-4 transition-all hover:border-primary hover:shadow-md"
             >
-              <div className="relative">
-                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-2xl font-semibold">
-                  {char.nameJa[0]}
-                </div>
+              <div className="relative flex-shrink-0">
+                <Image
+                  src={char.avatarUrl}
+                  alt={char.nameJa}
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 rounded-full object-cover"
+                />
                 <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
               </div>
               <div className="flex-1">

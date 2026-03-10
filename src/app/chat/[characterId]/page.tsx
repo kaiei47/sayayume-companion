@@ -167,9 +167,11 @@ export default function ChatPage() {
         </a>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-              {character.nameJa[0]}
-            </div>
+            <img
+              src={character.avatarUrl}
+              alt={character.nameJa}
+              className="h-9 w-9 rounded-full object-cover"
+            />
             <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
           </div>
           <div>
