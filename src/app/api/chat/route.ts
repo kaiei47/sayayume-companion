@@ -12,6 +12,14 @@ import {
   COMPRESS_THRESHOLD,
   KEEP_RECENT,
 } from '@/lib/context-compression';
+import {
+  analyzeMessage,
+  updateIntimacy,
+  getIntimacy,
+  applyIntimacyToPrompt,
+  getLevelInfo,
+  getLevelProgress,
+} from '@/lib/intimacy';
 
 // 画像生成を含むため60秒に延長
 export const maxDuration = 60;
@@ -74,6 +82,8 @@ export async function POST(req: NextRequest) {
     let history: { role: string; content: string }[] = [];
     let existingSummary: string | null = null;
     let userPlan: keyof typeof PLAN_LIMITS = 'free';
+    let intimacyLevel = 1;
+    let intimacyResult: { newLevel: number; newPoints: number; levelChanged: boolean; previousLevel: number } | null = null;
 
     if (user) {
       // 認証済みユーザー: DB保存あり
@@ -153,6 +163,33 @@ export async function POST(req: NextRequest) {
           content: message,
           content_type: 'text',
         });
+
+        // 親密度の更新（duo以外のみ個別追跡）
+        const targetCharId = character_id === 'duo' ? 'saya' : character_id;
+        try {
+          // 今日最初のメッセージかチェック
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const currentIntimacy = await getIntimacy(supabase, dbUser.id, targetCharId);
+          const isFirstToday = !currentIntimacy?.last_interaction_at ||
+            new Date(currentIntimacy.last_interaction_at) < today;
+
+          const analysis = analyzeMessage(message, targetCharId, isFirstToday);
+          intimacyResult = await updateIntimacy(supabase, dbUser.id, targetCharId, analysis);
+          intimacyLevel = intimacyResult.newLevel;
+
+          // duoの場合はゆめも更新
+          if (character_id === 'duo') {
+            const yumeIntimacy = await getIntimacy(supabase, dbUser.id, 'yume');
+            const isFirstTodayYume = !yumeIntimacy?.last_interaction_at ||
+              new Date(yumeIntimacy.last_interaction_at) < today;
+            const yumeAnalysis = analyzeMessage(message, 'yume', isFirstTodayYume);
+            await updateIntimacy(supabase, dbUser.id, 'yume', yumeAnalysis);
+          }
+        } catch (intimacyErr) {
+          console.error('Intimacy update failed:', intimacyErr);
+          // 親密度の失敗はチャットをブロックしない
+        }
 
         // 既存の会話サマリーを取得
         const { data: summaryData } = await supabase
@@ -242,9 +279,16 @@ export async function POST(req: NextRequest) {
       conversation_id = `guest-${Date.now()}`;
     }
 
+    // 親密度に応じたシステムプロンプトを構築
+    const intimacyAwarePrompt = applyIntimacyToPrompt(
+      character.systemPrompt,
+      character_id,
+      intimacyLevel
+    );
+
     // Gemini API用のcontentsを構築（サマリー対応）
     const contents = buildContentsWithSummary(
-      character.systemPrompt,
+      intimacyAwarePrompt,
       existingSummary,
       history,
       // ゲストの場合はhistoryに現在のメッセージが含まれていない
@@ -263,6 +307,24 @@ export async function POST(req: NextRequest) {
               `event: metadata\ndata: ${JSON.stringify({ conversation_id, character_id })}\n\n`
             )
           );
+
+          // 親密度情報を送信（フロントでレベル表示・レベルアップアニメーション用）
+          if (intimacyResult) {
+            const levelInfo = getLevelInfo(intimacyResult.newLevel);
+            const progress = getLevelProgress(intimacyResult.newPoints, intimacyResult.newLevel);
+            controller.enqueue(
+              encoder.encode(
+                `event: intimacy\ndata: ${JSON.stringify({
+                  level: intimacyResult.newLevel,
+                  points: intimacyResult.newPoints,
+                  progress,
+                  levelInfo: { nameJa: levelInfo.nameJa, emoji: levelInfo.emoji, color: levelInfo.color },
+                  levelChanged: intimacyResult.levelChanged,
+                  previousLevel: intimacyResult.previousLevel,
+                })}\n\n`
+              )
+            );
+          }
 
           const response = await fetch(GEMINI_API_URL, {
             method: 'POST',

@@ -25,6 +25,10 @@ export default function ChatPage() {
   const [conversationList, setConversationList] = useState<Array<{
     id: string; title: string; message_count: number; last_message_at: string;
   }>>([]);
+  const [intimacyLevel, setIntimacyLevel] = useState(1);
+  const [intimacyProgress, setIntimacyProgress] = useState(0);
+  const [intimacyInfo, setIntimacyInfo] = useState<{ nameJa: string; emoji: string; color: string } | null>(null);
+  const [levelUpNotice, setLevelUpNotice] = useState<{ from: number; to: number; nameJa: string; emoji: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // メニュー外クリックで閉じる
@@ -45,9 +49,9 @@ export default function ChatPage() {
     setShowMenu(false);
   }, []);
 
-  // ユーザーのプランを取得
+  // ユーザーのプランと親密度を取得
   useEffect(() => {
-    async function loadPlan() {
+    async function loadUserData() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -55,9 +59,25 @@ export default function ChatPage() {
       if (!dbUser) return;
       const { data: sub } = await supabase.from('subscriptions').select('plan').eq('user_id', dbUser.id).eq('status', 'active').single();
       if (sub) setUserPlan(sub.plan);
+
+      // 親密度取得
+      try {
+        const res = await fetch('/api/intimacy');
+        if (res.ok) {
+          const data = await res.json();
+          const charIntimacy = data.intimacy?.[characterId];
+          if (charIntimacy) {
+            setIntimacyLevel(charIntimacy.level);
+            setIntimacyProgress(charIntimacy.progress);
+            setIntimacyInfo(charIntimacy.levelInfo);
+          }
+        }
+      } catch {
+        // 無視
+      }
     }
-    loadPlan();
-  }, []);
+    loadUserData();
+  }, [characterId]);
 
   // 会話履歴をロード
   const loadConversation = useCallback(async (convId?: string) => {
@@ -192,6 +212,23 @@ export default function ChatPage() {
                   setIsGeneratingImage(true);
                 }
 
+                // 親密度イベント
+                if (currentEvent === 'intimacy' && data.level) {
+                  setIntimacyLevel(data.level);
+                  setIntimacyProgress(data.progress || 0);
+                  if (data.levelInfo) setIntimacyInfo(data.levelInfo);
+                  if (data.levelChanged && data.level > data.previousLevel) {
+                    setLevelUpNotice({
+                      from: data.previousLevel,
+                      to: data.level,
+                      nameJa: data.levelInfo?.nameJa || '',
+                      emoji: data.levelInfo?.emoji || '',
+                    });
+                    // 5秒後に自動で消す
+                    setTimeout(() => setLevelUpNotice(null), 5000);
+                  }
+                }
+
                 // image または done イベントからimage_urlを取得（短いURLのみ）
                 if ((currentEvent === 'image' || currentEvent === 'done') && data.image_url) {
                   imageUrlFromStream = data.image_url;
@@ -269,8 +306,28 @@ export default function ChatPage() {
             <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
           </div>
           <div>
-            <h1 className="text-sm font-semibold">{character.nameJa}</h1>
-            <p className="text-[11px] text-green-400/80">オンライン</p>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm font-semibold">{character.nameJa}</h1>
+              {intimacyInfo && (
+                <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-gradient-to-r ${intimacyInfo.color} text-white`}>
+                  {intimacyInfo.emoji} Lv{intimacyLevel}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[11px] text-green-400/80">オンライン</p>
+              {intimacyInfo && (
+                <div className="flex items-center gap-1">
+                  <div className="w-12 h-1 rounded-full bg-muted/30 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${intimacyInfo.color} transition-all duration-700`}
+                      style={{ width: `${intimacyProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-muted-foreground/50">{intimacyInfo.nameJa}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         {/* フリープランのアップグレードバッジ */}
@@ -328,6 +385,20 @@ export default function ChatPage() {
           )}
         </div>
       </header>
+
+      {/* レベルアップ通知 */}
+      {levelUpNotice && (
+        <div className="absolute inset-x-0 top-20 z-50 flex justify-center animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="bg-gradient-to-r from-pink-500/90 via-purple-500/90 to-blue-500/90 text-white rounded-2xl px-6 py-3 shadow-lg backdrop-blur-sm">
+            <div className="text-center">
+              <p className="text-lg font-bold">{levelUpNotice.emoji} Level UP!</p>
+              <p className="text-sm">
+                Lv{levelUpNotice.from} → Lv{levelUpNotice.to} 「{levelUpNotice.nameJa}」
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* メッセージエリア */}
       <ChatMessages

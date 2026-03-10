@@ -53,6 +53,8 @@ export default function DuoChatPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [userPlan, setUserPlan] = useState<string>('free');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [intimacyInfo, setIntimacyInfo] = useState<Record<string, { level: number; progress: number; levelInfo: { nameJa: string; emoji: string; color: string } }>>({});
+  const [levelUpNotice, setLevelUpNotice] = useState<{ from: number; to: number; nameJa: string; emoji: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -77,6 +79,22 @@ export default function DuoChatPage() {
       }
       const { data: sub } = await supabase.from('subscriptions').select('plan').eq('user_id', dbUser.id).eq('status', 'active').single();
       if (sub) setUserPlan(sub.plan);
+
+      // 親密度取得
+      try {
+        const res = await fetch('/api/intimacy');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.intimacy) {
+            const info: Record<string, { level: number; progress: number; levelInfo: { nameJa: string; emoji: string; color: string } }> = {};
+            for (const [charId, charData] of Object.entries(data.intimacy) as [string, { level: number; progress: number; levelInfo: { nameJa: string; emoji: string; color: string } }][]) {
+              info[charId] = { level: charData.level, progress: charData.progress, levelInfo: charData.levelInfo };
+            }
+            setIntimacyInfo(info);
+          }
+        }
+      } catch { /* ignore */ }
+
       setIsLoadingHistory(false);
     }
     checkAuth();
@@ -231,6 +249,23 @@ export default function DuoChatPage() {
                 if (currentEvent === 'image_failed') {
                   setGeneratingImage(false);
                 }
+                // 親密度イベント
+                if (currentEvent === 'intimacy' && data.level) {
+                  setIntimacyInfo(prev => ({
+                    ...prev,
+                    saya: { level: data.level, progress: data.progress || 0, levelInfo: data.levelInfo },
+                    yume: { level: data.level, progress: data.progress || 0, levelInfo: data.levelInfo },
+                  }));
+                  if (data.levelChanged && data.level > data.previousLevel) {
+                    setLevelUpNotice({
+                      from: data.previousLevel,
+                      to: data.level,
+                      nameJa: data.levelInfo?.nameJa || '',
+                      emoji: data.levelInfo?.emoji || '',
+                    });
+                    setTimeout(() => setLevelUpNotice(null), 5000);
+                  }
+                }
               } catch {
                 // SSE parse error — ignore
               }
@@ -375,7 +410,14 @@ export default function DuoChatPage() {
             />
           </div>
           <div className="ml-3">
-            <h1 className="text-sm font-semibold">さや＆ゆめ</h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm font-semibold">さや＆ゆめ</h1>
+              {intimacyInfo.saya && intimacyInfo.saya.level > 1 && (
+                <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-gradient-to-r ${intimacyInfo.saya.levelInfo.color} text-white`}>
+                  {intimacyInfo.saya.levelInfo.emoji} Lv{intimacyInfo.saya.level}
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-green-400/80">2人ともオンライン</p>
           </div>
         </div>
@@ -383,6 +425,20 @@ export default function DuoChatPage() {
           PREMIUM
         </span>
       </header>
+
+      {/* レベルアップ通知 */}
+      {levelUpNotice && (
+        <div className="absolute inset-x-0 top-20 z-50 flex justify-center animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="bg-gradient-to-r from-pink-500/90 via-purple-500/90 to-blue-500/90 text-white rounded-2xl px-6 py-3 shadow-lg backdrop-blur-sm">
+            <div className="text-center">
+              <p className="text-lg font-bold">{levelUpNotice.emoji} Level UP!</p>
+              <p className="text-sm">
+                Lv{levelUpNotice.from} → Lv{levelUpNotice.to} 「{levelUpNotice.nameJa}」
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* メッセージエリア */}
       <div className="flex-1 overflow-y-auto px-4 py-6">

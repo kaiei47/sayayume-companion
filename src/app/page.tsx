@@ -12,9 +12,18 @@ interface LastMessage {
   created_at: string;
 }
 
+interface IntimacyInfo {
+  level: number;
+  points: number;
+  progress: number;
+  levelInfo: { nameJa: string; emoji: string; color: string };
+  totalMessages: number;
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [lastMessages, setLastMessages] = useState<Record<string, LastMessage>>({});
+  const [intimacy, setIntimacy] = useState<Record<string, IntimacyInfo>>({});
 
   useEffect(() => {
     const supabase = createClient();
@@ -39,6 +48,14 @@ export default function Home() {
             // 無視
           }
         });
+
+        // 親密度を取得
+        fetch('/api/intimacy')
+          .then(res => res.json())
+          .then(data => {
+            if (data.intimacy) setIntimacy(data.intimacy);
+          })
+          .catch(() => {});
       }
     });
   }, []);
@@ -92,46 +109,80 @@ export default function Home() {
           ))}
         </div>
 
-        {/* キャラ選択カード */}
+        {/* キャラ選択カード（親密度順にソート） */}
         <div className="grid gap-4">
-          {Object.values(CHARACTERS).filter(c => c.id !== 'duo').map((char) => (
-            <Link
-              key={char.id}
-              href={`/chat/${char.id}`}
-              className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-4 transition-all hover:border-primary/50 hover:bg-card overflow-hidden"
-            >
-              <div className="relative flex-shrink-0">
-                <Image
-                  src={char.avatarUrl}
-                  alt={char.nameJa}
-                  width={64}
-                  height={64}
-                  className="h-16 w-16 rounded-full object-cover"
-                />
-                <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <h2 className="font-semibold group-hover:text-primary">
-                    {char.nameJa}
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                      {char.name}
-                    </span>
-                  </h2>
-                  {lastMessages[char.id] && (
-                    <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">
-                      {formatRelativeTime(lastMessages[char.id].created_at)}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground truncate">
-                  {lastMessages[char.id]
-                    ? lastMessages[char.id].content
-                    : char.tagline}
-                </p>
-              </div>
-            </Link>
-          ))}
+          {Object.values(CHARACTERS)
+            .filter(c => c.id !== 'duo')
+            .sort((a, b) => {
+              const aLevel = intimacy[a.id]?.level || 1;
+              const bLevel = intimacy[b.id]?.level || 1;
+              const aPoints = intimacy[a.id]?.points || 0;
+              const bPoints = intimacy[b.id]?.points || 0;
+              if (bLevel !== aLevel) return bLevel - aLevel;
+              return bPoints - aPoints;
+            })
+            .map((char) => {
+              const charIntimacy = intimacy[char.id];
+              return (
+                <Link
+                  key={char.id}
+                  href={`/chat/${char.id}`}
+                  className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-4 transition-all hover:border-primary/50 hover:bg-card overflow-hidden"
+                >
+                  <div className="relative flex-shrink-0">
+                    <Image
+                      src={char.avatarUrl}
+                      alt={char.nameJa}
+                      width={64}
+                      height={64}
+                      className="h-16 w-16 rounded-full object-cover"
+                    />
+                    <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h2 className="font-semibold group-hover:text-primary">
+                        {char.nameJa}
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          {char.name}
+                        </span>
+                      </h2>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {charIntimacy && charIntimacy.level > 1 && (
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} text-white`}>
+                            {charIntimacy.levelInfo.emoji} Lv{charIntimacy.level}
+                          </span>
+                        )}
+                        {lastMessages[char.id] && (
+                          <span className="text-[10px] text-muted-foreground/60">
+                            {formatRelativeTime(lastMessages[char.id].created_at)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {lastMessages[char.id]
+                        ? lastMessages[char.id].content
+                        : char.tagline}
+                    </p>
+                    {/* 親密度プログレスバー */}
+                    {charIntimacy && (
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <div className="flex-1 h-1 rounded-full bg-muted/30 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} transition-all duration-500`}
+                            style={{ width: `${charIntimacy.progress}%` }}
+                          />
+                        </div>
+                        <span className="text-[9px] text-muted-foreground/50">
+                          {charIntimacy.levelInfo.nameJa}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
 
           {/* さやゆめモード（デュオ） */}
           <Link
