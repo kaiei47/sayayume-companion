@@ -22,6 +22,9 @@ export default function ChatPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   const [userPlan, setUserPlan] = useState<string>('free');
+  const [conversationList, setConversationList] = useState<Array<{
+    id: string; title: string; message_count: number; last_message_at: string;
+  }>>([]);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // メニュー外クリックで閉じる
@@ -57,33 +60,46 @@ export default function ChatPage() {
   }, []);
 
   // 会話履歴をロード
-  useEffect(() => {
-    async function loadHistory() {
-      try {
-        const res = await fetch(`/api/conversations?character_id=${characterId}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.conversation && data.messages.length > 0) {
-            setConversationId(data.conversation.id);
-            setMessages(
-              data.messages.map((msg: { id: string; role: string; content: string; image_url?: string; created_at: string }) => ({
-                id: msg.id,
-                role: msg.role as 'user' | 'assistant',
-                content: msg.content,
-                image_url: msg.image_url,
-                created_at: msg.created_at,
-              }))
-            );
-          }
+  const loadConversation = useCallback(async (convId?: string) => {
+    setIsLoadingHistory(true);
+    try {
+      const url = convId
+        ? `/api/conversations?character_id=${characterId}&conversation_id=${convId}`
+        : `/api/conversations?character_id=${characterId}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversations) {
+          setConversationList(data.conversations);
         }
-      } catch {
-        // 履歴ロード失敗は無視（ゲストの場合など）
-      } finally {
-        setIsLoadingHistory(false);
+        if (data.conversation && data.messages.length > 0) {
+          setConversationId(data.conversation.id);
+          setMessages(
+            data.messages.map((msg: { id: string; role: string; content: string; image_url?: string; created_at: string }) => ({
+              id: msg.id,
+              role: msg.role as 'user' | 'assistant',
+              content: msg.content,
+              image_url: msg.image_url,
+              created_at: msg.created_at,
+            }))
+          );
+        } else if (!convId) {
+          // 会話がない場合（初回）
+          setConversationId(null);
+          setMessages([]);
+        }
       }
+    } catch {
+      // 履歴ロード失敗は無視（ゲストの場合など）
+    } finally {
+      setIsLoadingHistory(false);
+      setShowMenu(false);
     }
-    loadHistory();
   }, [characterId]);
+
+  useEffect(() => {
+    loadConversation();
+  }, [loadConversation]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -277,16 +293,37 @@ export default function ChatPage() {
             </svg>
           </button>
           {showMenu && (
-            <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-border/50 bg-popover shadow-lg py-1 z-50">
+            <div className="absolute right-0 top-full mt-1 w-56 rounded-xl border border-border/50 bg-popover shadow-lg py-1 z-50 max-h-80 overflow-y-auto">
               <button
                 onClick={startNewChat}
-                className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2 border-b border-border/30"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                   <path fillRule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
                 </svg>
                 新しい会話を始める
               </button>
+              {conversationList.length > 0 && (
+                <>
+                  <div className="px-4 py-1.5 text-[10px] text-muted-foreground/60 uppercase tracking-wider">
+                    過去の会話
+                  </div>
+                  {conversationList.map((conv) => (
+                    <button
+                      key={conv.id}
+                      onClick={() => loadConversation(conv.id)}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors ${
+                        conv.id === conversationId ? 'bg-muted/30 text-primary' : 'text-foreground'
+                      }`}
+                    >
+                      <p className="truncate text-xs">{conv.title || '無題の会話'}</p>
+                      <p className="text-[10px] text-muted-foreground/50 mt-0.5">
+                        {conv.message_count}メッセージ · {formatMenuTime(conv.last_message_at)}
+                      </p>
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -310,4 +347,19 @@ export default function ChatPage() {
       />
     </div>
   );
+}
+
+function formatMenuTime(dateStr: string): string {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffMin < 1) return '今';
+  if (diffMin < 60) return `${diffMin}分前`;
+  if (diffHour < 24) return `${diffHour}時間前`;
+  if (diffDay < 7) return `${diffDay}日前`;
+  return `${date.getMonth() + 1}/${date.getDate()}`;
 }

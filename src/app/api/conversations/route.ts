@@ -8,13 +8,16 @@ export async function GET(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      return Response.json({ conversation: null, messages: [] });
+      return Response.json({ conversation: null, messages: [], conversations: [] });
     }
 
     const characterId = req.nextUrl.searchParams.get('character_id') as CharacterId;
     if (!characterId) {
       return Response.json({ error: 'character_id required' }, { status: 400 });
     }
+
+    // 特定の会話IDが指定された場合はその会話を取得
+    const conversationIdParam = req.nextUrl.searchParams.get('conversation_id');
 
     // usersテーブルからDB上のuser_idを取得
     const { data: dbUser } = await supabase
@@ -24,22 +27,41 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (!dbUser) {
-      return Response.json({ conversation: null, messages: [] });
+      return Response.json({ conversation: null, messages: [], conversations: [] });
     }
 
-    // そのキャラの直近の会話を取得
-    const { data: conversation } = await supabase
+    // 会話一覧を取得（最新10件）
+    const { data: allConversations } = await supabase
       .from('conversations')
       .select('id, title, message_count, last_message_at')
       .eq('user_id', dbUser.id)
       .eq('character_id', characterId)
       .eq('is_archived', false)
       .order('last_message_at', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(10);
+
+    // 対象の会話を決定
+    let conversation = null;
+    if (conversationIdParam) {
+      // 指定されたIDの会話を取得
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('id, title, message_count, last_message_at')
+        .eq('id', conversationIdParam)
+        .eq('user_id', dbUser.id)
+        .single();
+      conversation = conv;
+    } else {
+      // 最新の会話を取得
+      conversation = allConversations?.[0] || null;
+    }
 
     if (!conversation) {
-      return Response.json({ conversation: null, messages: [] });
+      return Response.json({
+        conversation: null,
+        messages: [],
+        conversations: allConversations || [],
+      });
     }
 
     // メッセージ履歴を取得（最新50件）
@@ -53,6 +75,7 @@ export async function GET(req: NextRequest) {
     return Response.json({
       conversation,
       messages: messages || [],
+      conversations: allConversations || [],
     });
   } catch (error) {
     return Response.json({ error: String(error) }, { status: 500 });
