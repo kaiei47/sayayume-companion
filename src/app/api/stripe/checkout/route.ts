@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { stripe, PLANS, PlanType, STRIPE_PRICE_IDS } from '@/lib/stripe';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+
+function getSupabaseAdmin() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -79,8 +87,9 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // DB更新
-        await supabase
+        // DB更新（admin clientでRLSバイパス）
+        const adminDb = getSupabaseAdmin();
+        await adminDb
           .from('subscriptions')
           .update({
             plan,
@@ -89,9 +98,12 @@ export async function POST(req: NextRequest) {
           .eq('external_subscription_id', existingSub.external_subscription_id);
 
         // is_premiumフラグ更新
-        await supabase
+        await adminDb
           .from('users')
-          .update({ is_premium: plan === 'premium' })
+          .update({
+            is_premium: plan === 'premium',
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', dbUser.id);
 
         return NextResponse.json({

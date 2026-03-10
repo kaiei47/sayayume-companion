@@ -44,10 +44,11 @@ export async function POST(req: NextRequest) {
         const periodStart = firstItem?.current_period_start;
         const periodEnd = firstItem?.current_period_end;
 
-        // subscriptionsテーブルを更新
+        // subscriptionsテーブルをupsert（既存レコードがなくても対応）
         await getSupabaseAdmin()
           .from('subscriptions')
-          .update({
+          .upsert({
+            user_id: userId,
             plan,
             status: 'active',
             payment_provider: 'stripe',
@@ -56,8 +57,7 @@ export async function POST(req: NextRequest) {
             current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
             cancel_at_period_end: false,
             updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', userId);
+          }, { onConflict: 'user_id' });
 
         // ユーザーのis_premiumフラグを更新
         await getSupabaseAdmin()
@@ -110,10 +110,18 @@ export async function POST(req: NextRequest) {
         const updPeriodStart = updItem?.current_period_start;
         const updPeriodEnd = updItem?.current_period_end;
 
+        // Price IDからプラン名を逆引き
+        const updPriceId = updItem?.price?.id;
+        let updPlan: string | null = null;
+        if (updPriceId === process.env.STRIPE_BASIC_PRICE_ID) updPlan = 'basic';
+        else if (updPriceId === process.env.STRIPE_PREMIUM_PRICE_ID) updPlan = 'premium';
+        // metadataからも取得（checkout APIで設定済み）
+        if (!updPlan && subscription.metadata?.plan) updPlan = subscription.metadata.plan;
+
         // DBからサブスクを探す
         const { data: sub } = await getSupabaseAdmin()
           .from('subscriptions')
-          .select('user_id')
+          .select('user_id, plan')
           .eq('external_subscription_id', subscriptionId)
           .single();
 
@@ -123,24 +131,41 @@ export async function POST(req: NextRequest) {
             : subscription.status === 'canceled' ? 'cancelled'
             : 'expired';
 
+          // DB更新（planも含む）
+          const updateData: Record<string, unknown> = {
+            status,
+            current_period_start: updPeriodStart ? new Date(updPeriodStart * 1000).toISOString() : null,
+            current_period_end: updPeriodEnd ? new Date(updPeriodEnd * 1000).toISOString() : null,
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            updated_at: new Date().toISOString(),
+          };
+          if (updPlan) {
+            updateData.plan = updPlan;
+          }
+
           await getSupabaseAdmin()
             .from('subscriptions')
-            .update({
-              status,
-              current_period_start: updPeriodStart ? new Date(updPeriodStart * 1000).toISOString() : null,
-              current_period_end: updPeriodEnd ? new Date(updPeriodEnd * 1000).toISOString() : null,
-              cancel_at_period_end: subscription.cancel_at_period_end,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('external_subscription_id', subscriptionId);
 
-          // cancelled/expired なら is_premium を false に
+          // is_premium更新
+          const effectivePlan = updPlan || sub.plan;
           if (status === 'cancelled' || status === 'expired') {
             await getSupabaseAdmin()
               .from('users')
               .update({ is_premium: false, updated_at: new Date().toISOString() })
               .eq('id', sub.user_id);
+          } else if (status === 'active' && updPlan) {
+            await getSupabaseAdmin()
+              .from('users')
+              .update({
+                is_premium: effectivePlan === 'premium' || effectivePlan === 'vip',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', sub.user_id);
           }
+
+          console.log(`Subscription updated: user=${sub.user_id}, plan=${effectivePlan}, status=${status}`);
         }
         break;
       }
