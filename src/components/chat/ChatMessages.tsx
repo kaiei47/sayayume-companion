@@ -148,6 +148,14 @@ function TypingDots() {
   );
 }
 
+// [IMAGE: ...] タグや余分な空白をテキスト表示から除去
+function cleanDisplayText(text: string): string {
+  return text
+    .replace(/\[IMAGE:\s*[^\]]*\]/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function formatTime(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
@@ -230,7 +238,9 @@ function MessageBubble({
                   : 'bg-muted rounded-bl-md'
               )}
             >
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              <p className="whitespace-pre-wrap break-words">
+                {cleanDisplayText(message.content)}
+              </p>
             </div>
           )}
 

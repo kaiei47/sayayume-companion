@@ -12,6 +12,14 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
 
+// プラン別の制限
+const PLAN_LIMITS = {
+  free: { dailyMessages: 5, imageGeneration: false },
+  basic: { dailyMessages: -1, imageGeneration: true },
+  premium: { dailyMessages: -1, imageGeneration: true },
+  vip: { dailyMessages: -1, imageGeneration: true },
+} as const;
+
 interface ChatRequest {
   conversation_id: string | null;
   character_id: CharacterId;
@@ -35,6 +43,7 @@ export async function POST(req: NextRequest) {
     let conversation_id = body.conversation_id;
     let dbUserId: string | null = null;
     let history: { role: string; content: string }[] = [];
+    let userPlan: keyof typeof PLAN_LIMITS = 'free';
 
     if (user) {
       // 認証済みユーザー: DB保存あり
@@ -46,6 +55,50 @@ export async function POST(req: NextRequest) {
 
       if (dbUser) {
         dbUserId = dbUser.id;
+
+        // ユーザーのプランを取得
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('plan')
+          .eq('user_id', dbUser.id)
+          .eq('status', 'active')
+          .single();
+
+        if (sub) {
+          userPlan = sub.plan as keyof typeof PLAN_LIMITS;
+        }
+
+        // フリープランのメッセージ制限チェック
+        const limits = PLAN_LIMITS[userPlan] || PLAN_LIMITS.free;
+        if (limits.dailyMessages > 0) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const { count } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'user')
+            .gte('created_at', today.toISOString())
+            .in('conversation_id',
+              (await supabase
+                .from('conversations')
+                .select('id')
+                .eq('user_id', dbUser.id)
+              ).data?.map(c => c.id) || []
+            );
+
+          if ((count || 0) >= limits.dailyMessages) {
+            return new Response(
+              JSON.stringify({
+                error: 'daily_limit',
+                message: `今日のメッセージ上限（${limits.dailyMessages}回）に達しました。プランをアップグレードすると無制限にチャットできます♡`,
+                limit: limits.dailyMessages,
+                used: count,
+              }),
+              { status: 429, headers: { 'Content-Type': 'application/json' } }
+            );
+          }
+        }
 
         // 会話が無ければ新規作成
         if (!conversation_id) {
@@ -188,8 +241,9 @@ export async function POST(req: NextRequest) {
           let imageUrl: string | null = null;
           let savedContent = fullResponse;
           const { cleanText, imageDescriptions } = extractImageTags(fullResponse);
+          const canGenerateImages = PLAN_LIMITS[userPlan]?.imageGeneration !== false;
 
-          if (imageDescriptions.length > 0) {
+          if (imageDescriptions.length > 0 && canGenerateImages) {
             savedContent = cleanText;
 
             controller.enqueue(
@@ -245,6 +299,16 @@ export async function POST(req: NextRequest) {
                 )
               );
             }
+          } else if (imageDescriptions.length > 0 && !canGenerateImages) {
+            // フリープランで画像リクエスト → アップグレード案内
+            savedContent = cleanText;
+            const upgradeMsg = '\n\n写真を見るにはプランのアップグレードが必要だよ♡ ベーシックプランなら画像付きでチャットできるよ！';
+            savedContent += upgradeMsg;
+            controller.enqueue(
+              encoder.encode(
+                `event: clean_text\ndata: ${JSON.stringify({ content: savedContent })}\n\n`
+              )
+            );
           }
 
           // 認証ユーザーの場合: アシスタントメッセージをDB保存

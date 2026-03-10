@@ -95,6 +95,19 @@ export default function ChatPage() {
         });
 
         if (!response.ok) {
+          // メッセージ制限チェック
+          if (response.status === 429) {
+            const errorData = await response.json();
+            const limitMessage: ChatMessage = {
+              id: `limit-${Date.now()}`,
+              role: 'assistant',
+              content: errorData.message || '今日のメッセージ上限に達しました。プランをアップグレードしてね♡',
+              created_at: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, limitMessage]);
+            setIsLoading(false);
+            return;
+          }
           throw new Error(`API error: ${response.status}`);
         }
 

@@ -126,6 +126,17 @@ export default function Home() {
           ))}
         </div>
 
+        {/* プランリンク */}
+        <Link
+          href="/pricing"
+          className="block rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4 text-center transition-all hover:border-blue-500/50 hover:bg-blue-500/10"
+        >
+          <p className="text-sm font-medium">もっと楽しみたい？♡</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            画像生成・無制限チャット — プランを見る →
+          </p>
+        </Link>
+
         {/* ゲスト注記 */}
         {!user && (
           <p className="text-center text-xs text-muted-foreground">
