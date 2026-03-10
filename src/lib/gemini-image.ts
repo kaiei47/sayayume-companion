@@ -1,11 +1,11 @@
 /**
  * Gemini Image Generation (REST API)
- * Uses gemini-2.0-flash-preview-image-generation for chat selfie generation.
- * Cheaper than gemini-3-pro-image-preview and good enough for chat images.
+ * Uses gemini-3.1-flash-image-preview for fast, cheap chat selfie generation.
+ * $0.039/image at 1K size. Face consistency comparable to Pro.
  */
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
-const IMAGE_MODEL = 'gemini-2.0-flash-exp-image-generation';
+const IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 interface GenerateImageResult {
@@ -26,6 +26,10 @@ export async function generateImage(prompt: string): Promise<GenerateImageResult
         ],
         generationConfig: {
           responseModalities: ['TEXT', 'IMAGE'],
+          imageConfig: {
+            aspectRatio: '3:4',
+            imageSize: '1K',
+          },
         },
       }),
     });
@@ -36,10 +40,21 @@ export async function generateImage(prompt: string): Promise<GenerateImageResult
     }
 
     const data = await response.json();
-    const parts = data.candidates?.[0]?.content?.parts;
+
+    // Check for safety blocks
+    const candidate = data.candidates?.[0];
+    if (!candidate) {
+      console.error('No candidates:', data.promptFeedback);
+      return null;
+    }
+    if (candidate.finishReason === 'IMAGE_SAFETY') {
+      console.error('Image blocked by safety filter');
+      return null;
+    }
+
+    const parts = candidate.content?.parts;
     if (!parts) return null;
 
-    // Find the image part in the response
     for (const part of parts) {
       if (part.inlineData?.mimeType?.startsWith('image/')) {
         return {
@@ -84,5 +99,5 @@ export function buildImagePrompt(
   characterPromptBase: string,
   imageDescription: string
 ): string {
-  return `Generate a selfie-style photo. ${characterPromptBase}. Scene: ${imageDescription}. The image should look like a candid selfie or photo shared in a chat conversation. Soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, upper body shot, 9:16 aspect ratio.`;
+  return `Generate a selfie-style photo. ${characterPromptBase}. Scene: ${imageDescription}. The image should look like a candid selfie or photo shared in a chat conversation. Soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, upper body shot.`;
 }
