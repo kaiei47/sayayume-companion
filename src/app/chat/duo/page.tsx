@@ -18,6 +18,7 @@ interface DuoMessage {
   content: string;
   image_url?: string | null;
   created_at: string;
+  isLevelUp?: boolean;
 }
 
 /** [SAYA]...[YUME]... 形式のテキストをパースして個別メッセージに分割 */
@@ -248,6 +249,16 @@ export default function DuoChatPage() {
                 }
                 if (currentEvent === 'image_failed') {
                   setGeneratingImage(false);
+                }
+                // レベルアップ特別メッセージ
+                if (currentEvent === 'level_up_message' && data.content) {
+                  setMessages((prev) => [...prev, {
+                    id: `levelup-${Date.now()}`,
+                    role: 'saya' as const,
+                    content: data.content,
+                    created_at: new Date().toISOString(),
+                    isLevelUp: true,
+                  }]);
                 }
                 // 親密度イベント
                 if (currentEvent === 'intimacy' && data.level) {

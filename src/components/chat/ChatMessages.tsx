@@ -11,6 +11,7 @@ export interface ChatMessage {
   content: string;
   image_url?: string | null;
   created_at: string;
+  isLevelUp?: boolean;
 }
 
 interface ChatMessagesProps {
@@ -246,9 +247,16 @@ function MessageBubble({
                 'rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed',
                 isUser
                   ? 'bg-blue-600 text-white rounded-br-md'
-                  : 'bg-muted rounded-bl-md'
+                  : message.isLevelUp
+                    ? 'bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-pink-500/20 border border-pink-500/30 rounded-bl-md'
+                    : 'bg-muted rounded-bl-md'
               )}
             >
+              {message.isLevelUp && (
+                <p className="text-[10px] font-semibold text-pink-400/80 mb-1 flex items-center gap-1">
+                  <span>✨</span> Special Message
+                </p>
+              )}
               <p className="whitespace-pre-wrap break-words">
                 {cleanDisplayText(message.content)}
               </p>

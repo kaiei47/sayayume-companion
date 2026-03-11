@@ -240,6 +240,18 @@ export default function ChatPage() {
                   setStreamingContent(cleanedText);
                   setIsGeneratingImage(false);
                 }
+
+                // レベルアップ特別メッセージ
+                if (currentEvent === 'level_up_message' && data.content) {
+                  const levelUpMessage: ChatMessage = {
+                    id: `levelup-${Date.now()}`,
+                    role: 'assistant',
+                    content: data.content,
+                    created_at: new Date().toISOString(),
+                    isLevelUp: true,
+                  };
+                  setMessages((prev) => [...prev, levelUpMessage]);
+                }
               } catch {
                 // パースエラーは無視
               }

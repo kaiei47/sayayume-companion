@@ -19,6 +19,7 @@ import {
   applyIntimacyToPrompt,
   getLevelInfo,
   getLevelProgress,
+  getLevelUpMessage,
 } from '@/lib/intimacy';
 
 // 画像生成を含むため60秒に延長
@@ -324,6 +325,32 @@ export async function POST(req: NextRequest) {
                 })}\n\n`
               )
             );
+          }
+
+          // レベルアップ特別メッセージを送信（キャラがお祝いコメントを言う）
+          if (intimacyResult?.levelChanged && intimacyResult.newLevel > intimacyResult.previousLevel) {
+            const targetCharId = character_id === 'duo' ? 'saya' : character_id;
+            const levelUpMsg = getLevelUpMessage(targetCharId, intimacyResult.newLevel);
+            if (levelUpMsg) {
+              controller.enqueue(
+                encoder.encode(
+                  `event: level_up_message\ndata: ${JSON.stringify({
+                    content: levelUpMsg,
+                    level: intimacyResult.newLevel,
+                  })}\n\n`
+                )
+              );
+              // DBに保存
+              if (dbUserId && conversation_id && !conversation_id.startsWith('guest-')) {
+                await supabase.from('messages').insert({
+                  conversation_id,
+                  role: 'assistant',
+                  content: levelUpMsg,
+                  content_type: 'text',
+                  model_used: 'level_up',
+                });
+              }
+            }
           }
 
           const response = await fetch(GEMINI_API_URL, {

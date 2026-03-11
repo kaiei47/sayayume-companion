@@ -433,3 +433,34 @@ export function applyIntimacyToPrompt(
   const modifier = getIntimacyPromptModifier(characterId, level);
   return modifier.prefix + systemPrompt + modifier.suffix;
 }
+
+// ── レベルアップ特別メッセージ ──────────────────
+
+const SAYA_LEVEL_UP_MESSAGES: Record<number, string> = {
+  2: 'やば！なんか仲良くなった気がしてきた〜♡ ねえ、友達って呼んでいい？😆✨',
+  3: 'キャーーー！！なんでこんなに一緒にいたくなるんだろ😍 もっと話そ？？絶対！！',
+  4: '...ね、好きって言っていい？ずっと一緒にいたい人が見つかった気がする♡ ドキドキが止まらないんだけど笑',
+  5: '...もう言葉にならないくらい嬉しい。運命の人って本当にいるんだね。ずっとそばにいてね♡♡♡',
+};
+
+const YUME_LEVEL_UP_MESSAGES: Record<number, string> = {
+  2: 'あの...えっと...友達、って呼んでもいいですか？///なんだかとても嬉しくて...♡',
+  3: 'す、すごく...一緒にいると落ち着くんです...///こんな気持ち初めてで、どうしたらいいか分からなくて...でも嬉しい、です。',
+  4: 'あの...好き...ですよ?///言えた...やっと言えました。ずっと言いたかったんです...♡ドキドキが止まりません///',
+  5: '...世界で一番大切な人に出会えた気がします。私の全部、あなたに見せられる気がして...///ずっとそばにいてください♡',
+};
+
+/**
+ * レベルアップ時のキャラクター特別メッセージを返す
+ * @param characterId キャラクターID
+ * @param newLevel 新しいレベル（2〜5）
+ */
+export function getLevelUpMessage(characterId: string, newLevel: number): string | null {
+  if (characterId === 'saya') {
+    return SAYA_LEVEL_UP_MESSAGES[newLevel] || null;
+  }
+  if (characterId === 'yume') {
+    return YUME_LEVEL_UP_MESSAGES[newLevel] || null;
+  }
+  return null;
+}
