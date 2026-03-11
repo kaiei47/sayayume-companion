@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const APP_URL = process.env.APP_URL || "https://sayayume-companion.vercel.app";
+const APP_URL = process.env.APP_URL || "https://www.sayayume.com";
 
 export const metadata: Metadata = {
   title: {

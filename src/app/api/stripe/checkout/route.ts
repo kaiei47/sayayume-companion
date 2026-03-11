@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       .eq('status', 'active')
       .single();
 
-    const origin = req.headers.get('origin') || 'http://localhost:3000';
+    const origin = req.headers.get('origin') || 'https://www.sayayume.com';
 
     if (existingSub?.external_subscription_id) {
       // 既存サブスクがある → プラン変更（Stripe Subscription Update）

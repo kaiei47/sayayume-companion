@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const subscription = await stripe.subscriptions.retrieve(sub.external_subscription_id);
     const customerId = subscription.customer as string;
 
-    const origin = req.headers.get('origin') || 'http://localhost:3000';
+    const origin = req.headers.get('origin') || 'https://www.sayayume.com';
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/pricing`,

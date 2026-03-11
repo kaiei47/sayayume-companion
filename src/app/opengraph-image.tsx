@@ -121,7 +121,7 @@ export default function Image() {
             display: 'flex',
           }}
         >
-          sayayume-companion.vercel.app
+          www.sayayume.com
         </div>
       </div>
     ),
