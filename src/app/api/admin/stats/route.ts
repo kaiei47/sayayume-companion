@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 
-const ADMIN_EMAILS = ['yoshihide.maruyama@gmail.com'];
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'yoshihide.maruyama@gmail.com').split(',').map(e => e.trim());
 
 export async function GET() {
   // Auth check: verify requesting user is admin

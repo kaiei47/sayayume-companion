@@ -12,10 +12,18 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'Invalid subscription' }, { status: 400 });
     }
 
-    await supabase.from('push_subscriptions').upsert(
-      { user_id: user.id, subscription, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id,subscription->endpoint' }
-    );
+    // Delete any existing subscription with the same endpoint for this user, then insert fresh
+    // (avoids functional-index onConflict issues with PostgREST)
+    await supabase.from('push_subscriptions')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('subscription->>endpoint', (subscription as { endpoint: string }).endpoint);
+
+    await supabase.from('push_subscriptions').insert({
+      user_id: user.id,
+      subscription,
+      updated_at: new Date().toISOString(),
+    });
 
     return Response.json({ ok: true });
   } catch (e) {

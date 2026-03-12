@@ -78,6 +78,7 @@ export async function GET(req: NextRequest) {
       conversations: allConversations || [],
     });
   } catch (error) {
-    return Response.json({ error: String(error) }, { status: 500 });
+    console.error('conversations API error:', error);
+    return Response.json({ error: 'Failed to load conversations' }, { status: 500 });
   }
 }

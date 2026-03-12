@@ -69,8 +69,20 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    const body: ChatRequest = await req.json();
+    let body: ChatRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
     const { character_id, message } = body;
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return new Response(JSON.stringify({ error: 'Message is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (message.length > 2000) {
+      return new Response(JSON.stringify({ error: 'Message too long (max 2000 chars)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
 
     const character = getCharacter(character_id);
     if (!character) {
@@ -99,8 +111,9 @@ export async function POST(req: NextRequest) {
         dbUserId = dbUser.id;
         userName = (dbUser as { id: string; display_name: string | null }).display_name || null;
 
-        // Update last_active_at for re-engagement push targeting
-        supabase.from('users').update({ last_active_at: new Date().toISOString() }).eq('id', dbUser.id).then(() => {});
+        // Update last_active_at for re-engagement push targeting (fire-and-forget)
+        supabase.from('users').update({ last_active_at: new Date().toISOString() }).eq('id', dbUser.id)
+          .then(({ error }) => { if (error) console.error('last_active_at update failed:', error.message); });
 
         // ユーザーのプランを取得
         const { data: sub } = await supabase
@@ -153,7 +166,7 @@ export async function POST(req: NextRequest) {
             .insert({
               user_id: dbUserId,
               character_id,
-              title: message.slice(0, 50),
+              title: [...message].slice(0, 30).join(''),
               mood: 'neutral',
             })
             .select('id')

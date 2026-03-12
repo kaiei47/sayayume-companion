@@ -39,15 +39,19 @@ export async function GET(req: NextRequest) {
 
     const { data: messages } = await query;
 
-    const images = (messages || []).map((m) => ({
-      id: m.id,
-      url: m.image_url,
-      created_at: m.created_at,
-      character_id: (m.conversations as unknown as { character_id: string; user_id: string }).character_id,
-    }));
+    const images = (messages || []).map((m) => {
+      const conv = m.conversations as { character_id?: string; user_id?: string } | null;
+      return {
+        id: m.id,
+        url: m.image_url,
+        created_at: m.created_at,
+        character_id: conv?.character_id ?? '',
+      };
+    }).filter(img => img.character_id);
 
     return Response.json({ images });
   } catch (error) {
-    return Response.json({ error: String(error) }, { status: 500 });
+    console.error('images API error:', error);
+    return Response.json({ error: 'Failed to load images' }, { status: 500 });
   }
 }
