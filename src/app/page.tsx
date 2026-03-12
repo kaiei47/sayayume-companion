@@ -101,7 +101,7 @@ function LandingPage() {
     <div className="min-h-dvh bg-background text-foreground overflow-x-hidden">
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border/20">
-        <SayayumeLogo size="sm" />
+        <SayayumeLogo size="md" />
         <div className="flex items-center gap-3">
           <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
             ログイン
@@ -450,7 +450,7 @@ function Dashboard({
     <div className="min-h-dvh bg-background text-foreground">
       {/* Top nav */}
       <div className="flex items-center justify-between px-4 pt-safe pb-3 pt-4 max-w-md mx-auto">
-        <SayayumeLogo size="sm" />
+        <SayayumeLogo size="md" />
         <div className="flex items-center gap-3">
           <Link href="/pricing" className="text-[11px] text-muted-foreground bg-card/50 border border-border/30 px-2.5 py-1 rounded-full hover:bg-card transition-colors">
             プラン
