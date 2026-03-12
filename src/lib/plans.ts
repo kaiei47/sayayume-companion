@@ -2,13 +2,13 @@
 export const PLANS = {
   free: {
     name: 'Free',
-    nameJa: 'フリー',
+    nameJa: 'Free',
     price: 0,
     priceLabel: '¥0',
     features: [
-      '1日5メッセージ',
-      'テキストチャットのみ',
-      '画像生成なし',
+      '5 messages/day',
+      'Text chat only',
+      'No image generation',
     ],
     limits: {
       dailyMessages: 5,
@@ -18,14 +18,14 @@ export const PLANS = {
   },
   basic: {
     name: 'Basic',
-    nameJa: 'ベーシック',
+    nameJa: 'Basic',
     price: 1980,
-    priceLabel: '¥1,980/月',
+    priceLabel: '¥1,980/mo',
     features: [
-      '無制限メッセージ',
-      '画像生成（1日20枚）',
-      '会話履歴の保存',
-      '2キャラ（さや＆ゆめ）',
+      'Unlimited messages',
+      '20 AI photos/day',
+      'Chat history',
+      'Saya & Yume',
     ],
     limits: {
       dailyMessages: -1, // unlimited
@@ -36,15 +36,15 @@ export const PLANS = {
   },
   premium: {
     name: 'Premium',
-    nameJa: 'プレミアム',
+    nameJa: 'Premium',
     price: 4980,
-    priceLabel: '¥4,980/月',
+    priceLabel: '¥4,980/mo',
     features: [
-      '無制限メッセージ',
-      '画像生成（1日50枚）',
-      '音声メッセージ',
-      '優先レスポンス',
-      '限定コンテンツ',
+      'Unlimited messages',
+      '50 AI photos/day',
+      'Voice messages',
+      'Priority response',
+      'Exclusive content',
     ],
     limits: {
       dailyMessages: -1,

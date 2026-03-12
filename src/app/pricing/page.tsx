@@ -127,21 +127,21 @@ function PricingContent() {
         {/* ヘッダー */}
         <div className="text-center mb-8">
           <a href="/" className="text-muted-foreground hover:text-foreground text-sm mb-4 inline-block">
-            ← トップに戻る
+            ← Back
           </a>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">料金プラン</h1>
-          <p className="text-muted-foreground">さや＆ゆめともっと楽しく♡</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Plans</h1>
+          <p className="text-muted-foreground">Unlock more with Saya & Yume ♡</p>
         </div>
 
         {/* 成功/キャンセル通知 */}
         {showSuccess && (
           <div className="mb-6 rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-center text-green-400 text-sm">
-            サブスクリプションが開始されました！♡
+            Subscription started! ♡
           </div>
         )}
         {showCanceled && (
           <div className="mb-6 rounded-xl bg-yellow-500/10 border border-yellow-500/20 p-4 text-center text-yellow-400 text-sm">
-            決済がキャンセルされました
+            Payment canceled
           </div>
         )}
 
@@ -169,12 +169,12 @@ function PricingContent() {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
                       <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
                     </svg>
-                    現在のプラン
+                    Current plan
                   </div>
                 )}
                 {!isCurrent && popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-0.5 text-xs font-medium text-white">
-                    人気
+                    Popular
                   </div>
                 )}
 
@@ -182,10 +182,10 @@ function PricingContent() {
                   <h3 className="text-lg font-semibold">{plan.nameJa}</h3>
                   <div className="mt-2">
                     <span className="text-3xl font-bold">
-                      {plan.price === 0 ? '無料' : `¥${plan.price.toLocaleString()}`}
+                      {plan.price === 0 ? 'Free' : `¥${plan.price.toLocaleString()}`}
                     </span>
                     {plan.price > 0 && (
-                      <span className="text-sm text-muted-foreground">/月</span>
+                      <span className="text-sm text-muted-foreground">/mo</span>
                     )}
                   </div>
                 </div>
@@ -214,7 +214,7 @@ function PricingContent() {
                   <div
                     className="w-full rounded-xl py-2.5 text-sm font-medium bg-green-500/10 text-green-400 text-center border border-green-500/20"
                   >
-                    ご利用中
+                    Active
                   </div>
                 ) : key === 'free' ? (
                   hasActiveSub ? (
@@ -223,7 +223,7 @@ function PricingContent() {
                       disabled={loading !== null}
                       className="w-full rounded-xl py-2.5 text-sm font-medium border border-border/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
                     >
-                      {loading ? '処理中...' : '解約する'}
+                      {loading ? 'Loading...' : 'Cancel plan'}
                     </button>
                   ) : null
                 ) : (
@@ -237,10 +237,10 @@ function PricingContent() {
                     } disabled:opacity-50`}
                   >
                     {loading === key
-                      ? '処理中...'
+                      ? 'Loading...'
                       : hasActiveSub
-                        ? 'プランを変更'
-                        : `${plan.nameJa}にアップグレード`}
+                        ? 'Change plan'
+                        : `Upgrade to ${plan.name}`}
                   </button>
                 )}
               </div>
@@ -251,14 +251,14 @@ function PricingContent() {
         {/* フッター */}
         <div className="mt-8 text-center space-y-2">
           <p className="text-xs text-muted-foreground">
-            いつでもキャンセル可能 · 日割り返金なし · 18歳以上限定
+            Cancel anytime · No prorated refunds · 18+ only
           </p>
           {currentPlan !== 'free' && (
             <button
               onClick={handleManage}
               className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
             >
-              サブスクリプションを管理
+              Manage subscription
             </button>
           )}
         </div>

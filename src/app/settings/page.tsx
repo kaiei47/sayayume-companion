@@ -101,7 +101,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground text-sm">読み込み中...</div>
+        <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
       </div>
     );
   }
@@ -114,26 +114,26 @@ export default function SettingsPage() {
         {/* ヘッダー */}
         <div>
           <a href="/" className="text-muted-foreground hover:text-foreground text-sm mb-4 inline-block">
-            ← トップに戻る
+            ← Back
           </a>
-          <h1 className="text-2xl font-bold tracking-tight">設定</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         </div>
 
         {/* アカウント情報 */}
         <div className="rounded-2xl border border-border/50 bg-card/50 p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">アカウント</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Account</h2>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">メール</span>
+            <span className="text-sm text-muted-foreground">Email</span>
             <span className="text-sm truncate max-w-[200px]">{user?.email}</span>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm text-muted-foreground">ニックネーム</label>
+            <label className="text-sm text-muted-foreground">Nickname</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                placeholder="さやとゆめに呼んでもらう名前"
+                placeholder="Your name for Saya & Yume"
                 maxLength={20}
                 className="flex-1 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
               />
@@ -142,28 +142,28 @@ export default function SettingsPage() {
                 disabled={nicknameSaving}
                 className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-50 transition-colors min-w-[56px]"
               >
-                {nicknameSaved ? '✓' : nicknameSaving ? '...' : '保存'}
+                {nicknameSaved ? '✓' : nicknameSaving ? '...' : 'Save'}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">設定すると、さやとゆめがこの名前で呼んでくれます♡</p>
+            <p className="text-xs text-muted-foreground">Saya & Yume will call you by this name ♡</p>
           </div>
         </div>
 
         {/* サブスクリプション */}
         <div className="rounded-2xl border border-border/50 bg-card/50 p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">プラン</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Plan</h2>
 
           <div className="flex items-center justify-between">
             <div>
               <span className="text-lg font-bold">{plan.nameJa}</span>
               {subscription?.plan !== 'free' && (
                 <span className="ml-2 text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
-                  アクティブ
+                  Active
                 </span>
               )}
             </div>
             <span className="text-lg font-bold">
-              {plan.price === 0 ? '無料' : `¥${plan.price.toLocaleString()}/月`}
+              {plan.price === 0 ? 'Free' : `¥${plan.price.toLocaleString()}/mo`}
             </span>
           </div>
 
@@ -183,8 +183,8 @@ export default function SettingsPage() {
           {subscription?.current_period_end && (
             <p className="text-xs text-muted-foreground">
               {subscription.cancel_at_period_end
-                ? `${new Date(subscription.current_period_end).toLocaleDateString('ja-JP')} に終了予定`
-                : `次回更新: ${new Date(subscription.current_period_end).toLocaleDateString('ja-JP')}`}
+                ? `Ends on ${new Date(subscription.current_period_end).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`
+                : `Next renewal: ${new Date(subscription.current_period_end).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
             </p>
           )}
 
@@ -195,7 +195,7 @@ export default function SettingsPage() {
                 href="/pricing"
                 className="flex-1 rounded-xl bg-blue-600 text-white py-2.5 text-sm font-medium text-center hover:bg-blue-500 transition-colors"
               >
-                プランをアップグレード
+                Upgrade Plan
               </a>
             ) : (
               <button
@@ -203,7 +203,7 @@ export default function SettingsPage() {
                 disabled={portalLoading}
                 className="flex-1 rounded-xl border border-border/50 py-2.5 text-sm font-medium hover:bg-muted/50 transition-colors disabled:opacity-50"
               >
-                {portalLoading ? '処理中...' : 'サブスクリプションを管理'}
+                {portalLoading ? 'Loading...' : 'Manage Subscription'}
               </button>
             )}
           </div>
@@ -214,13 +214,13 @@ export default function SettingsPage() {
           onClick={handleLogout}
           className="w-full rounded-2xl border border-red-500/30 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
         >
-          ログアウト
+          Sign Out
         </button>
 
         {/* フッター */}
         <div className="text-center space-y-1 pt-4">
           <p className="text-xs text-muted-foreground">さやゆめ v0.1.0</p>
-          <p className="text-xs text-muted-foreground">18歳以上限定 · AI生成コンテンツ</p>
+          <p className="text-xs text-muted-foreground">18+ only · AI-generated content</p>
         </div>
       </div>
     </div>

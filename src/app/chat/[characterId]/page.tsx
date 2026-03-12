@@ -294,7 +294,7 @@ export default function ChatPage() {
   if (!character) {
     return (
       <div className="flex h-dvh items-center justify-center">
-        <p>キャラクターが見つかりません</p>
+        <p>Character not found</p>
       </div>
     );
   }
@@ -327,7 +327,7 @@ export default function ChatPage() {
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              <p className="text-[11px] text-green-400/80">オンライン</p>
+              <p className="text-[11px] text-green-400/80">Online</p>
               {intimacyInfo && (
                 <div className="flex items-center gap-1">
                   <div className="w-12 h-1 rounded-full bg-muted/30 overflow-hidden">
@@ -370,12 +370,12 @@ export default function ChatPage() {
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                   <path fillRule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
                 </svg>
-                新しい会話を始める
+                New conversation
               </button>
               {conversationList.length > 0 && (
                 <>
                   <div className="px-4 py-1.5 text-[10px] text-muted-foreground/60 uppercase tracking-wider">
-                    過去の会話
+                    Previous chats
                   </div>
                   {conversationList.map((conv) => (
                     <button
@@ -385,9 +385,9 @@ export default function ChatPage() {
                         conv.id === conversationId ? 'bg-muted/30 text-primary' : 'text-foreground'
                       }`}
                     >
-                      <p className="truncate text-xs">{conv.title || '無題の会話'}</p>
+                      <p className="truncate text-xs">{conv.title || 'Untitled chat'}</p>
                       <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-                        {conv.message_count}メッセージ · {formatMenuTime(conv.last_message_at)}
+                        {conv.message_count} msgs · {formatMenuTime(conv.last_message_at)}
                       </p>
                     </button>
                   ))}
@@ -426,7 +426,7 @@ export default function ChatPage() {
       <ChatInput
         onSend={sendMessage}
         disabled={isLoading}
-        placeholder={`${character.nameJa}にメッセージ...`}
+        placeholder={`Message ${character.nameJa}...`}
       />
     </div>
   );
@@ -440,9 +440,9 @@ function formatMenuTime(dateStr: string): string {
   const diffMin = Math.floor(diffMs / 60000);
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
-  if (diffMin < 1) return '今';
-  if (diffMin < 60) return `${diffMin}分前`;
-  if (diffHour < 24) return `${diffHour}時間前`;
-  if (diffDay < 7) return `${diffDay}日前`;
+  if (diffMin < 1) return 'now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
