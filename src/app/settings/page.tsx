@@ -19,6 +19,10 @@ export default function SettingsPage() {
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [nickname, setNickname] = useState('');
+  const [nicknameSaving, setNicknameSaving] = useState(false);
+  const [nicknameSaved, setNicknameSaved] = useState(false);
+  const [dbUserId, setDbUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -34,11 +38,14 @@ export default function SettingsPage() {
 
       const { data: dbUser } = await supabase
         .from('users')
-        .select('id')
+        .select('id, display_name')
         .eq('auth_id', user.id)
         .single();
 
       if (dbUser) {
+        setDbUserId(dbUser.id);
+        setNickname((dbUser as { id: string; display_name: string | null }).display_name || '');
+
         const { data: sub } = await supabase
           .from('subscriptions')
           .select('plan, status, current_period_end, cancel_at_period_end')
@@ -57,6 +64,16 @@ export default function SettingsPage() {
     }
     loadData();
   }, [router]);
+
+  const handleSaveNickname = async () => {
+    if (!dbUserId) return;
+    setNicknameSaving(true);
+    const supabase = createClient();
+    await supabase.from('users').update({ display_name: nickname.trim() || null }).eq('id', dbUserId);
+    setNicknameSaving(false);
+    setNicknameSaved(true);
+    setTimeout(() => setNicknameSaved(false), 2000);
+  };
 
   const handleManageSubscription = async () => {
     setPortalLoading(true);
@@ -103,11 +120,32 @@ export default function SettingsPage() {
         </div>
 
         {/* アカウント情報 */}
-        <div className="rounded-2xl border border-border/50 bg-card/50 p-5 space-y-3">
+        <div className="rounded-2xl border border-border/50 bg-card/50 p-5 space-y-4">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">アカウント</h2>
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">メール</span>
             <span className="text-sm truncate max-w-[200px]">{user?.email}</span>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm text-muted-foreground">ニックネーム</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="さやとゆめに呼んでもらう名前"
+                maxLength={20}
+                className="flex-1 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
+              />
+              <button
+                onClick={handleSaveNickname}
+                disabled={nicknameSaving}
+                className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-50 transition-colors min-w-[56px]"
+              >
+                {nicknameSaved ? '✓' : nicknameSaving ? '...' : '保存'}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">設定すると、さやとゆめがこの名前で呼んでくれます♡</p>
           </div>
         </div>
 

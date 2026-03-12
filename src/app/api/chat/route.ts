@@ -85,17 +85,19 @@ export async function POST(req: NextRequest) {
     let userPlan: keyof typeof PLAN_LIMITS = 'free';
     let intimacyLevel = 1;
     let intimacyResult: { newLevel: number; newPoints: number; levelChanged: boolean; previousLevel: number } | null = null;
+    let userName: string | null = null;
 
     if (user) {
       // 認証済みユーザー: DB保存あり
       const { data: dbUser } = await supabase
         .from('users')
-        .select('id')
+        .select('id, display_name')
         .eq('auth_id', user.id)
         .single();
 
       if (dbUser) {
         dbUserId = dbUser.id;
+        userName = (dbUser as { id: string; display_name: string | null }).display_name || null;
 
         // ユーザーのプランを取得
         const { data: sub } = await supabase
@@ -281,8 +283,12 @@ export async function POST(req: NextRequest) {
     }
 
     // 親密度に応じたシステムプロンプトを構築
+    let basePrompt = character.systemPrompt;
+    if (userName) {
+      basePrompt = `【ユーザー名】相手の名前は「${userName}」。必ずこの名前で呼ぶこと。\n\n` + basePrompt;
+    }
     const intimacyAwarePrompt = applyIntimacyToPrompt(
-      character.systemPrompt,
+      basePrompt,
       character_id,
       intimacyLevel
     );
