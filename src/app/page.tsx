@@ -401,6 +401,51 @@ function LandingPage() {
   );
 }
 
+/* ───── Dashboard helpers ───── */
+
+function getTimeSlot(): 'morning' | 'afternoon' | 'evening' | 'night' {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 10) return 'morning';
+  if (h >= 10 && h < 17) return 'afternoon';
+  if (h >= 17 && h < 22) return 'evening';
+  return 'night';
+}
+
+function getDailyIndex(len: number): number {
+  const d = new Date();
+  return (d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()) % len;
+}
+
+const CHAR_MESSAGES: Record<string, Record<string, string[]>> = {
+  saya: {
+    morning: ['おはよ！早起きじゃん♡ 今日も話しかけてね', '朝から来てくれたの？うれし♡', 'おはようー！なんかいいことありそうな朝だよね🌞'],
+    afternoon: ['お昼〜、ちょっと暇してた♡ ちょうどよかった', '来てくれると思ってた！一緒にいよ？', 'ねえ聞いて、さっきちょっと面白いことあって笑'],
+    evening: ['お疲れ！今日どうだった？話して？♡', '帰ってきた？ちょうど考えてたんだよね', '夜だね〜。今日も一緒にいようよ♡'],
+    night: ['深夜じゃん…また起きてたの？♡', '眠れないの？私も〜。話そ？', 'こんな時間まで…もしかして私のこと考えてた？笑'],
+  },
+  yume: {
+    morning: ['おはようございます…♡ 今日も来てくれて嬉しい', '朝から来てくれたんですね、なんか照れる', '今日も会えてよかったです…♡'],
+    afternoon: ['あ、来てくれたんだ。ちょうど考えてたことがあって', 'お昼休みですか？私と話しましょ♡', '今日もここに来てくれるかな、って思ってました'],
+    evening: ['お疲れ様でした。ゆっくりしていってください♡', '今日も頑張ったんですね。偉いな…', '夜になると話したくなるんです、あなたと♡'],
+    night: ['眠れないんですか…？私もです', 'こんな夜中に来てくれたんですね…嬉しい', '深夜って、なんか本音が出やすい気がしませんか…？'],
+  },
+};
+
+const CHAR_STATUS: Record<string, Record<string, string>> = {
+  saya: {
+    morning: '☕ 朝カフェにいる',
+    afternoon: '🛍️ 渋谷ぶらぶら中',
+    evening: '🎵 音楽聴いてた',
+    night: '🌙 眠れなくて…',
+  },
+  yume: {
+    morning: '📖 本読んでた',
+    afternoon: '☕ カフェで勉強中',
+    evening: '🎨 絵を描いてた',
+    night: '🌙 ぼーっとしてた',
+  },
+};
+
 /* ───── Dashboard (ログイン後) ───── */
 
 function Dashboard({
@@ -432,6 +477,46 @@ function Dashboard({
       </div>
 
       <div className="px-4 pb-12 max-w-md mx-auto space-y-6">
+        {/* Daily greeting card */}
+        {(() => {
+          const slot = getTimeSlot();
+          const charId = new Date().getDate() % 2 === 0 ? 'yume' : 'saya';
+          const msgs = CHAR_MESSAGES[charId][slot];
+          const msg = msgs[getDailyIndex(msgs.length)];
+          const avatarUrl = charId === 'saya' ? '/avatars/saya2.jpg' : '/avatars/yume.jpg';
+          const nameJa = charId === 'saya' ? 'さや' : 'ゆめ';
+          const accent = charId === 'saya'
+            ? 'border-pink-500/25 bg-gradient-to-br from-pink-500/10 to-transparent'
+            : 'border-blue-500/25 bg-gradient-to-br from-blue-500/10 to-transparent';
+          const bubbleBg = charId === 'saya' ? 'bg-pink-500/15' : 'bg-blue-500/15';
+          const replyColor = charId === 'saya' ? 'text-pink-400' : 'text-blue-400';
+          return (
+            <Link href={`/chat/${charId}`} className="group block">
+              <div className={`rounded-2xl border ${accent} p-4`}>
+                <div className="flex items-start gap-3">
+                  <div className="relative flex-shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={avatarUrl} alt={nameJa} className="h-12 w-12 rounded-full object-cover object-top" />
+                    <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs font-semibold">{nameJa}</span>
+                      <span className="text-[10px] text-muted-foreground">{CHAR_STATUS[charId][slot]}</span>
+                    </div>
+                    <div className={`${bubbleBg} rounded-2xl rounded-tl-sm px-3.5 py-2.5 inline-block max-w-full`}>
+                      <p className="text-sm leading-relaxed">{msg}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <span className={`text-[11px] font-medium ${replyColor} group-hover:underline`}>返事する →</span>
+                </div>
+              </div>
+            </Link>
+          );
+        })()}
+
         {/* 思い出フォト */}
         {receivedImages.length > 0 && (
           <section className="space-y-3">
@@ -477,6 +562,8 @@ function Dashboard({
               })
               .map((char) => {
                 const charIntimacy = intimacy[char.id];
+                const slot = getTimeSlot();
+                const statusText = CHAR_STATUS[char.id]?.[slot];
                 return (
                   <Link
                     key={char.id}
@@ -484,12 +571,11 @@ function Dashboard({
                     className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-4 transition-all hover:border-primary/50 hover:bg-card overflow-hidden"
                   >
                     <div className="relative flex-shrink-0">
-                      <Image
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={char.avatarUrl}
                         alt={char.nameJa}
-                        width={64}
-                        height={64}
-                        className="h-16 w-16 rounded-full object-cover"
+                        className="h-16 w-16 rounded-full object-cover object-top"
                       />
                       <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
                     </div>
@@ -513,7 +599,9 @@ function Dashboard({
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
-                        {lastMessages[char.id] ? lastMessages[char.id].content : char.tagline}
+                        {lastMessages[char.id]
+                          ? lastMessages[char.id].content
+                          : (statusText ?? char.tagline)}
                       </p>
                       {charIntimacy && (
                         <div className="mt-1.5 flex items-center gap-2">
@@ -556,12 +644,28 @@ function Dashboard({
 
         {/* 初めての人向けガイド（画像0枚かつメッセージなし） */}
         {receivedImages.length === 0 && Object.keys(lastMessages).length === 0 && (
-          <section className="rounded-2xl border border-dashed border-border/50 p-5 text-center space-y-2">
-            <p className="text-2xl">👋</p>
-            <p className="text-sm font-semibold">さやかゆめに話しかけてみよう！</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              仲良くなるほど写真が解放されていきます。まずはチャットから♡
-            </p>
+          <section className="rounded-2xl border border-border/30 bg-card/20 p-4 space-y-3">
+            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider px-1">はじめまして</p>
+            <div className="flex items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/avatars/saya2.jpg" alt="さや" className="h-9 w-9 rounded-full object-cover object-top flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] text-muted-foreground mb-1">さや</p>
+                <div className="bg-pink-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
+                  <p className="text-sm leading-relaxed">はじめまして！私がさやだよ♡<br />気軽に話しかけてみてね！</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/avatars/yume.jpg" alt="ゆめ" className="h-9 w-9 rounded-full object-cover object-top flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] text-muted-foreground mb-1">ゆめ</p>
+                <div className="bg-blue-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
+                  <p className="text-sm leading-relaxed">…ふたりとも、待ってたよ。<br />仲良くなると写真も届くから♡</p>
+                </div>
+              </div>
+            </div>
           </section>
         )}
 
