@@ -115,16 +115,22 @@ export async function POST(req: NextRequest) {
         supabase.from('users').update({ last_active_at: new Date().toISOString() }).eq('id', dbUser.id)
           .then(({ error }) => { if (error) console.error('last_active_at update failed:', error.message); });
 
-        // ユーザーのプランを取得
-        const { data: sub } = await supabase
-          .from('subscriptions')
-          .select('plan')
-          .eq('user_id', dbUser.id)
-          .eq('status', 'active')
-          .single();
+        // 管理者アカウントはpremium扱い（Stripe不要）
+        const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+        if (user.email && adminEmails.includes(user.email)) {
+          userPlan = 'premium';
+        } else {
+          // ユーザーのプランを取得
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('plan')
+            .eq('user_id', dbUser.id)
+            .eq('status', 'active')
+            .single();
 
-        if (sub) {
-          userPlan = sub.plan as keyof typeof PLAN_LIMITS;
+          if (sub) {
+            userPlan = sub.plan as keyof typeof PLAN_LIMITS;
+          }
         }
 
         // フリープランのメッセージ制限チェック
