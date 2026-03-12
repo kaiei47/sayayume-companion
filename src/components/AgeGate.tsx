@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import SayayumeLogo from '@/components/SayayumeLogo';
 
 export default function AgeGate({ children }: { children: React.ReactNode }) {
   const [verified, setVerified] = useState<boolean | null>(null);
@@ -23,8 +24,8 @@ export default function AgeGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6 text-center">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">さやゆめ</h1>
+        <div className="flex flex-col items-center gap-2">
+          <SayayumeLogo size="lg" />
           <p className="text-muted-foreground text-sm">AI彼女</p>
         </div>
 
