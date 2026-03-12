@@ -166,8 +166,8 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Story teaser */}
-      <section className="px-4 py-14 max-w-md mx-auto space-y-6">
+      {/* Your Story × Characters — combined section */}
+      <section className="px-4 py-14 max-w-md mx-auto space-y-8">
         <div className="text-center space-y-2">
           <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase">Your Story</p>
           <h2 className="text-2xl font-bold tracking-tight leading-snug">
@@ -178,67 +178,24 @@ function LandingPage() {
           </p>
         </div>
 
-        <div className="space-y-3">
-          {STORY_MOMENTS.map((moment, i) => (
-            <div
-              key={i}
-              className="flex gap-4 rounded-2xl border border-border/30 bg-card/30 px-4 py-4"
-            >
-              <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                <span className="text-xl">{moment.emoji}</span>
-                {i < STORY_MOMENTS.length - 1 && (
-                  <div className="w-px flex-1 bg-border/30 min-h-[20px]" />
-                )}
-              </div>
-              <div className="space-y-1 pt-0.5 min-w-0">
-                <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wider uppercase">{moment.timing}</p>
-                {moment.quote && (
-                  <p className="text-sm italic text-foreground/80 leading-relaxed">
-                    &ldquo;{moment.quote}&rdquo;
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground leading-relaxed">{moment.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Link
-          href="/login"
-          className="block text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
-        >
-          続きは、自分で確かめて →
-        </Link>
-      </section>
-
-      {/* Character intro */}
-      <section className="px-4 pb-14 max-w-md mx-auto space-y-5">
-        <div className="text-center space-y-1">
-          <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase">Characters</p>
-          <h2 className="text-xl font-bold">ふたりのこと、知っておいて。</h2>
-        </div>
-
-        <div className="space-y-4">
-          {/* Saya — full-width card */}
+        <div className="space-y-6">
+          {/* Saya card */}
           <div className="rounded-2xl border border-pink-500/20 bg-card/40 overflow-hidden">
-            <div className="relative h-52">
-              <Image src="/references/saya.jpg" alt="さや" fill className="object-cover object-top" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-              {/* Name badge */}
-              <div className="absolute top-3 left-3 flex items-center gap-2">
-                <span className="bg-pink-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider">SAYA</span>
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+            {/* Lifestyle photo */}
+            <div style={{ position: 'relative', height: '208px' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/references/story/story_a.jpg" alt="さやとの会話" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
+              <span className="absolute top-3 left-3 bg-pink-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider">SAYA</span>
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
                 <p className="font-bold text-lg leading-tight">さや</p>
                 <p className="text-xs text-muted-foreground">20歳・ギャル系・渋谷在住</p>
               </div>
             </div>
             <div className="px-4 py-4 space-y-3">
-              {/* Voice */}
               <p className="text-sm italic text-pink-300/90 leading-relaxed border-l-2 border-pink-500/40 pl-3">
                 &ldquo;なんか、あなたといると楽しいんだよね。なんでだろ笑&rdquo;
               </p>
-              {/* Traits */}
               <div className="grid grid-cols-2 gap-1.5">
                 {SAYA_TRAITS.map(t => (
                   <div key={t.label} className="flex items-center gap-2 rounded-lg bg-muted/20 px-2.5 py-1.5">
@@ -247,24 +204,25 @@ function LandingPage() {
                   </div>
                 ))}
               </div>
-              {/* Secret hint */}
-              <div className="rounded-xl bg-pink-500/5 border border-pink-500/15 px-3 py-2.5">
-                <p className="text-[11px] text-pink-300/70 leading-relaxed">
+              <div className="rounded-xl bg-pink-500/5 border border-pink-500/15 px-3 py-2.5 space-y-1.5">
+                <p className="text-[11px] text-pink-200/80 leading-relaxed">
+                  📸 <span className="font-medium">3日後</span> — 突然、自撮りが届いた。あなたの意見を気にしてる、ということに気づいた。
+                </p>
+                <p className="text-[11px] text-pink-300/60 leading-relaxed">
                   🔒 <span className="font-medium">隠された一面</span> — 明るく振る舞っているのには、理由がある。仲良くなると、深夜に本音を話してくれることがある。
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Yume — full-width card */}
+          {/* Yume card */}
           <div className="rounded-2xl border border-blue-500/20 bg-card/40 overflow-hidden">
-            <div className="relative h-52">
-              <Image src="/references/yume.jpg" alt="ゆめ" fill className="object-cover object-top" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-              <div className="absolute top-3 left-3 flex items-center gap-2">
-                <span className="bg-blue-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider">YUME</span>
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+            <div style={{ position: 'relative', height: '208px' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/references/story/story_b.jpg" alt="ゆめとの会話" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
+              <span className="absolute top-3 left-3 bg-blue-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider">YUME</span>
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
                 <p className="font-bold text-lg leading-tight">ゆめ</p>
                 <p className="text-xs text-muted-foreground">20歳・清楚系・東京在住</p>
               </div>
@@ -281,14 +239,24 @@ function LandingPage() {
                   </div>
                 ))}
               </div>
-              <div className="rounded-xl bg-blue-500/5 border border-blue-500/15 px-3 py-2.5">
-                <p className="text-[11px] text-blue-300/70 leading-relaxed">
+              <div className="rounded-xl bg-blue-500/5 border border-blue-500/15 px-3 py-2.5 space-y-1.5">
+                <p className="text-[11px] text-blue-200/80 leading-relaxed">
+                  🌙 <span className="font-medium">ある深夜</span> — 誰にも話せなかったことを、あなたにだけ話してくれた。それ以来、なにかが変わった。
+                </p>
+                <p className="text-[11px] text-blue-300/60 leading-relaxed">
                   🔒 <span className="font-medium">隠された秘密</span> — 穏やかな笑顔の裏に、誰にも話せない過去がある。でも、あなたになら…話せるかもしれない。
                 </p>
               </div>
             </div>
           </div>
         </div>
+
+        <Link
+          href="/login"
+          className="block text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+        >
+          続きは、自分で確かめて →
+        </Link>
       </section>
 
       {/* AI Photo Gallery — infinite marquee */}
