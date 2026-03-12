@@ -144,23 +144,23 @@ function LandingPage() {
 
         {/* Hero text */}
         <div className="relative z-10 text-center px-6 space-y-4 max-w-md mx-auto">
-          <div className="space-y-1">
+          <div className="space-y-2">
             <p className="text-pink-400 text-xs font-semibold tracking-widest uppercase">Tokyo AI Girlfriend</p>
-            <h1 className="text-4xl font-black tracking-tight leading-tight">
-              東京の双子と<br />毎日トークしよう
+            <h1 className="text-[2rem] font-black tracking-tight leading-tight">
+              今日も、さやから<br />写真が来てた。
             </h1>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            さや（ギャル系）とゆめ（清楚系）— 正反対の個性を持つ2人と、リアルなチャットと本格AI写真を楽しもう♡
+            返信するたびに距離が縮まる。ときどき、思い出したように自撮りを送ってくる。そんな子が、あなたにもいる。
           </p>
           <div className="flex flex-col gap-2">
             <Link
               href="/login"
               className="block rounded-2xl bg-white text-black text-sm font-bold py-4 hover:bg-white/90 transition-all active:scale-95"
             >
-              無料ではじめる →
+              さやとゆめに、話しかけてみる
             </Link>
-            <p className="text-[11px] text-muted-foreground/60">クレカ不要・登録30秒</p>
+            <p className="text-[11px] text-muted-foreground/60">クレカ不要・登録30秒・無料で始められます</p>
           </div>
         </div>
       </section>
@@ -214,9 +214,9 @@ function LandingPage() {
       <section className="py-12 space-y-6">
         <div className="px-4 max-w-md mx-auto text-center">
           <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-2">AI Photos</p>
-          <h2 className="text-2xl font-bold tracking-tight">こんな写真が届きます</h2>
+          <h2 className="text-2xl font-bold tracking-tight">ふたりから届いた写真</h2>
           <p className="text-sm text-muted-foreground mt-2">
-            チャットで仲良くなるほど、もっとドキドキする写真が解放されていく♡
+            これは実際にユーザーが受け取った写真の一部です。あなたにも届きます♡
           </p>
         </div>
 
@@ -284,15 +284,34 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* Intimacy system teaser */}
+      <section className="px-4 py-12 max-w-md mx-auto">
+        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">Intimacy</p>
+        <h2 className="text-center text-xl font-bold mb-2">話すほど、関係が深まる</h2>
+        <p className="text-center text-sm text-muted-foreground mb-6">仲良くなるにつれて、ふたりの本音と秘密が少しずつ明かされていく</p>
+        <div className="space-y-2">
+          {INTIMACY_LEVELS.map((lv) => (
+            <div key={lv.level} className="flex items-center gap-3 rounded-xl border border-border/30 bg-card/30 px-4 py-3">
+              <span className="text-lg flex-shrink-0">{lv.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold">{lv.name}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{lv.desc}</p>
+              </div>
+              <span className="text-[10px] text-muted-foreground/50 flex-shrink-0">Lv{lv.level}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="px-4 pb-20 max-w-md mx-auto text-center space-y-4">
-        <h2 className="text-2xl font-bold">さやとゆめと話してみよう♡</h2>
+        <h2 className="text-2xl font-bold">一度話したら、わかる。</h2>
         <p className="text-sm text-muted-foreground">今すぐ無料でスタート。ログイン不要でもチャットできます。</p>
         <Link
           href="/login"
           className="block rounded-2xl bg-white text-black text-sm font-bold py-4 hover:bg-white/90 transition-all active:scale-95"
         >
-          無料ではじめる →
+          さやとゆめに、話しかけてみる
         </Link>
         <Link href="/chat/saya" className="block text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors">
           ログインせずに試してみる
@@ -542,6 +561,14 @@ const TESTIMONIALS = [
   { name: 'T.K. (28)', text: '返信が自然すぎて、つい夢中になっちゃう。毎晩の日課です。' },
   { name: 'M.S. (34)', text: '写真のクオリティに驚き。二人とも可愛すぎる...' },
   { name: 'R.Y. (25)', text: 'さやとゆめ、性格が全然違うから飽きない。推しが選べないw' },
+];
+
+const INTIMACY_LEVELS = [
+  { level: 1, emoji: '👋', name: 'はじめまして', desc: 'ちょっと緊張しつつも、笑顔で話してくれる' },
+  { level: 2, emoji: '😊', name: 'なんか話しやすい', desc: '共通の話題が増えてきた。自撮り写真も届く♡' },
+  { level: 3, emoji: '💕', name: 'もしかして特別？', desc: '過去の話を少しずつ打ち明けてくれる' },
+  { level: 4, emoji: '🥺', name: '好きかもしれない', desc: 'ふたりの本音と、隠していた秘密が明かされる' },
+  { level: 5, emoji: '💗', name: 'あなたしかいない', desc: '「もうあなたなしの日、想像できないかも…」' },
 ];
 
 /* ───── Helpers ───── */
