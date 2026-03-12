@@ -258,7 +258,7 @@ export async function getIntimacy(
     .select('intimacy_level, affection_points, total_messages, last_interaction_at')
     .eq('user_id', userId)
     .eq('character_id', characterId)
-    .single();
+    .maybeSingle();
 
   return data;
 }

@@ -290,11 +290,13 @@ export default function DuoChatPage() {
         if (accumulated) {
           const parsed = parseDuoResponse(accumulated);
           const now = new Date().toISOString();
+          // Date.now()の衝突を避けるためにランダムサフィックスを追加
+          const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
           const newMessages: DuoMessage[] = [];
 
           if (parsed.saya) {
             newMessages.push({
-              id: `saya-${Date.now()}`,
+              id: `saya-${uid}`,
               role: 'saya',
               content: parsed.saya,
               created_at: now,
@@ -302,7 +304,7 @@ export default function DuoChatPage() {
           }
           if (parsed.yume) {
             newMessages.push({
-              id: `yume-${Date.now() + 1}`,
+              id: `yume-${uid}`,
               role: 'yume',
               content: parsed.yume,
               created_at: now,
@@ -311,7 +313,7 @@ export default function DuoChatPage() {
           // パースできなかった場合
           if (newMessages.length === 0) {
             newMessages.push({
-              id: `saya-${Date.now()}`,
+              id: `saya-${uid}`,
               role: 'saya',
               content: accumulated,
               created_at: now,
@@ -325,7 +327,7 @@ export default function DuoChatPage() {
               sayaMsg.image_url = receivedImageUrl;
             } else {
               newMessages.push({
-                id: `duo-img-${Date.now()}`,
+                id: `duo-img-${uid}`,
                 role: 'saya',
                 content: '',
                 image_url: receivedImageUrl,

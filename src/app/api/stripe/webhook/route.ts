@@ -76,9 +76,10 @@ export async function POST(req: NextRequest) {
             .from('token_balances')
             .select('balance, total_purchased')
             .eq('user_id', userId)
-            .single();
+            .maybeSingle();
 
           if (balance) {
+            // 既存レコードを更新
             const newBalance = balance.balance + bonusTokens;
             await getSupabaseAdmin()
               .from('token_balances')
@@ -96,6 +97,26 @@ export async function POST(req: NextRequest) {
               description: `${plan}プラン登録ボーナス`,
               balance_after: newBalance,
             });
+          } else {
+            // 新規ユーザー: token_balancesレコードを作成してボーナス付与
+            await getSupabaseAdmin()
+              .from('token_balances')
+              .insert({
+                user_id: userId,
+                balance: bonusTokens,
+                total_purchased: bonusTokens,
+                total_used: 0,
+              });
+
+            await getSupabaseAdmin().from('token_transactions').insert({
+              user_id: userId,
+              amount: bonusTokens,
+              type: 'subscription_grant',
+              description: `${plan}プラン登録ボーナス`,
+              balance_after: bonusTokens,
+            });
+
+            console.log(`New user token_balance created: user=${userId}, bonus=${bonusTokens}`);
           }
         }
 
@@ -126,7 +147,7 @@ export async function POST(req: NextRequest) {
           .from('subscriptions')
           .select('user_id, plan')
           .eq('external_subscription_id', subscriptionId)
-          .single();
+          .maybeSingle();
 
         if (sub) {
           const status = subscription.status === 'active' ? 'active'
@@ -181,7 +202,7 @@ export async function POST(req: NextRequest) {
           .from('subscriptions')
           .select('user_id')
           .eq('external_subscription_id', subscriptionId)
-          .single();
+          .maybeSingle();
 
         if (sub) {
           await getSupabaseAdmin()

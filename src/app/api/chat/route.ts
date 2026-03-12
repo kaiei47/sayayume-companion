@@ -98,6 +98,7 @@ export async function POST(req: NextRequest) {
     let intimacyLevel = 1;
     let intimacyResult: { newLevel: number; newPoints: number; levelChanged: boolean; previousLevel: number } | null = null;
     let userName: string | null = null;
+    let currentTotalMessageCount = 0; // 圧縮後でも正確なmessage_count追跡用
 
     if (user) {
       // 認証済みユーザー: DB保存あり
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
             .select('plan')
             .eq('user_id', dbUser.id)
             .eq('status', 'active')
-            .single();
+            .maybeSingle();
 
           if (sub) {
             userPlan = sub.plan as keyof typeof PLAN_LIMITS;
@@ -234,6 +235,7 @@ export async function POST(req: NextRequest) {
           .eq('conversation_id', conversation_id);
 
         const totalMessages = totalMsgCount || 0;
+        currentTotalMessageCount = totalMessages;
 
         if (totalMessages > COMPRESS_THRESHOLD) {
           // 圧縮が必要: 全メッセージ取得→古いものを要約→最新KEEP_RECENT件だけ使う
@@ -450,7 +452,7 @@ export async function POST(req: NextRequest) {
           let imageUrl: string | null = null;
           let savedContent = fullResponse;
           const { cleanText, imageDescriptions } = extractImageTags(fullResponse);
-          const canGenerateImages = PLAN_LIMITS[userPlan]?.imageGeneration !== false;
+          const canGenerateImages = PLAN_LIMITS[userPlan]?.imageGeneration === true;
           if (imageDescriptions.length > 0 && canGenerateImages) {
             savedContent = cleanText;
 
@@ -548,7 +550,9 @@ export async function POST(req: NextRequest) {
             await supabase
               .from('conversations')
               .update({
-                message_count: history.length + 2,
+                // currentTotalMessageCount: DBから取得した正確な総数（圧縮後でも壊れない）
+                // +2: 今回の user + assistant メッセージ分
+                message_count: currentTotalMessageCount + 2,
                 last_message_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               })

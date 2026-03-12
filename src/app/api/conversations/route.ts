@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
         .select('id, title, message_count, last_message_at')
         .eq('id', conversationIdParam)
         .eq('user_id', dbUser.id)
-        .single();
+        .maybeSingle();
       conversation = conv;
     } else {
       // 最新の会話を取得

@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       .eq('user_id', dbUser.id)
       .eq('payment_provider', 'stripe')
       .eq('status', 'active')
-      .single();
+      .maybeSingle();
 
     const origin = req.headers.get('origin') || 'https://www.sayayume.com';
 
