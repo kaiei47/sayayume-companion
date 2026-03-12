@@ -110,13 +110,16 @@ export async function POST(req: NextRequest) {
         const updPeriodStart = updItem?.current_period_start;
         const updPeriodEnd = updItem?.current_period_end;
 
-        // Price IDからプラン名を逆引き
+        // Price IDからプラン名を逆引き（metadataは旧値の可能性があるため使わない）
         const updPriceId = updItem?.price?.id;
         let updPlan: string | null = null;
         if (updPriceId === process.env.STRIPE_BASIC_PRICE_ID) updPlan = 'basic';
         else if (updPriceId === process.env.STRIPE_PREMIUM_PRICE_ID) updPlan = 'premium';
-        // metadataからも取得（checkout APIで設定済み）
-        if (!updPlan && subscription.metadata?.plan) updPlan = subscription.metadata.plan;
+        // Price IDが未設定の場合のみmetadata参照（プラン変更直後はmetadataが更新済みのため使用可）
+        if (!updPlan && subscription.metadata?.plan &&
+            ['basic', 'premium', 'free'].includes(subscription.metadata.plan)) {
+          updPlan = subscription.metadata.plan;
+        }
 
         // DBからサブスクを探す
         const { data: sub } = await getSupabaseAdmin()
@@ -159,7 +162,7 @@ export async function POST(req: NextRequest) {
             await getSupabaseAdmin()
               .from('users')
               .update({
-                is_premium: effectivePlan === 'premium' || effectivePlan === 'vip',
+                is_premium: effectivePlan !== 'free',
                 updated_at: new Date().toISOString(),
               })
               .eq('id', sub.user_id);

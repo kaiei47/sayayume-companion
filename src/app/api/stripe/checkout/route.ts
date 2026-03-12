@@ -87,24 +87,35 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // DB更新（admin clientでRLSバイパス）
+        // DB更新（admin clientでRLSバイパス、user_idで確実にマッチ）
         const adminDb = getSupabaseAdmin();
-        await adminDb
+        const { error: subUpdateError } = await adminDb
           .from('subscriptions')
           .update({
             plan,
+            external_subscription_id: existingSub.external_subscription_id,
             updated_at: new Date().toISOString(),
           })
-          .eq('external_subscription_id', existingSub.external_subscription_id);
+          .eq('user_id', dbUser.id)
+          .eq('payment_provider', 'stripe');
 
-        // is_premiumフラグ更新
-        await adminDb
+        if (subUpdateError) {
+          console.error('Subscription DB update error:', subUpdateError);
+          return NextResponse.json({ error: 'プラン変更の記録に失敗しました' }, { status: 500 });
+        }
+
+        // is_premiumフラグ更新（basic/premiumどちらも有料扱い）
+        const { error: userUpdateError } = await adminDb
           .from('users')
           .update({
-            is_premium: plan === 'premium',
+            is_premium: plan !== 'free',
             updated_at: new Date().toISOString(),
           })
           .eq('id', dbUser.id);
+
+        if (userUpdateError) {
+          console.error('User is_premium update error:', userUpdateError);
+        }
 
         return NextResponse.json({
           success: true,
