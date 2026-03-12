@@ -27,22 +27,18 @@ export default function TokushohoPage() {
 
           <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 py-4">
             <dt className="text-sm font-semibold text-foreground sm:w-48 flex-shrink-0">運営責任者</dt>
-            <dd className="text-sm text-muted-foreground">
-              請求があった場合に遅滞なく開示いたします
-            </dd>
+            <dd className="text-sm text-muted-foreground">丸山快英</dd>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 py-4">
             <dt className="text-sm font-semibold text-foreground sm:w-48 flex-shrink-0">所在地</dt>
-            <dd className="text-sm text-muted-foreground">
-              請求があった場合に遅滞なく開示いたします
-            </dd>
+            <dd className="text-sm text-muted-foreground">東京都多摩市</dd>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 py-4">
             <dt className="text-sm font-semibold text-foreground sm:w-48 flex-shrink-0">電話番号</dt>
             <dd className="text-sm text-muted-foreground">
-              請求があった場合に遅滞なく開示いたします
+              メールにてお問い合わせください（support@sayayume.com）
             </dd>
           </div>
 

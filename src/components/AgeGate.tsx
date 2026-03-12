@@ -1,20 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import SayayumeLogo from '@/components/SayayumeLogo';
 
 export default function AgeGate({ children }: { children: React.ReactNode }) {
   const [verified, setVerified] = useState<boolean | null>(null);
+  const pathname = usePathname();
+
+  // 法務ページはAgeGate不要（Stripe審査・クローラー対応）
+  const isLegalPage = pathname?.startsWith('/legal');
 
   useEffect(() => {
+    if (isLegalPage) return;
     const stored = localStorage.getItem('age-verified');
     setVerified(stored === 'true');
-  }, []);
+  }, [isLegalPage]);
 
   const handleConfirm = () => {
     localStorage.setItem('age-verified', 'true');
     setVerified(true);
   };
+
+  // 法務ページはゲートなしで表示
+  if (isLegalPage) return <>{children}</>;
 
   // ロード中は何も表示しない（フラッシュ防止）
   if (verified === null) return null;
