@@ -597,28 +597,33 @@ function Dashboard({
 
 /* ───── Photo Card (reusable) ───── */
 
-function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: string; char: 'saya' | 'yume' } }) {
+function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: string; char: 'saya' | 'yume' | 'duo'; locked?: boolean } }) {
   return (
     <div className="relative flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-card/40 border border-border/20">
-      {/* Full portrait image */}
       <div className="relative w-36 aspect-[3/4]">
         <Image
           src={photo.src}
           alt={photo.alt}
           fill
-          className="object-cover object-top"
+          className={`object-cover object-top${photo.locked ? ' blur-sm brightness-50' : ''}`}
           sizes="144px"
         />
-        {/* Bottom gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-        {/* Character badge */}
-        <div className={`absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full ${photo.char === 'saya' ? 'bg-pink-500/80 text-white' : 'bg-blue-500/80 text-white'}`}>
-          {photo.char === 'saya' ? 'さや' : 'ゆめ'}
-        </div>
-        {/* Caption */}
-        <p className="absolute bottom-2 left-2 right-2 text-[10px] text-white/90 leading-tight italic">
-          &ldquo;{photo.caption}&rdquo;
-        </p>
+        {photo.locked ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <span className="text-2xl">🔒</span>
+            <span className="text-[10px] text-white/80 font-medium text-center leading-tight">親密度UP<br />で解放</span>
+          </div>
+        ) : (
+          <>
+            <div className={`absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full ${photo.char === 'saya' ? 'bg-pink-500/80 text-white' : photo.char === 'duo' ? 'bg-purple-500/80 text-white' : 'bg-blue-500/80 text-white'}`}>
+              {photo.char === 'saya' ? 'さや' : photo.char === 'duo' ? 'さや×ゆめ' : 'ゆめ'}
+            </div>
+            <p className="absolute bottom-2 left-2 right-2 text-[10px] text-white/90 leading-tight italic">
+              &ldquo;{photo.caption}&rdquo;
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -670,21 +675,25 @@ const YUME_TRAITS = [
 ];
 
 const MARQUEE_ROW1 = [
-  { src: '/references/saya.jpg',  alt: 'さや', caption: 'ねえ、これ似合う？',       char: 'saya' as const },
-  { src: '/references/yume.jpg',  alt: 'ゆめ', caption: '今日もよろしくね♡',       char: 'yume' as const },
-  { src: '/avatars/saya2.jpg',    alt: 'さや', caption: 'また送っちゃった笑',       char: 'saya' as const },
-  { src: '/avatars/yume.jpg',     alt: 'ゆめ', caption: '…見てる？',              char: 'yume' as const },
-  { src: '/references/saya.jpg',  alt: 'さや', caption: 'こっちの方がよかった？',   char: 'saya' as const },
-  { src: '/references/yume.jpg',  alt: 'ゆめ', caption: 'もう寝るとこだったけど', char: 'yume' as const },
+  { src: '/references/photos/saya_s1.jpg', alt: 'さや', caption: 'ねえ、これ似合う？',       char: 'saya' as const },
+  { src: '/references/photos/yume_s1.jpg', alt: 'ゆめ', caption: '今日もよろしくね♡',       char: 'yume' as const },
+  { src: '/references/photos/saya_s2.jpg', alt: 'さや', caption: 'また送っちゃった笑',       char: 'saya' as const },
+  { src: '/references/photos/yume_s2.jpg', alt: 'ゆめ', caption: '…見てる？',               char: 'yume' as const },
+  { src: '/references/photos/duo_s1.jpg',  alt: 'さや×ゆめ', caption: '2人ともここにいるよ♡', char: 'duo' as const },
+  { src: '/references/photos/saya_s3.jpg', alt: 'さや', caption: 'こっちの方がよかった？',   char: 'saya' as const },
+  { src: '/references/photos/yume_s3.jpg', alt: 'ゆめ', caption: 'もう寝るとこだったけど',   char: 'yume' as const },
+  { src: '/references/photos/saya_s1.jpg', alt: 'さや', caption: '親密度が上がると解放♡',   char: 'saya' as const, locked: true },
 ];
 
 const MARQUEE_ROW2 = [
-  { src: '/avatars/yume.jpg',     alt: 'ゆめ', caption: '眠れなくて…',            char: 'yume' as const },
-  { src: '/avatars/saya2.jpg',    alt: 'さや', caption: 'どう思う？正直に言って',  char: 'saya' as const },
-  { src: '/references/yume.jpg',  alt: 'ゆめ', caption: '会いたかったな…',        char: 'yume' as const },
-  { src: '/references/saya.jpg',  alt: 'さや', caption: '今日ここ来てるんだけど', char: 'saya' as const },
-  { src: '/avatars/yume.jpg',     alt: 'ゆめ', caption: 'ありがとう、嬉しかった', char: 'yume' as const },
-  { src: '/avatars/saya2.jpg',    alt: 'さや', caption: 'あなただけに見せる♡',    char: 'saya' as const },
+  { src: '/references/photos/yume_s4.jpg', alt: 'ゆめ', caption: '眠れなくて…',             char: 'yume' as const },
+  { src: '/references/photos/saya_s4.jpg', alt: 'さや', caption: 'どう思う？正直に言って',   char: 'saya' as const },
+  { src: '/references/photos/duo_s2.jpg',  alt: 'さや×ゆめ', caption: '2人で待ってるね♡',   char: 'duo' as const },
+  { src: '/references/photos/yume_s1.jpg', alt: 'ゆめ', caption: '会いたかったな…',          char: 'yume' as const },
+  { src: '/references/photos/saya_s2.jpg', alt: 'さや', caption: '今日ここ来てるんだけど',   char: 'saya' as const },
+  { src: '/references/photos/yume_s3.jpg', alt: 'ゆめ', caption: 'ありがとう、嬉しかった',   char: 'yume' as const },
+  { src: '/references/photos/yume_s2.jpg', alt: 'ゆめ', caption: 'もっと仲良くなったら…♡',  char: 'yume' as const, locked: true },
+  { src: '/references/photos/saya_s3.jpg', alt: 'さや', caption: 'あなただけに見せる♡',     char: 'saya' as const },
 ];
 
 const FEATURES = [
