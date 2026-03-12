@@ -19,10 +19,10 @@ const APP_URL = process.env.APP_URL || "https://www.sayayume.com";
 
 export const metadata: Metadata = {
   title: {
-    default: "さやゆめ - AIコンパニオン",
+    default: "さやゆめ - AI彼女",
     template: "%s | さやゆめ",
   },
-  description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真。日本語特化AIコンパニオンアプリ。",
+  description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真。日本語AI彼女アプリ。",
   keywords: ["AI", "コンパニオン", "AIガールフレンド", "チャットボット", "AI美女", "さやゆめ", "日本語AI"],
   manifest: "/manifest.json",
   icons: {
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     title: "さやゆめ",
   },
   openGraph: {
-    title: "さやゆめ - AIコンパニオン",
+    title: "さやゆめ - AI彼女",
     description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真",
     type: "website",
     url: APP_URL,
@@ -50,12 +50,12 @@ export const metadata: Metadata = {
       url: `${APP_URL}/og-image.png`,
       width: 1200,
       height: 630,
-      alt: "さやゆめ - AIコンパニオン",
+      alt: "さやゆめ - AI彼女",
     }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "さやゆめ - AIコンパニオン",
+    title: "さやゆめ - AI彼女",
     description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真",
     images: [`${APP_URL}/og-image.png`],
   },
