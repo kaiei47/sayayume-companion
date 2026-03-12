@@ -77,6 +77,10 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6">
+        {/* 戻るリンク */}
+        <a href="/" className="text-muted-foreground hover:text-foreground text-sm inline-block">
+          ← ホームに戻る
+        </a>
         {/* ロゴ */}
         <div className="flex flex-col items-center space-y-3">
           <Image
