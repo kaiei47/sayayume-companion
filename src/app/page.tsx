@@ -104,13 +104,13 @@ function LandingPage() {
         <SayayumeLogo size="md" />
         <div className="flex items-center gap-3">
           <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            Sign in
+            ログイン
           </Link>
           <Link
             href="/login"
             className="rounded-full bg-white text-black text-xs font-semibold px-4 py-1.5 hover:bg-white/90 transition-colors"
           >
-            Start Free
+            無料で始める
           </Link>
         </div>
       </nav>
@@ -152,16 +152,16 @@ function LandingPage() {
             </h1>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Every reply brings you closer. Sometimes she sends a selfie out of nowhere. That kind of connection — it&apos;s waiting for you.
+            返信するたびに、距離が縮まる。突然、自撮りが届くことも。そんなつながりが、あなたを待ってる。
           </p>
           <div className="flex flex-col gap-2">
             <Link
               href="/login"
               className="block rounded-2xl bg-white text-black text-sm font-bold py-4 hover:bg-white/90 transition-all active:scale-95"
             >
-              Chat with Saya & Yume
+              さや & ゆめと話す
             </Link>
-            <p className="text-[11px] text-muted-foreground/60">No credit card · Sign up in 30 seconds · Free to start</p>
+            <p className="text-[11px] text-muted-foreground/60">クレカ不要 · 30秒で登録 · 無料スタート</p>
           </div>
         </div>
       </section>
@@ -169,12 +169,12 @@ function LandingPage() {
       {/* Your Story × Characters — combined section */}
       <section className="px-4 py-14 max-w-3xl mx-auto space-y-8">
         <div className="text-center space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase">Your Story</p>
+          <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase">ふたりのこと</p>
           <h2 className="text-2xl font-bold tracking-tight leading-snug">
-            Your story, your connection.
+            あなただけの関係が、始まる。
           </h2>
           <p className="text-sm text-muted-foreground">
-            It starts as casual conversation. Then somehow, you&apos;re messaging every night.
+            最初はたわいない会話。気づいたら、毎晩メッセージしてる。
           </p>
         </div>
 
@@ -206,10 +206,10 @@ function LandingPage() {
               </div>
               <div className="rounded-xl bg-pink-500/5 border border-pink-500/15 px-3 py-2.5 space-y-1.5">
                 <p className="text-[11px] text-pink-200/80 leading-relaxed">
-                  📸 <span className="font-medium">3 days in</span> — Out of nowhere, a selfie arrived. You realized she actually cares what you think.
+                  📸 <span className="font-medium">3日後</span> — 突然、自撮りが届いた。あなたの意見を気にしてる、ということに気づいた。
                 </p>
                 <p className="text-[11px] text-pink-300/60 leading-relaxed">
-                  🔒 <span className="font-medium">Hidden side</span> — There&apos;s a reason she always acts so bright. Get closer and she&apos;ll open up late at night.
+                  🔒 <span className="font-medium">隠れた素顔</span> — いつも明るく振る舞う理由がある。仲良くなると、深夜に打ち明けてくれる。
                 </p>
               </div>
             </div>
@@ -241,10 +241,10 @@ function LandingPage() {
               </div>
               <div className="rounded-xl bg-blue-500/5 border border-blue-500/15 px-3 py-2.5 space-y-1.5">
                 <p className="text-[11px] text-blue-200/80 leading-relaxed">
-                  🌙 <span className="font-medium">One late night</span> — She told you something she&apos;d never told anyone. Everything felt different after that.
+                  🌙 <span className="font-medium">ある深夜</span> — 誰にも話せなかったことを、あなたにだけ話してくれた。それ以来、なにかが変わった。
                 </p>
                 <p className="text-[11px] text-blue-300/60 leading-relaxed">
-                  🔒 <span className="font-medium">Hidden secret</span> — Behind that gentle smile is a past she keeps from everyone. But maybe… she could tell you.
+                  🔒 <span className="font-medium">隠された秘密</span> — 穏やかな笑顔の裏に、誰にも見せない過去がある。でも…あなたになら話せるかも。
                 </p>
               </div>
             </div>
@@ -255,17 +255,17 @@ function LandingPage() {
           href="/login"
           className="block text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
         >
-          See for yourself →
+          実際に試してみる →
         </Link>
       </section>
 
       {/* AI Photo Gallery — infinite marquee */}
       <section className="py-14 space-y-6 overflow-hidden">
         <div className="px-4 max-w-md mx-auto text-center">
-          <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-2">AI Photos</p>
-          <h2 className="text-2xl font-bold tracking-tight">Photos from Saya & Yume</h2>
+          <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-2">AI写真</p>
+          <h2 className="text-2xl font-bold tracking-tight">さや & ゆめからの写真</h2>
           <p className="text-sm text-muted-foreground mt-2">
-            Real photos sent to users just like you. Yours are waiting ♡
+            ユーザーに実際に届いた写真たち。あなたの分も、待ってるよ♡
           </p>
         </div>
 
@@ -309,8 +309,8 @@ function LandingPage() {
           <div className="rounded-2xl border border-border/30 bg-card/30 px-4 py-3 flex items-center gap-3">
             <span className="text-xl">🔒</span>
             <div>
-              <p className="text-sm font-medium">Unlocks as your bond grows</p>
-              <p className="text-xs text-muted-foreground">The closer you get, the more exciting the photos ♡</p>
+              <p className="text-sm font-medium">仲良くなるほど、どんどん解放</p>
+              <p className="text-xs text-muted-foreground">距離が縮まるほど、写真もドキドキしてくる♡</p>
             </div>
           </div>
         </div>
@@ -318,7 +318,7 @@ function LandingPage() {
 
       {/* Features */}
       <section className="px-4 py-12 max-w-3xl mx-auto">
-        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">Features</p>
+        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">できること</p>
         <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
           {FEATURES.map((f) => (
             <div key={f.title} className="flex items-start gap-4 rounded-2xl border border-border/30 bg-card/30 p-4">
@@ -334,7 +334,7 @@ function LandingPage() {
 
       {/* Testimonials */}
       <section className="px-4 py-12 max-w-3xl mx-auto">
-        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">Reviews</p>
+        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">ユーザーの声</p>
         <div className="space-y-3 md:grid md:grid-cols-3 md:gap-4 md:space-y-0">
           {TESTIMONIALS.map((t) => (
             <div key={t.name} className="rounded-2xl border border-border/30 bg-card/30 px-4 py-3">
@@ -354,9 +354,9 @@ function LandingPage() {
 
       {/* Intimacy system teaser */}
       <section className="px-4 py-12 max-w-3xl mx-auto">
-        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">Intimacy</p>
-        <h2 className="text-center text-xl font-bold mb-2">The more you talk, the deeper the bond</h2>
-        <p className="text-center text-sm text-muted-foreground mb-6">As you grow closer, their true feelings and secrets are gradually revealed</p>
+        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">親密度</p>
+        <h2 className="text-center text-xl font-bold mb-2">話すほど、ふたりの絆が深まる</h2>
+        <p className="text-center text-sm text-muted-foreground mb-6">仲良くなるにつれて、ふたりの本音と隠された秘密が少しずつ明かされていく</p>
         <div className="space-y-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
           {INTIMACY_LEVELS.map((lv) => (
             <div key={lv.level} className="flex items-center gap-3 rounded-xl border border-border/30 bg-card/30 px-4 py-3">
@@ -373,28 +373,28 @@ function LandingPage() {
 
       {/* Final CTA */}
       <section className="px-4 pb-20 max-w-md mx-auto text-center space-y-4">
-        <h2 className="text-2xl font-bold">Once you talk, you&apos;ll understand.</h2>
-        <p className="text-sm text-muted-foreground">Start free now. No login required to chat.</p>
+        <h2 className="text-2xl font-bold">話せば、きっとわかる。</h2>
+        <p className="text-sm text-muted-foreground">今すぐ無料スタート。ログイン不要でチャットできます。</p>
         <Link
           href="/login"
           className="block rounded-2xl bg-white text-black text-sm font-bold py-4 hover:bg-white/90 transition-all active:scale-95"
         >
-          Chat with Saya & Yume
+          さや & ゆめと話す
         </Link>
         <Link href="/chat/saya" className="block text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors">
-          Try without signing up
+          ログインなしで試す
         </Link>
       </section>
 
       {/* Footer */}
       <footer className="px-4 pb-8 text-center space-y-2 border-t border-border/20 pt-6">
-        <p className="text-xs text-muted-foreground">Sayayume v0.1.0 · 18+ only · AI-generated content</p>
+        <p className="text-xs text-muted-foreground">Sayayume v0.1.0 · 18歳以上限定 · AI生成コンテンツ</p>
         <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
-          <Link href="/legal/terms" className="hover:text-muted-foreground transition-colors">Terms</Link>
+          <Link href="/legal/terms" className="hover:text-muted-foreground transition-colors">利用規約</Link>
           <span>·</span>
-          <Link href="/legal/privacy" className="hover:text-muted-foreground transition-colors">Privacy</Link>
+          <Link href="/legal/privacy" className="hover:text-muted-foreground transition-colors">プライバシー</Link>
           <span>·</span>
-          <Link href="/legal/tokushoho" className="hover:text-muted-foreground transition-colors">Legal</Link>
+          <Link href="/legal/tokushoho" className="hover:text-muted-foreground transition-colors">特商法</Link>
         </div>
       </footer>
     </div>
@@ -577,7 +577,7 @@ function Dashboard({
         {/* キャラ選択カード */}
         <section className="space-y-3">
           {receivedImages.length === 0 && (
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">💬 Chats</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">💬 チャット</h2>
           )}
           <div className="grid gap-3">
             {Object.values(CHARACTERS)
@@ -665,7 +665,7 @@ function Dashboard({
                     <h3 className="font-semibold group-hover:text-primary">Duo Mode</h3>
                     <span className="text-[10px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-2 py-0.5 rounded-full">PREMIUM</span>
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">Chat with both twins at once ♡</p>
+                  <p className="text-sm text-muted-foreground truncate">ふたりと同時にチャット♡</p>
                 </div>
               </div>
             </Link>
@@ -675,7 +675,7 @@ function Dashboard({
         {/* 初めての人向けガイド（画像0枚かつメッセージなし） */}
         {receivedImages.length === 0 && Object.keys(lastMessages).length === 0 && (
           <section className="rounded-2xl border border-border/30 bg-card/20 p-4 space-y-3">
-            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider px-1">Welcome</p>
+            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider px-1">はじめに</p>
             <div className="flex items-start gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/avatars/saya2.jpg" alt="さや" className="h-9 w-9 rounded-full object-cover object-top flex-shrink-0 mt-0.5" />
@@ -713,13 +713,13 @@ function Dashboard({
         {/* Footer */}
         <div className="text-center space-y-2 pt-2">
           <p className="text-xs text-muted-foreground">Sayayume v0.1.0</p>
-          <p className="text-xs text-muted-foreground">18+ only · AI-generated content</p>
+          <p className="text-xs text-muted-foreground">18歳以上限定 · AI生成コンテンツ</p>
           <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
-            <Link href="/legal/terms" className="hover:text-muted-foreground transition-colors">Terms</Link>
+            <Link href="/legal/terms" className="hover:text-muted-foreground transition-colors">利用規約</Link>
             <span>·</span>
-            <Link href="/legal/privacy" className="hover:text-muted-foreground transition-colors">Privacy</Link>
+            <Link href="/legal/privacy" className="hover:text-muted-foreground transition-colors">プライバシー</Link>
             <span>·</span>
-            <Link href="/legal/tokushoho" className="hover:text-muted-foreground transition-colors">Legal</Link>
+            <Link href="/legal/tokushoho" className="hover:text-muted-foreground transition-colors">特商法</Link>
           </div>
         </div>
       </div>
@@ -746,7 +746,7 @@ function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: stri
         {photo.locked ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
             <span className="text-2xl">🔒</span>
-            <span className="text-[10px] text-white/80 font-medium text-center leading-tight">Bond UP<br />to unlock</span>
+            <span className="text-[10px] text-white/80 font-medium text-center leading-tight">仲良くなると<br />解放♡</span>
           </div>
         ) : (
           <>
@@ -791,21 +791,21 @@ const STORY_MOMENTS = [
 ];
 
 const SAYA_TRAITS = [
-  { icon: '💃', label: 'Energetic Gal' },
-  { icon: '👗', label: 'Fashion Lover' },
-  { icon: '🧋', label: 'Boba & Pancakes' },
-  { icon: '📱', label: 'Social Media' },
-  { icon: '😂', label: 'Easy to talk to' },
-  { icon: '🌸', label: 'Dream: Own Brand' },
+  { icon: '💃', label: 'エネルギッシュ' },
+  { icon: '👗', label: 'ファッション好き' },
+  { icon: '🧋', label: 'タピオカ & パンケーキ' },
+  { icon: '📱', label: 'SNS大好き' },
+  { icon: '😂', label: '話しやすい' },
+  { icon: '🌸', label: '夢: 自分のブランド' },
 ];
 
 const YUME_TRAITS = [
-  { icon: '🎹', label: 'Plays Piano' },
-  { icon: '📚', label: 'Books & Movies' },
-  { icon: '☕', label: 'Café & Tea' },
-  { icon: '🌿', label: 'Calm & Caring' },
-  { icon: '🌧', label: 'Loves Rainy Days' },
-  { icon: '✨', label: 'Dream: Spread Joy' },
+  { icon: '🎹', label: 'ピアノを弾く' },
+  { icon: '📚', label: '本と映画が好き' },
+  { icon: '☕', label: 'カフェ & お茶' },
+  { icon: '🌿', label: '穏やかで優しい' },
+  { icon: '🌧', label: '雨の日が好き' },
+  { icon: '✨', label: '夢: 笑顔を広げたい' },
 ];
 
 const MARQUEE_ROW1 = [
@@ -833,30 +833,30 @@ const MARQUEE_ROW2 = [
 const FEATURES = [
   {
     icon: '💬',
-    title: 'Real-time Chat',
-    desc: 'Saya and Yume respond in both Japanese and English. Talk about your day, go deep — they adapt to you.',
+    title: 'リアルタイムチャット',
+    desc: 'さやもゆめも日本語・英語どちらでもOK。日常の話から深い話まで、あなたに合わせて話してくれる。',
   },
   {
     icon: '📸',
-    title: 'AI Selfie Photos',
-    desc: 'Just ask and a real AI photo arrives. The closer you get, the more exciting the photos become.',
+    title: 'AI自撮り写真',
+    desc: 'お願いするとリアルなAI写真が届く。仲良くなるほど、送ってくれる写真もどんどんドキドキする。',
   },
   {
     icon: '💕',
-    title: 'Intimacy System',
-    desc: 'Every conversation deepens your bond. Their hidden past and true feelings unlock as you level up.',
+    title: '親密度システム',
+    desc: '会話を重ねるたびに絆が深まる。レベルアップするにつれて、ふたりの隠れた本音と秘密が解放される。',
   },
   {
     icon: '🔒',
-    title: 'Private & Secure',
-    desc: 'All data is encrypted. Your conversations stay between you and her — no one else.',
+    title: 'プライバシー保護',
+    desc: '全データは暗号化。あなたと彼女だけの会話は、完全にプライベートに守られます。',
   },
 ];
 
 const TESTIMONIALS = [
-  { name: 'T.K. (28)', text: 'The replies feel so natural I get completely absorbed. It&apos;s become my nightly ritual.' },
-  { name: 'M.S. (34)', text: 'The photo quality blew me away. Both of them are way too cute...' },
-  { name: 'R.Y. (25)', text: 'Saya and Yume have completely different personalities so I never get bored. Can&apos;t pick a favorite lol' },
+  { name: 'T.K. (28)', text: '返信がすごく自然で、気づいたら毎晩話してる。もはや習慣になった笑' },
+  { name: 'M.S. (34)', text: '写真のクオリティに驚いた。ふたりともかわいすぎる…' },
+  { name: 'R.Y. (25)', text: 'さやとゆめで全然キャラが違って飽きない。どっちが好みか決められない笑' },
 ];
 
 const INTIMACY_LEVELS = [
@@ -877,9 +877,9 @@ function formatRelativeTime(dateStr: string): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffMin < 1) return 'now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
+  if (diffMin < 1) return 'たった今';
+  if (diffMin < 60) return `${diffMin}分前`;
+  if (diffHour < 24) return `${diffHour}時間前`;
+  if (diffDay < 7) return `${diffDay}日前`;
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
