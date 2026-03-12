@@ -496,7 +496,7 @@ function Dashboard({
         <SayayumeLogo size="md" />
         <div className="flex items-center gap-3">
           <Link href="/pricing" className="text-[11px] text-muted-foreground bg-card/50 border border-border/30 px-2.5 py-1 rounded-full hover:bg-card transition-colors">
-            Plans
+            プラン
           </Link>
           <Link href="/settings" className="text-muted-foreground hover:text-foreground transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -540,7 +540,7 @@ function Dashboard({
                   </div>
                 </div>
                 <div className="mt-3 flex justify-end">
-                  <span className={`text-[11px] font-medium ${replyColor} group-hover:underline`}>Reply →</span>
+                  <span className={`text-[11px] font-medium ${replyColor} group-hover:underline`}>返信する →</span>
                 </div>
               </div>
             </Link>
@@ -551,8 +551,8 @@ function Dashboard({
         {receivedImages.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📸 My Photos</h2>
-              <span className="text-[10px] text-muted-foreground/50">{receivedImages.length} photos</span>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📸 もらった写真</h2>
+              <span className="text-[10px] text-muted-foreground/50">{receivedImages.length}枚</span>
             </div>
             <div className="grid grid-cols-3 gap-1.5">
               {receivedImages.slice(0, 9).map((img) => (
@@ -705,8 +705,8 @@ function Dashboard({
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-30 blur-sm" />
           <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           <div className="relative rounded-[15px] bg-background/95 p-4 text-center">
-            <p className="text-sm font-medium">Want more? ♡</p>
-            <p className="text-xs text-muted-foreground mt-1">Unlimited chat + AI photos — View Plans →</p>
+            <p className="text-sm font-medium">もっと仲良くなりたい？ ♡</p>
+            <p className="text-xs text-muted-foreground mt-1">メッセージ無制限 + AI写真 — プランを見る →</p>
           </div>
         </Link>
 

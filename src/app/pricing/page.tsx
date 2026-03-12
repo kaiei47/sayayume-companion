@@ -130,10 +130,10 @@ function PricingContent() {
         {/* ヘッダー */}
         <div className="text-center mb-8">
           <a href="/" className="text-muted-foreground hover:text-foreground text-sm mb-4 inline-block">
-            ← Back
+            ← 戻る
           </a>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Plans</h1>
-          <p className="text-muted-foreground">Unlock more with Saya & Yume ♡</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">料金プラン</h1>
+          <p className="text-muted-foreground">さや & ゆめともっと仲良くなろう ♡</p>
         </div>
 
         {/* 成功/キャンセル通知 */}
@@ -172,12 +172,12 @@ function PricingContent() {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
                       <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
                     </svg>
-                    Current plan
+                    現在のプラン
                   </div>
                 )}
                 {!isCurrent && popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-0.5 text-xs font-medium text-white">
-                    Popular
+                    人気
                   </div>
                 )}
 
@@ -217,7 +217,7 @@ function PricingContent() {
                   <div
                     className="w-full rounded-xl py-2.5 text-sm font-medium bg-green-500/10 text-green-400 text-center border border-green-500/20"
                   >
-                    Active
+                    利用中
                   </div>
                 ) : key === 'free' ? (
                   hasActiveSub ? (
@@ -226,7 +226,7 @@ function PricingContent() {
                       disabled={loading !== null}
                       className="w-full rounded-xl py-2.5 text-sm font-medium border border-border/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
                     >
-                      {loading ? 'Loading...' : 'Cancel plan'}
+                      {loading ? '読み込み中...' : 'プランをキャンセルする'}
                     </button>
                   ) : null
                 ) : (
@@ -240,10 +240,10 @@ function PricingContent() {
                     } disabled:opacity-50`}
                   >
                     {loading === key
-                      ? 'Loading...'
+                      ? '読み込み中...'
                       : hasActiveSub
-                        ? 'Change plan'
-                        : `Upgrade to ${plan.name}`}
+                        ? 'プランを変更する'
+                        : `${plan.name}にする`}
                   </button>
                 )}
               </div>
@@ -257,14 +257,14 @@ function PricingContent() {
             <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{errorMsg}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            Cancel anytime · No prorated refunds · 18+ only
+            いつでもキャンセル可能 · 日割り返金なし · 18歳以上限定
           </p>
           {currentPlan !== 'free' && (
             <button
               onClick={handleManage}
               className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
             >
-              Manage subscription
+              サブスクを管理する
             </button>
           )}
         </div>

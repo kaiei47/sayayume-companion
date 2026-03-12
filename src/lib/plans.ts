@@ -6,9 +6,9 @@ export const PLANS = {
     price: 0,
     priceLabel: '¥0',
     features: [
-      '5 messages/day',
-      'Text chat only',
-      'No image generation',
+      '1日5メッセージ',
+      'テキストチャットのみ',
+      '写真送信なし',
     ],
     limits: {
       dailyMessages: 5,
@@ -22,10 +22,10 @@ export const PLANS = {
     price: 1980,
     priceLabel: '¥1,980/mo',
     features: [
-      'Unlimited messages',
-      '20 AI photos/day',
-      'Chat history',
-      'Saya & Yume',
+      'メッセージ無制限',
+      'AI写真 1日20枚',
+      '会話履歴保存',
+      'さや & ゆめ 両方',
     ],
     limits: {
       dailyMessages: -1, // unlimited
@@ -40,11 +40,11 @@ export const PLANS = {
     price: 4980,
     priceLabel: '¥4,980/mo',
     features: [
-      'Unlimited messages',
-      '50 AI photos/day',
-      'Voice messages',
-      'Priority response',
-      'Exclusive content',
+      'メッセージ無制限',
+      'AI写真 1日50枚',
+      'ボイスメッセージ',
+      '優先レスポンス',
+      '限定コンテンツ',
     ],
     limits: {
       dailyMessages: -1,
