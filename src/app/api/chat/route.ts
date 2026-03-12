@@ -99,6 +99,9 @@ export async function POST(req: NextRequest) {
         dbUserId = dbUser.id;
         userName = (dbUser as { id: string; display_name: string | null }).display_name || null;
 
+        // Update last_active_at for re-engagement push targeting
+        supabase.from('users').update({ last_active_at: new Date().toISOString() }).eq('id', dbUser.id).then(() => {});
+
         // ユーザーのプランを取得
         const { data: sub } = await supabase
           .from('subscriptions')

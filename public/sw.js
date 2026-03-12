@@ -98,6 +98,34 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
+// Push notification received
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() ?? {};
+  event.waitUntil(
+    self.registration.showNotification(data.title ?? 'さやゆめ', {
+      body: data.body ?? '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: data.tag ?? 'sayayume',
+      renotify: true,
+      data: { url: data.url ?? '/' },
+    })
+  );
+});
+
+// Notification clicked → open the app
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const existing = list.find((c) => c.url.includes(self.location.origin));
+      if (existing) return existing.focus();
+      return clients.openWindow(url);
+    })
+  );
+});
+
 function offlineResponse() {
   return new Response(
     '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>オフライン - さやゆめ</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:2rem}.container{max-width:400px}h1{font-size:1.5rem;margin-bottom:1rem}p{color:#999;margin-bottom:1.5rem}button{background:#ec4899;color:#fff;border:none;padding:0.75rem 1.5rem;border-radius:0.5rem;font-size:1rem;cursor:pointer}button:hover{background:#db2777}</style></head><body><div class="container"><h1>オフラインです</h1><p>インターネット接続を確認してね</p><button onclick="location.reload()">再読み込み</button></div></body></html>',

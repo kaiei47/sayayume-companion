@@ -448,6 +448,26 @@ const CHAR_STATUS: Record<string, Record<string, string>> = {
 
 /* ───── Dashboard (ログイン後) ───── */
 
+async function subscribeToPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  const reg = await navigator.serviceWorker.ready;
+  const existing = await reg.pushManager.getSubscription();
+  if (existing) return; // already subscribed
+
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') return;
+
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+  });
+  await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sub),
+  });
+}
+
 function Dashboard({
   user,
   lastMessages,
@@ -459,6 +479,16 @@ function Dashboard({
   intimacy: Record<string, IntimacyInfo>;
   receivedImages: ReceivedImage[];
 }) {
+  // Push notification subscription — triggered after 2 chat messages for better UX
+  useEffect(() => {
+    const totalMsgs = Object.keys(lastMessages).length;
+    if (totalMsgs >= 1) {
+      // Delay slightly to not interrupt first-time experience
+      const t = setTimeout(() => subscribeToPush(), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [lastMessages]);
+
   return (
     <div className="min-h-dvh bg-background text-foreground">
       {/* Top nav */}
