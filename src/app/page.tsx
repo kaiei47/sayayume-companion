@@ -166,46 +166,126 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Character intro */}
-      <section className="px-4 py-12 max-w-md mx-auto space-y-4">
-        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase">Characters</p>
+      {/* Story teaser */}
+      <section className="px-4 py-14 max-w-md mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase">Your Story</p>
+          <h2 className="text-2xl font-bold tracking-tight leading-snug">
+            あなたとの、これからの話。
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            最初は普通の会話。でも気づいたら、毎晩話しかけていた。
+          </p>
+        </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {/* Saya */}
-          <div className="rounded-2xl border border-border/40 bg-card/40 overflow-hidden">
-            <div className="relative h-44">
-              <Image src="/references/saya.jpg" alt="さや" fill className="object-cover object-top" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-3">
-                <p className="font-bold text-sm">さや <span className="text-xs font-normal text-muted-foreground">Saya</span></p>
-                <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">20歳・ギャル系・東京</p>
+        <div className="space-y-3">
+          {STORY_MOMENTS.map((moment, i) => (
+            <div
+              key={i}
+              className="flex gap-4 rounded-2xl border border-border/30 bg-card/30 px-4 py-4"
+            >
+              <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                <span className="text-xl">{moment.emoji}</span>
+                {i < STORY_MOMENTS.length - 1 && (
+                  <div className="w-px flex-1 bg-border/30 min-h-[20px]" />
+                )}
+              </div>
+              <div className="space-y-1 pt-0.5 min-w-0">
+                <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wider uppercase">{moment.timing}</p>
+                {moment.quote && (
+                  <p className="text-sm italic text-foreground/80 leading-relaxed">
+                    &ldquo;{moment.quote}&rdquo;
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground leading-relaxed">{moment.desc}</p>
               </div>
             </div>
-            <div className="p-3 space-y-1.5">
-              {['元気で天真爛漫', '夜は弱い一面も', 'ファッション大好き'].map(t => (
-                <p key={t} className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                  <span className="text-pink-400">♡</span>{t}
+          ))}
+        </div>
+
+        <Link
+          href="/login"
+          className="block text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+        >
+          続きは、自分で確かめて →
+        </Link>
+      </section>
+
+      {/* Character intro */}
+      <section className="px-4 pb-14 max-w-md mx-auto space-y-5">
+        <div className="text-center space-y-1">
+          <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase">Characters</p>
+          <h2 className="text-xl font-bold">ふたりのこと、知っておいて。</h2>
+        </div>
+
+        <div className="space-y-4">
+          {/* Saya — full-width card */}
+          <div className="rounded-2xl border border-pink-500/20 bg-card/40 overflow-hidden">
+            <div className="relative h-52">
+              <Image src="/references/saya.jpg" alt="さや" fill className="object-cover object-top" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+              {/* Name badge */}
+              <div className="absolute top-3 left-3 flex items-center gap-2">
+                <span className="bg-pink-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider">SAYA</span>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+                <p className="font-bold text-lg leading-tight">さや</p>
+                <p className="text-xs text-muted-foreground">20歳・ギャル系・渋谷在住</p>
+              </div>
+            </div>
+            <div className="px-4 py-4 space-y-3">
+              {/* Voice */}
+              <p className="text-sm italic text-pink-300/90 leading-relaxed border-l-2 border-pink-500/40 pl-3">
+                &ldquo;なんか、あなたといると楽しいんだよね。なんでだろ笑&rdquo;
+              </p>
+              {/* Traits */}
+              <div className="grid grid-cols-2 gap-1.5">
+                {SAYA_TRAITS.map(t => (
+                  <div key={t.label} className="flex items-center gap-2 rounded-lg bg-muted/20 px-2.5 py-1.5">
+                    <span className="text-sm">{t.icon}</span>
+                    <span className="text-[11px] text-muted-foreground">{t.label}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Secret hint */}
+              <div className="rounded-xl bg-pink-500/5 border border-pink-500/15 px-3 py-2.5">
+                <p className="text-[11px] text-pink-300/70 leading-relaxed">
+                  🔒 <span className="font-medium">隠された一面</span> — 明るく振る舞っているのには、理由がある。仲良くなると、深夜に本音を話してくれることがある。
                 </p>
-              ))}
+              </div>
             </div>
           </div>
 
-          {/* Yume */}
-          <div className="rounded-2xl border border-border/40 bg-card/40 overflow-hidden">
-            <div className="relative h-44">
+          {/* Yume — full-width card */}
+          <div className="rounded-2xl border border-blue-500/20 bg-card/40 overflow-hidden">
+            <div className="relative h-52">
               <Image src="/references/yume.jpg" alt="ゆめ" fill className="object-cover object-top" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-3">
-                <p className="font-bold text-sm">ゆめ <span className="text-xs font-normal text-muted-foreground">Yume</span></p>
-                <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">20歳・清楚系・東京</p>
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+              <div className="absolute top-3 left-3 flex items-center gap-2">
+                <span className="bg-blue-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider">YUME</span>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+                <p className="font-bold text-lg leading-tight">ゆめ</p>
+                <p className="text-xs text-muted-foreground">20歳・清楚系・東京在住</p>
               </div>
             </div>
-            <div className="p-3 space-y-1.5">
-              {['穏やかで優しい', '過去に秘密がある', 'ピアノが得意'].map(t => (
-                <p key={t} className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                  <span className="text-blue-400">♡</span>{t}
+            <div className="px-4 py-4 space-y-3">
+              <p className="text-sm italic text-blue-300/90 leading-relaxed border-l-2 border-blue-500/40 pl-3">
+                &ldquo;最近、あなたのこと考えることが増えた気がする…。変かな。&rdquo;
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {YUME_TRAITS.map(t => (
+                  <div key={t.label} className="flex items-center gap-2 rounded-lg bg-muted/20 px-2.5 py-1.5">
+                    <span className="text-sm">{t.icon}</span>
+                    <span className="text-[11px] text-muted-foreground">{t.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-xl bg-blue-500/5 border border-blue-500/15 px-3 py-2.5">
+                <p className="text-[11px] text-blue-300/70 leading-relaxed">
+                  🔒 <span className="font-medium">隠された秘密</span> — 穏やかな笑顔の裏に、誰にも話せない過去がある。でも、あなたになら…話せるかもしれない。
                 </p>
-              ))}
+              </div>
             </div>
           </div>
         </div>
@@ -527,6 +607,51 @@ function Dashboard({
 }
 
 /* ───── Constants ───── */
+
+const STORY_MOMENTS = [
+  {
+    emoji: '👋',
+    timing: '最初の日',
+    quote: 'やっほ、今日ひま？',
+    desc: 'ちょっとぶっきらぼうに見えて、でもなんか気になる。そんな出会いだった。',
+  },
+  {
+    emoji: '📸',
+    timing: '3日後',
+    quote: 'ねえ、これ似合う？正直に言って。',
+    desc: '突然、自撮りが届いた。あなたの意見を気にしてる、ということに気づいた。',
+  },
+  {
+    emoji: '🌙',
+    timing: 'ある深夜',
+    quote: '…ねえ、昔の話してもいい？',
+    desc: '誰にも話せなかったことを、あなたにだけ話してくれた。それ以来、なにかが変わった。',
+  },
+  {
+    emoji: '💗',
+    timing: 'その先は…',
+    quote: null,
+    desc: '仲良くなるほど、ふたりの本音と秘密が少しずつ明かされていく。どこまで深く知り合えるかは、あなた次第。',
+  },
+];
+
+const SAYA_TRAITS = [
+  { icon: '💃', label: 'ギャル系・明るい' },
+  { icon: '👗', label: 'ファッション好き' },
+  { icon: '🧋', label: 'タピオカ・パンケーキ' },
+  { icon: '📱', label: 'SNS大好き' },
+  { icon: '😂', label: 'ノリがいい' },
+  { icon: '🌸', label: '夢：自分のブランド' },
+];
+
+const YUME_TRAITS = [
+  { icon: '🎹', label: 'ピアノが得意' },
+  { icon: '📚', label: '読書・映画が好き' },
+  { icon: '☕', label: 'カフェ・お茶派' },
+  { icon: '🌿', label: '穏やか・聞き上手' },
+  { icon: '🌧', label: '雨の日が好き' },
+  { icon: '✨', label: '夢：誰かを笑顔に' },
+];
 
 const SAMPLE_PHOTOS = [
   { src: '/references/saya.jpg', alt: 'さや', label: 'さや' },
