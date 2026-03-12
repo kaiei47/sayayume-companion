@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState('');
   const [nickname, setNickname] = useState('');
   const [nicknameSaving, setNicknameSaving] = useState(false);
   const [nicknameSaved, setNicknameSaved] = useState(false);
@@ -83,10 +84,10 @@ export default function SettingsPage() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert(data.error || 'エラーが発生しました');
+        setPortalError(data.error || 'Something went wrong. Please try again.');
       }
     } catch {
-      alert('エラーが発生しました');
+      setPortalError('Something went wrong. Please try again.');
     } finally {
       setPortalLoading(false);
     }
@@ -135,7 +136,7 @@ export default function SettingsPage() {
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="Your name for Saya & Yume"
                 maxLength={20}
-                className="flex-1 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
+                className="flex-1 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-base outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors"
               />
               <button
                 onClick={handleSaveNickname}
@@ -207,6 +208,9 @@ export default function SettingsPage() {
               </button>
             )}
           </div>
+          {portalError && (
+            <p className="text-xs text-red-400 mt-1">{portalError}</p>
+          )}
         </div>
 
         {/* ログアウト */}

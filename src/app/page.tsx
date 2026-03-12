@@ -167,7 +167,7 @@ function LandingPage() {
       </section>
 
       {/* Your Story × Characters — combined section */}
-      <section className="px-4 py-14 max-w-md mx-auto space-y-8">
+      <section className="px-4 py-14 max-w-3xl mx-auto space-y-8">
         <div className="text-center space-y-2">
           <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase">Your Story</p>
           <h2 className="text-2xl font-bold tracking-tight leading-snug">
@@ -178,7 +178,7 @@ function LandingPage() {
           </p>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 md:grid md:grid-cols-2 md:gap-6 md:space-y-0">
           {/* Saya card */}
           <div className="rounded-2xl border border-pink-500/20 bg-card/40 overflow-hidden">
             {/* Lifestyle photo */}
@@ -317,9 +317,9 @@ function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="px-4 py-12 max-w-md mx-auto">
+      <section className="px-4 py-12 max-w-3xl mx-auto">
         <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">Features</p>
-        <div className="space-y-3">
+        <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
           {FEATURES.map((f) => (
             <div key={f.title} className="flex items-start gap-4 rounded-2xl border border-border/30 bg-card/30 p-4">
               <div className="text-2xl flex-shrink-0">{f.icon}</div>
@@ -333,9 +333,9 @@ function LandingPage() {
       </section>
 
       {/* Testimonials */}
-      <section className="px-4 py-12 max-w-md mx-auto">
+      <section className="px-4 py-12 max-w-3xl mx-auto">
         <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">Reviews</p>
-        <div className="space-y-3">
+        <div className="space-y-3 md:grid md:grid-cols-3 md:gap-4 md:space-y-0">
           {TESTIMONIALS.map((t) => (
             <div key={t.name} className="rounded-2xl border border-border/30 bg-card/30 px-4 py-3">
               <div className="flex gap-0.5 mb-2">
@@ -353,11 +353,11 @@ function LandingPage() {
       </section>
 
       {/* Intimacy system teaser */}
-      <section className="px-4 py-12 max-w-md mx-auto">
+      <section className="px-4 py-12 max-w-3xl mx-auto">
         <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">Intimacy</p>
         <h2 className="text-center text-xl font-bold mb-2">The more you talk, the deeper the bond</h2>
         <p className="text-center text-sm text-muted-foreground mb-6">As you grow closer, their true feelings and secrets are gradually revealed</p>
-        <div className="space-y-2">
+        <div className="space-y-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
           {INTIMACY_LEVELS.map((lv) => (
             <div key={lv.level} className="flex items-center gap-3 rounded-xl border border-border/30 bg-card/30 px-4 py-3">
               <span className="text-lg flex-shrink-0">{lv.emoji}</span>

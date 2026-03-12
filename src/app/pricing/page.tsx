@@ -23,6 +23,7 @@ function PricingContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCanceled, setShowCanceled] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     if (searchParams.get('success') === 'true') {
@@ -91,10 +92,10 @@ function PricingContent() {
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 5000);
       } else {
-        alert(data.error || '決済の開始に失敗しました');
+        setErrorMsg(data.error || 'Payment failed. Please try again.');
       }
     } catch {
-      alert('エラーが発生しました');
+      setErrorMsg('Something went wrong. Please try again.');
     } finally {
       setLoading(null);
     }
@@ -107,9 +108,11 @@ function PricingContent() {
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        setErrorMsg(data.error || 'Something went wrong. Please try again.');
       }
     } catch {
-      alert('エラーが発生しました');
+      setErrorMsg('Something went wrong. Please try again.');
     } finally {
       setLoading(null);
     }
@@ -250,6 +253,9 @@ function PricingContent() {
 
         {/* フッター */}
         <div className="mt-8 text-center space-y-2">
+          {errorMsg && (
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{errorMsg}</p>
+          )}
           <p className="text-xs text-muted-foreground">
             Cancel anytime · No prorated refunds · 18+ only
           </p>

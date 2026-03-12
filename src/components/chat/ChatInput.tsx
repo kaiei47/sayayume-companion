@@ -61,7 +61,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: ChatInputPr
           placeholder={placeholder || 'メッセージを入力...'}
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none rounded-2xl border border-border/50 bg-muted/30 px-4 py-2.5 text-[15px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 disabled:opacity-50 transition-colors"
+          className="flex-1 resize-none rounded-2xl border border-border/50 bg-muted/30 px-4 py-2.5 text-base placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 disabled:opacity-50 transition-colors"
         />
         <Button
           onClick={handleSend}
