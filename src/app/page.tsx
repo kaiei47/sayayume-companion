@@ -291,8 +291,8 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* AI Photo Gallery */}
-      <section className="py-12 space-y-6">
+      {/* AI Photo Gallery — infinite marquee */}
+      <section className="py-14 space-y-6 overflow-hidden">
         <div className="px-4 max-w-md mx-auto text-center">
           <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-2">AI Photos</p>
           <h2 className="text-2xl font-bold tracking-tight">ふたりから届いた写真</h2>
@@ -301,29 +301,48 @@ function LandingPage() {
           </p>
         </div>
 
-        {/* Mosaic grid */}
-        <div className="grid grid-cols-2 gap-1 px-2 max-w-md mx-auto">
-          {SAMPLE_PHOTOS.map((photo, i) => (
-            <div key={i} className={`relative overflow-hidden rounded-xl ${i === 0 ? 'col-span-2 h-64' : 'h-40'}`}>
-              <Image
-                src={photo.src}
-                alt={photo.alt}
-                fill
-                className="object-cover object-top"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
-              <div className="absolute bottom-2 left-3">
-                <span className="text-xs text-white/80 font-medium">{photo.label}</span>
-              </div>
+        {/* Row 1 — left scroll */}
+        <div className="relative">
+          {/* Edge fade masks */}
+          <div className="absolute inset-y-0 left-0 w-12 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-12 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+
+          <div className="flex overflow-hidden">
+            <div
+              className="flex gap-3 flex-shrink-0"
+              style={{ animation: 'marquee-left 28s linear infinite' }}
+            >
+              {[...MARQUEE_ROW1, ...MARQUEE_ROW1].map((photo, i) => (
+                <PhotoCard key={i} photo={photo} />
+              ))}
             </div>
-          ))}
-          {/* Blurred teaser */}
-          <div className="relative h-40 rounded-xl overflow-hidden col-span-2">
-            <Image src="/references/saya.jpg" alt="もっと見る" fill className="object-cover object-center blur-lg scale-110" />
-            <div className="absolute inset-0 bg-background/70 flex flex-col items-center justify-center gap-2">
-              <span className="text-2xl">🔓</span>
-              <p className="text-sm font-semibold">親密度を上げると解放</p>
-              <p className="text-xs text-muted-foreground">さらにドキドキな写真が待ってる</p>
+          </div>
+        </div>
+
+        {/* Row 2 — right scroll (reverse) */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 w-12 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-12 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+
+          <div className="flex overflow-hidden">
+            <div
+              className="flex gap-3 flex-shrink-0"
+              style={{ animation: 'marquee-right 36s linear infinite' }}
+            >
+              {[...MARQUEE_ROW2, ...MARQUEE_ROW2].map((photo, i) => (
+                <PhotoCard key={i} photo={photo} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Lock teaser */}
+        <div className="px-4 max-w-md mx-auto">
+          <div className="rounded-2xl border border-border/30 bg-card/30 px-4 py-3 flex items-center gap-3">
+            <span className="text-xl">🔒</span>
+            <div>
+              <p className="text-sm font-medium">親密度を上げると解放</p>
+              <p className="text-xs text-muted-foreground">仲良くなるほど、もっとドキドキな写真が届く♡</p>
             </div>
           </div>
         </div>
@@ -608,6 +627,35 @@ function Dashboard({
 
 /* ───── Constants ───── */
 
+/* ───── Photo Card (reusable) ───── */
+
+function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: string; char: 'saya' | 'yume' } }) {
+  return (
+    <div className="relative flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-card/40 border border-border/20">
+      {/* Full portrait image */}
+      <div className="relative w-36 aspect-[3/4]">
+        <Image
+          src={photo.src}
+          alt={photo.alt}
+          fill
+          className="object-cover object-top"
+          sizes="144px"
+        />
+        {/* Bottom gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+        {/* Character badge */}
+        <div className={`absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full ${photo.char === 'saya' ? 'bg-pink-500/80 text-white' : 'bg-blue-500/80 text-white'}`}>
+          {photo.char === 'saya' ? 'さや' : 'ゆめ'}
+        </div>
+        {/* Caption */}
+        <p className="absolute bottom-2 left-2 right-2 text-[10px] text-white/90 leading-tight italic">
+          &ldquo;{photo.caption}&rdquo;
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const STORY_MOMENTS = [
   {
     emoji: '👋',
@@ -653,11 +701,22 @@ const YUME_TRAITS = [
   { icon: '✨', label: '夢：誰かを笑顔に' },
 ];
 
-const SAMPLE_PHOTOS = [
-  { src: '/references/saya.jpg', alt: 'さや', label: 'さや' },
-  { src: '/references/yume.jpg', alt: 'ゆめ', label: 'ゆめ' },
-  { src: '/avatars/saya2.jpg', alt: 'さや', label: 'さや' },
-  { src: '/avatars/yume.jpg', alt: 'ゆめ', label: 'ゆめ' },
+const MARQUEE_ROW1 = [
+  { src: '/references/saya.jpg',  alt: 'さや', caption: 'ねえ、これ似合う？',       char: 'saya' as const },
+  { src: '/references/yume.jpg',  alt: 'ゆめ', caption: '今日もよろしくね♡',       char: 'yume' as const },
+  { src: '/avatars/saya2.jpg',    alt: 'さや', caption: 'また送っちゃった笑',       char: 'saya' as const },
+  { src: '/avatars/yume.jpg',     alt: 'ゆめ', caption: '…見てる？',              char: 'yume' as const },
+  { src: '/references/saya.jpg',  alt: 'さや', caption: 'こっちの方がよかった？',   char: 'saya' as const },
+  { src: '/references/yume.jpg',  alt: 'ゆめ', caption: 'もう寝るとこだったけど', char: 'yume' as const },
+];
+
+const MARQUEE_ROW2 = [
+  { src: '/avatars/yume.jpg',     alt: 'ゆめ', caption: '眠れなくて…',            char: 'yume' as const },
+  { src: '/avatars/saya2.jpg',    alt: 'さや', caption: 'どう思う？正直に言って',  char: 'saya' as const },
+  { src: '/references/yume.jpg',  alt: 'ゆめ', caption: '会いたかったな…',        char: 'yume' as const },
+  { src: '/references/saya.jpg',  alt: 'さや', caption: '今日ここ来てるんだけど', char: 'saya' as const },
+  { src: '/avatars/yume.jpg',     alt: 'ゆめ', caption: 'ありがとう、嬉しかった', char: 'yume' as const },
+  { src: '/avatars/saya2.jpg',    alt: 'さや', caption: 'あなただけに見せる♡',    char: 'saya' as const },
 ];
 
 const FEATURES = [
