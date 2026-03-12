@@ -489,10 +489,35 @@ function Dashboard({
     }
   }, [lastMessages]);
 
+  // キャラカードのsort順を共有
+  const sortedChars = Object.values(CHARACTERS)
+    .filter(c => c.id !== 'duo')
+    .sort((a, b) => {
+      const aLevel = intimacy[a.id]?.level || 1;
+      const bLevel = intimacy[b.id]?.level || 1;
+      const aPoints = intimacy[a.id]?.points || 0;
+      const bPoints = intimacy[b.id]?.points || 0;
+      if (bLevel !== aLevel) return bLevel - aLevel;
+      return bPoints - aPoints;
+    });
+
+  const slot = getTimeSlot();
+  const greetingCharId = new Date().getDate() % 2 === 0 ? 'yume' : 'saya';
+  const greetingMsgs = CHAR_MESSAGES[greetingCharId][slot];
+  const greetingMsg = greetingMsgs[getDailyIndex(greetingMsgs.length)];
+  const greetingAvatarUrl = greetingCharId === 'saya' ? '/avatars/saya2.jpg' : '/avatars/yume.jpg';
+  const greetingNameJa = greetingCharId === 'saya' ? 'さや' : 'ゆめ';
+  const greetingAccent = greetingCharId === 'saya'
+    ? 'border-pink-500/25 bg-gradient-to-br from-pink-500/10 to-transparent'
+    : 'border-blue-500/25 bg-gradient-to-br from-blue-500/10 to-transparent';
+  const greetingBubbleBg = greetingCharId === 'saya' ? 'bg-pink-500/15' : 'bg-blue-500/15';
+  const greetingReplyColor = greetingCharId === 'saya' ? 'text-pink-400' : 'text-blue-400';
+
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      {/* Top nav */}
-      <div className="flex items-center justify-between px-4 pt-safe pb-3 pt-4 max-w-md mx-auto">
+    <div className="h-dvh bg-background text-foreground flex flex-col">
+
+      {/* ── Sticky top nav ── */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/20 flex-shrink-0 bg-background/95 backdrop-blur-sm">
         <SayayumeLogo size="md" />
         <div className="flex items-center gap-3">
           <Link href="/pricing" className="text-[11px] text-muted-foreground bg-card/50 border border-border/30 px-2.5 py-1 rounded-full hover:bg-card transition-colors">
@@ -506,222 +531,274 @@ function Dashboard({
         </div>
       </div>
 
-      <div className="px-4 pb-12 max-w-md mx-auto space-y-6">
-        {/* Daily greeting card */}
-        {(() => {
-          const slot = getTimeSlot();
-          const charId = new Date().getDate() % 2 === 0 ? 'yume' : 'saya';
-          const msgs = CHAR_MESSAGES[charId][slot];
-          const msg = msgs[getDailyIndex(msgs.length)];
-          const avatarUrl = charId === 'saya' ? '/avatars/saya2.jpg' : '/avatars/yume.jpg';
-          const nameJa = charId === 'saya' ? 'さや' : 'ゆめ';
-          const accent = charId === 'saya'
-            ? 'border-pink-500/25 bg-gradient-to-br from-pink-500/10 to-transparent'
-            : 'border-blue-500/25 bg-gradient-to-br from-blue-500/10 to-transparent';
-          const bubbleBg = charId === 'saya' ? 'bg-pink-500/15' : 'bg-blue-500/15';
-          const replyColor = charId === 'saya' ? 'text-pink-400' : 'text-blue-400';
-          return (
-            <Link href={`/chat/${charId}`} className="group block">
-              <div className={`rounded-2xl border ${accent} p-4`}>
+      <div className="flex flex-1 min-h-0">
+
+        {/* ── Desktop sidebar (PC専用) ── */}
+        <aside className="hidden md:flex flex-col w-72 border-r border-border/20 overflow-y-auto flex-shrink-0">
+          <div className="p-4 space-y-2 flex-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 pb-2">💬 チャット</p>
+
+            {/* キャラカード（コンパクト版） */}
+            {sortedChars.map((char) => {
+              const charIntimacy = intimacy[char.id];
+              const statusText = CHAR_STATUS[char.id]?.[slot];
+              return (
+                <Link
+                  key={char.id}
+                  href={`/chat/${char.id}`}
+                  className="group flex items-center gap-3 rounded-xl border border-border/30 bg-card/30 p-3 hover:bg-card/60 hover:border-primary/30 transition-all"
+                >
+                  <div className="relative flex-shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={char.avatarUrl} alt={char.nameJa} className="h-10 w-10 rounded-full object-cover object-top" />
+                    <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-sm font-medium">{char.nameJa}</span>
+                      {charIntimacy && charIntimacy.level > 1 && (
+                        <span className={`text-[9px] font-medium px-1 py-0.5 rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} text-white`}>
+                          Lv{charIntimacy.level}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {lastMessages[char.id] ? lastMessages[char.id].content : (statusText ?? char.tagline)}
+                    </p>
+                    {charIntimacy && (
+                      <div className="mt-1 h-0.5 rounded-full bg-muted/30 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color}`}
+                          style={{ width: `${charIntimacy.progress}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+
+            {/* Duo mode（コンパクト版） */}
+            <Link href="/chat/duo" className="group relative flex items-center gap-3 rounded-xl p-[1px] transition-all overflow-hidden">
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:opacity-80 transition-opacity" />
+              <div className="relative flex items-center gap-3 rounded-[11px] bg-background/95 p-3 w-full">
+                <div className="relative flex-shrink-0 w-10 h-10">
+                  <Image src="/avatars/saya2.jpg" alt="さや" width={28} height={28} className="h-7 w-7 rounded-full object-cover absolute top-0 left-0" />
+                  <Image src="/avatars/yume.jpg" alt="ゆめ" width={28} height={28} className="h-7 w-7 rounded-full object-cover absolute bottom-0 right-0 ring-1 ring-background" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium">Duo Mode</span>
+                    <span className="text-[9px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">PRO</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">ふたりと同時にチャット♡</p>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* アップグレードバナー（サイドバー下部） */}
+          <div className="p-3 border-t border-border/20 flex-shrink-0">
+            <Link href="/pricing" className="group relative block overflow-hidden rounded-xl p-[1px] transition-all">
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-50 group-hover:opacity-90 transition-opacity" />
+              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+              <div className="relative rounded-[11px] bg-background/95 px-3 py-2.5 text-center">
+                <p className="text-xs font-medium">もっと仲良くなりたい？ ♡</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">プランをアップグレード →</p>
+              </div>
+            </Link>
+          </div>
+        </aside>
+
+        {/* ── Main content ── */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="px-4 pb-10 pt-5 md:px-8 md:max-w-2xl md:mx-auto space-y-5">
+
+            {/* Daily greeting card */}
+            <Link href={`/chat/${greetingCharId}`} className="group block">
+              <div className={`rounded-2xl border ${greetingAccent} p-4`}>
                 <div className="flex items-start gap-3">
                   <div className="relative flex-shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={avatarUrl} alt={nameJa} className="h-12 w-12 rounded-full object-cover object-top" />
+                    <img src={greetingAvatarUrl} alt={greetingNameJa} className="h-12 w-12 rounded-full object-cover object-top" />
                     <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-xs font-semibold">{nameJa}</span>
-                      <span className="text-[10px] text-muted-foreground">{CHAR_STATUS[charId][slot]}</span>
+                      <span className="text-xs font-semibold">{greetingNameJa}</span>
+                      <span className="text-[10px] text-muted-foreground">{CHAR_STATUS[greetingCharId][slot]}</span>
                     </div>
-                    <div className={`${bubbleBg} rounded-2xl rounded-tl-sm px-3.5 py-2.5 inline-block max-w-full`}>
-                      <p className="text-sm leading-relaxed">{msg}</p>
+                    <div className={`${greetingBubbleBg} rounded-2xl rounded-tl-sm px-3.5 py-2.5 inline-block max-w-full`}>
+                      <p className="text-sm leading-relaxed">{greetingMsg}</p>
                     </div>
                   </div>
                 </div>
                 <div className="mt-3 flex justify-end">
-                  <span className={`text-[11px] font-medium ${replyColor} group-hover:underline`}>返信する →</span>
+                  <span className={`text-[11px] font-medium ${greetingReplyColor} group-hover:underline`}>返信する →</span>
                 </div>
               </div>
             </Link>
-          );
-        })()}
 
-        {/* 思い出フォト */}
-        {receivedImages.length > 0 && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📸 もらった写真</h2>
-              <span className="text-[10px] text-muted-foreground/50">{receivedImages.length}枚</span>
-            </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {receivedImages.slice(0, 9).map((img) => (
-                <Link
-                  key={img.id}
-                  href={`/chat/${img.character_id}`}
-                  className="relative aspect-square rounded-xl overflow-hidden group"
-                >
-                  <Image
-                    src={img.url}
-                    alt="受け取った写真"
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* キャラ選択カード */}
-        <section className="space-y-3">
-          {receivedImages.length === 0 && (
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">💬 チャット</h2>
-          )}
-          <div className="grid gap-3">
-            {Object.values(CHARACTERS)
-              .filter(c => c.id !== 'duo')
-              .sort((a, b) => {
-                const aLevel = intimacy[a.id]?.level || 1;
-                const bLevel = intimacy[b.id]?.level || 1;
-                const aPoints = intimacy[a.id]?.points || 0;
-                const bPoints = intimacy[b.id]?.points || 0;
-                if (bLevel !== aLevel) return bLevel - aLevel;
-                return bPoints - aPoints;
-              })
-              .map((char) => {
-                const charIntimacy = intimacy[char.id];
-                const slot = getTimeSlot();
-                const statusText = CHAR_STATUS[char.id]?.[slot];
-                return (
-                  <Link
-                    key={char.id}
-                    href={`/chat/${char.id}`}
-                    className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-4 transition-all hover:border-primary/50 hover:bg-card overflow-hidden"
-                  >
-                    <div className="relative flex-shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={char.avatarUrl}
-                        alt={char.nameJa}
-                        className="h-16 w-16 rounded-full object-cover object-top"
+            {/* 思い出フォト */}
+            {receivedImages.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📸 もらった写真</h2>
+                  <span className="text-[10px] text-muted-foreground/50">{receivedImages.length}枚</span>
+                </div>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
+                  {receivedImages.slice(0, 10).map((img) => (
+                    <Link
+                      key={img.id}
+                      href={`/chat/${img.character_id}`}
+                      className="relative aspect-square rounded-xl overflow-hidden group"
+                    >
+                      <Image
+                        src={img.url}
+                        alt="受け取った写真"
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <h3 className="font-semibold group-hover:text-primary">
-                          {char.nameJa}
-                          <span className="ml-2 text-xs font-normal text-muted-foreground">{char.name}</span>
-                        </h3>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {charIntimacy && charIntimacy.level > 1 && (
-                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} text-white`}>
-                              {charIntimacy.levelInfo.emoji} Lv{charIntimacy.level}
-                            </span>
-                          )}
-                          {lastMessages[char.id] && (
-                            <span className="text-[10px] text-muted-foreground/60">
-                              {formatRelativeTime(lastMessages[char.id].created_at)}
-                            </span>
-                          )}
-                        </div>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* キャラ選択カード（モバイルのみ表示） */}
+            <section className="md:hidden space-y-3">
+              {receivedImages.length === 0 && (
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">💬 チャット</h2>
+              )}
+              <div className="grid gap-3">
+                {sortedChars.map((char) => {
+                  const charIntimacy = intimacy[char.id];
+                  const statusText = CHAR_STATUS[char.id]?.[slot];
+                  return (
+                    <Link
+                      key={char.id}
+                      href={`/chat/${char.id}`}
+                      className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-4 transition-all hover:border-primary/50 hover:bg-card overflow-hidden"
+                    >
+                      <div className="relative flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={char.avatarUrl} alt={char.nameJa} className="h-16 w-16 rounded-full object-cover object-top" />
+                        <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {lastMessages[char.id]
-                          ? lastMessages[char.id].content
-                          : (statusText ?? char.tagline)}
-                      </p>
-                      {charIntimacy && (
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <div className="flex-1 h-1 rounded-full bg-muted/30 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} transition-all duration-500`}
-                              style={{ width: `${charIntimacy.progress}%` }}
-                            />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <h3 className="font-semibold group-hover:text-primary">
+                            {char.nameJa}
+                            <span className="ml-2 text-xs font-normal text-muted-foreground">{char.name}</span>
+                          </h3>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {charIntimacy && charIntimacy.level > 1 && (
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} text-white`}>
+                                {charIntimacy.levelInfo.emoji} Lv{charIntimacy.level}
+                              </span>
+                            )}
+                            {lastMessages[char.id] && (
+                              <span className="text-[10px] text-muted-foreground/60">
+                                {formatRelativeTime(lastMessages[char.id].created_at)}
+                              </span>
+                            )}
                           </div>
-                          <span className="text-[9px] text-muted-foreground/50">{charIntimacy.levelInfo.nameJa}</span>
                         </div>
-                      )}
+                        <p className="text-sm text-muted-foreground truncate">
+                          {lastMessages[char.id] ? lastMessages[char.id].content : (statusText ?? char.tagline)}
+                        </p>
+                        {charIntimacy && (
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <div className="flex-1 h-1 rounded-full bg-muted/30 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} transition-all duration-500`}
+                                style={{ width: `${charIntimacy.progress}%` }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-muted-foreground/50">{charIntimacy.levelInfo.nameJa}</span>
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+
+                {/* Duo mode */}
+                <Link href="/chat/duo" className="group relative flex items-center gap-4 rounded-2xl p-[1px] transition-all overflow-hidden">
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:from-pink-500/60 group-hover:via-purple-500/60 group-hover:to-blue-500/60 transition-all" />
+                  <div className="relative flex items-center gap-4 rounded-[15px] bg-background/95 p-4 w-full">
+                    <div className="relative flex-shrink-0">
+                      <Image src="/avatars/saya2.jpg" alt="さや" width={48} height={48} className="h-12 w-12 rounded-full object-cover" />
+                      <Image src="/avatars/yume.jpg" alt="ゆめ" width={48} height={48} className="h-12 w-12 rounded-full object-cover absolute -right-4 top-0 ring-2 ring-background" />
                     </div>
-                  </Link>
-                );
-              })}
-
-            {/* Duo mode */}
-            <Link
-              href="/chat/duo"
-              className="group relative flex items-center gap-4 rounded-2xl p-[1px] transition-all overflow-hidden"
-            >
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:from-pink-500/60 group-hover:via-purple-500/60 group-hover:to-blue-500/60 transition-all" />
-              <div className="relative flex items-center gap-4 rounded-[15px] bg-background/95 p-4 w-full">
-                <div className="relative flex-shrink-0">
-                  <Image src="/avatars/saya2.jpg" alt="さや" width={48} height={48} className="h-12 w-12 rounded-full object-cover" />
-                  <Image src="/avatars/yume.jpg" alt="ゆめ" width={48} height={48} className="h-12 w-12 rounded-full object-cover absolute -right-4 top-0 ring-2 ring-background" />
-                </div>
-                <div className="flex-1 min-w-0 ml-3">
-                  <div className="flex items-baseline gap-2">
-                    <h3 className="font-semibold group-hover:text-primary">Duo Mode</h3>
-                    <span className="text-[10px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-2 py-0.5 rounded-full">PREMIUM</span>
+                    <div className="flex-1 min-w-0 ml-3">
+                      <div className="flex items-baseline gap-2">
+                        <h3 className="font-semibold group-hover:text-primary">Duo Mode</h3>
+                        <span className="text-[10px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-2 py-0.5 rounded-full">PREMIUM</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">ふたりと同時にチャット♡</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">ふたりと同時にチャット♡</p>
-                </div>
+                </Link>
               </div>
-            </Link>
-          </div>
-        </section>
+            </section>
 
-        {/* 初めての人向けガイド（画像0枚かつメッセージなし） */}
-        {receivedImages.length === 0 && Object.keys(lastMessages).length === 0 && (
-          <section className="rounded-2xl border border-border/30 bg-card/20 p-4 space-y-3">
-            <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider px-1">はじめに</p>
-            <div className="flex items-start gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/avatars/saya2.jpg" alt="さや" className="h-9 w-9 rounded-full object-cover object-top flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[11px] text-muted-foreground mb-1">さや</p>
-                <div className="bg-pink-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
-                  <p className="text-sm leading-relaxed">はじめまして！私がさやだよ♡<br />気軽に話しかけてみてね！</p>
+            {/* 初めての人向けガイド（画像0枚かつメッセージなし） */}
+            {receivedImages.length === 0 && Object.keys(lastMessages).length === 0 && (
+              <section className="rounded-2xl border border-border/30 bg-card/20 p-4 space-y-3">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider px-1">はじめに</p>
+                <div className="flex items-start gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/avatars/saya2.jpg" alt="さや" className="h-9 w-9 rounded-full object-cover object-top flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] text-muted-foreground mb-1">さや</p>
+                    <div className="bg-pink-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
+                      <p className="text-sm leading-relaxed">はじめまして！私がさやだよ♡<br />気軽に話しかけてみてね！</p>
+                    </div>
+                  </div>
                 </div>
+                <div className="flex items-start gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/avatars/yume.jpg" alt="ゆめ" className="h-9 w-9 rounded-full object-cover object-top flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] text-muted-foreground mb-1">ゆめ</p>
+                    <div className="bg-blue-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
+                      <p className="text-sm leading-relaxed">…ふたりとも、待ってたよ。<br />仲良くなると写真も届くから♡</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* アップグレードバナー（モバイルのみ） */}
+            <div className="md:hidden">
+              <Link href="/pricing" className="group relative block overflow-hidden rounded-2xl p-[1px] transition-all">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-30 blur-sm" />
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                <div className="relative rounded-[15px] bg-background/95 p-4 text-center">
+                  <p className="text-sm font-medium">もっと仲良くなりたい？ ♡</p>
+                  <p className="text-xs text-muted-foreground mt-1">メッセージ無制限 + AI写真 — プランを見る →</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Footer */}
+            <div className="text-center space-y-2 pt-2">
+              <p className="text-xs text-muted-foreground">Sayayume v0.1.0</p>
+              <p className="text-xs text-muted-foreground">18歳以上限定 · AI生成コンテンツ</p>
+              <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
+                <Link href="/legal/terms" className="hover:text-muted-foreground transition-colors">利用規約</Link>
+                <span>·</span>
+                <Link href="/legal/privacy" className="hover:text-muted-foreground transition-colors">プライバシー</Link>
+                <span>·</span>
+                <Link href="/legal/tokushoho" className="hover:text-muted-foreground transition-colors">特商法</Link>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/avatars/yume.jpg" alt="ゆめ" className="h-9 w-9 rounded-full object-cover object-top flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[11px] text-muted-foreground mb-1">ゆめ</p>
-                <div className="bg-blue-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
-                  <p className="text-sm leading-relaxed">…ふたりとも、待ってたよ。<br />仲良くなると写真も届くから♡</p>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
-        {/* Upgrade banner */}
-        <Link href="/pricing" className="group relative block overflow-hidden rounded-2xl p-[1px] transition-all">
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-30 blur-sm" />
-          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          <div className="relative rounded-[15px] bg-background/95 p-4 text-center">
-            <p className="text-sm font-medium">もっと仲良くなりたい？ ♡</p>
-            <p className="text-xs text-muted-foreground mt-1">メッセージ無制限 + AI写真 — プランを見る →</p>
           </div>
-        </Link>
-
-        {/* Footer */}
-        <div className="text-center space-y-2 pt-2">
-          <p className="text-xs text-muted-foreground">Sayayume v0.1.0</p>
-          <p className="text-xs text-muted-foreground">18歳以上限定 · AI生成コンテンツ</p>
-          <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
-            <Link href="/legal/terms" className="hover:text-muted-foreground transition-colors">利用規約</Link>
-            <span>·</span>
-            <Link href="/legal/privacy" className="hover:text-muted-foreground transition-colors">プライバシー</Link>
-            <span>·</span>
-            <Link href="/legal/tokushoho" className="hover:text-muted-foreground transition-colors">特商法</Link>
-          </div>
-        </div>
+        </main>
       </div>
     </div>
   );
