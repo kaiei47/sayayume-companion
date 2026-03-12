@@ -1,4 +1,4 @@
-const CACHE_NAME = "sayayume-v1";
+const CACHE_NAME = "sayayume-v2";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
@@ -45,11 +45,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets (CSS, JS, images, fonts)
+  // Network-first for content images that may update without URL change
+  if (
+    url.pathname.startsWith("/references/") ||
+    url.pathname.startsWith("/avatars/")
+  ) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || offlineResponse()))
+    );
+    return;
+  }
+
+  // Cache-first for static assets (CSS, JS, icons, fonts) — these have content hashes
   if (
     request.destination === "style" ||
     request.destination === "script" ||
-    request.destination === "image" ||
     request.destination === "font" ||
     url.pathname.startsWith("/icons/") ||
     url.pathname.startsWith("/_next/static/")
