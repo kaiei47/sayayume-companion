@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         const { error: userUpdateError } = await adminDb
           .from('users')
           .update({
-            is_premium: plan !== 'free',
+            is_premium: true,
             updated_at: new Date().toISOString(),
           })
           .eq('id', dbUser.id);
