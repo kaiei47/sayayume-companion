@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import AgeGate from "@/components/AgeGate";
@@ -98,6 +99,18 @@ export default function RootLayout({
             `,
           }}
         />
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-N5R8J7LXP0"
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-N5R8J7LXP0');
+          `}
+        </Script>
       </body>
     </html>
   );

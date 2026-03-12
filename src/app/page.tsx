@@ -193,7 +193,7 @@ export default function Home() {
             <div className="relative flex items-center gap-4 rounded-[15px] bg-background/95 p-4 w-full">
               <div className="relative flex-shrink-0">
                 <Image
-                  src="/avatars/saya.jpg"
+                  src="/avatars/saya2.jpg"
                   alt="さや"
                   width={48}
                   height={48}
