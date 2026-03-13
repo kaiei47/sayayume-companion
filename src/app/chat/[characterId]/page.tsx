@@ -27,8 +27,13 @@ export default function ChatPage() {
   }>>([]);
   const [intimacyLevel, setIntimacyLevel] = useState(1);
   const [intimacyProgress, setIntimacyProgress] = useState(0);
+  const [intimacyPoints, setIntimacyPoints] = useState(0);
+  const [pointsToNext, setPointsToNext] = useState(100);
   const [intimacyInfo, setIntimacyInfo] = useState<{ nameJa: string; emoji: string; color: string } | null>(null);
   const [levelUpNotice, setLevelUpNotice] = useState<{ from: number; to: number; nameJa: string; emoji: string } | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [dailyMissions, setDailyMissions] = useState<Array<{ id: string; label: string; icon: string; points: number; completed: boolean }>>([]);
+  const [showMissions, setShowMissions] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // メニュー外クリックで閉じる
@@ -60,7 +65,7 @@ export default function ChatPage() {
       const { data: sub } = await supabase.from('subscriptions').select('plan').eq('user_id', dbUser.id).eq('status', 'active').single();
       if (sub) setUserPlan(sub.plan);
 
-      // 親密度取得
+      // 親密度 + ストリーク + デイリーミッション取得
       try {
         const res = await fetch('/api/intimacy');
         if (res.ok) {
@@ -69,8 +74,12 @@ export default function ChatPage() {
           if (charIntimacy) {
             setIntimacyLevel(charIntimacy.level);
             setIntimacyProgress(charIntimacy.progress);
+            setIntimacyPoints(charIntimacy.points || 0);
+            setPointsToNext(charIntimacy.pointsToNext ?? 100);
             setIntimacyInfo(charIntimacy.levelInfo);
           }
+          if (data.streak) setStreak(data.streak.count || 0);
+          if (data.dailyMissions) setDailyMissions(data.dailyMissions);
         }
       } catch {
         // 無視
@@ -317,7 +326,7 @@ export default function ChatPage() {
             />
             <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <h1 className="text-sm font-semibold">{character.nameJa}</h1>
               {intimacyInfo && (
@@ -326,22 +335,32 @@ export default function ChatPage() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-[11px] text-green-400/80">Online</p>
-              {intimacyInfo && (
-                <div className="flex items-center gap-1">
-                  <div className="w-12 h-1 rounded-full bg-muted/30 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${intimacyInfo.color} transition-all duration-700`}
-                      style={{ width: `${intimacyProgress}%` }}
-                    />
-                  </div>
-                  <span className="text-[9px] text-muted-foreground/50">{intimacyInfo.nameJa}</span>
+            {intimacyInfo && (
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="w-20 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r ${intimacyInfo.color} transition-all duration-700`}
+                    style={{ width: `${intimacyProgress}%` }}
+                  />
                 </div>
-              )}
-            </div>
+                <span className="text-[9px] text-muted-foreground/60">
+                  {intimacyLevel < 5
+                    ? `あと${pointsToNext}pt → Lv${intimacyLevel + 1}`
+                    : `${intimacyPoints}pt 💎`}
+                </span>
+              </div>
+            )}
           </div>
         </div>
+        {/* ストリーク表示 */}
+        {streak > 0 && (
+          <button
+            onClick={() => setShowMissions(!showMissions)}
+            className="flex items-center gap-0.5 text-[10px] font-semibold text-orange-400 bg-orange-500/10 px-2 py-1 rounded-full hover:bg-orange-500/20 transition-colors"
+          >
+            🔥{streak}
+          </button>
+        )}
         {/* フリープランのアップグレードバッジ */}
         {userPlan === 'free' && (
           <Link
@@ -397,6 +416,33 @@ export default function ChatPage() {
           )}
         </div>
       </header>
+
+      {/* デイリーミッション */}
+      {showMissions && dailyMissions.length > 0 && (
+        <div className="border-b border-border/30 bg-card/50 px-4 py-3 animate-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">今日のミッション</p>
+            <p className="text-[10px] text-muted-foreground/60">
+              {dailyMissions.filter(m => m.completed).length}/{dailyMissions.length} 完了
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            {dailyMissions.map(mission => (
+              <div key={mission.id} className="flex items-center gap-2">
+                <div className={`h-4 w-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${
+                  mission.completed ? 'bg-green-500' : 'bg-muted/40 border border-border/50'
+                }`}>
+                  {mission.completed ? '✓' : ''}
+                </div>
+                <span className={`text-xs ${mission.completed ? 'line-through text-muted-foreground/40' : 'text-foreground/80'}`}>
+                  {mission.icon} {mission.label}
+                </span>
+                <span className="ml-auto text-[10px] text-muted-foreground/50">+{mission.points}pt</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* レベルアップ通知 */}
       {levelUpNotice && (
