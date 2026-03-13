@@ -146,9 +146,9 @@ export function buildImagePrompt(
   hasReferenceImage: boolean = false
 ): string {
   if (hasReferenceImage) {
-    return `Generate a new selfie-style photo of this exact same person shown in the reference image. Keep the same face, facial features, and hair style. Scene: ${imageDescription}. ${characterPromptBase}. The image should look like a candid selfie or photo shared in a chat conversation. Soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, upper body shot.`;
+    return `Generate a photo of this exact same person shown in the reference image. Keep the same face, facial features, and hair style. ${imageDescription}. ${characterPromptBase}. Soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, lifestyle photography style.`;
   }
-  return `Generate a selfie-style photo. ${characterPromptBase}. Scene: ${imageDescription}. The image should look like a candid selfie or photo shared in a chat conversation. Soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, upper body shot.`;
+  return `Generate a photo. ${characterPromptBase}. ${imageDescription}. Soft frontal beauty lighting, no harsh shadows, youthful glowing skin, cinematic quality, lifestyle photography style.`;
 }
 
 /**
