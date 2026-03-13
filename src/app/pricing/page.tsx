@@ -134,6 +134,10 @@ function PricingContent() {
           </a>
           <h1 className="text-3xl font-bold tracking-tight mb-2">料金プラン</h1>
           <p className="text-muted-foreground">さや & ゆめともっと仲良くなろう ♡</p>
+          {/* クローズドβ限定バナー */}
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30 px-4 py-2 text-sm font-medium text-pink-300">
+            🎉 クローズドβ限定 — 最初の1ヶ月無料！
+          </div>
         </div>
 
         {/* 成功/キャンセル通知 */}
@@ -191,6 +195,11 @@ function PricingContent() {
                       <span className="text-sm text-muted-foreground">/mo</span>
                     )}
                   </div>
+                  {plan.price > 0 && (
+                    <div className="mt-1.5 text-xs font-medium text-pink-400">
+                      🎉 最初の1ヶ月無料
+                    </div>
+                  )}
                 </div>
 
                 <ul className="space-y-2 mb-6 flex-1">

@@ -129,6 +129,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 新規サブスク → Stripe Checkout Session作成
+    const betaCouponId = process.env.STRIPE_BETA_COUPON_ID;
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -143,6 +144,7 @@ export async function POST(req: NextRequest) {
         userId: dbUser.id,
         plan,
       },
+      ...(betaCouponId ? { discounts: [{ coupon: betaCouponId }] } : {}),
       success_url: `${origin}/pricing?success=true`,
       cancel_url: `${origin}/pricing?canceled=true`,
     });

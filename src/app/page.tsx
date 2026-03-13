@@ -162,6 +162,7 @@ function LandingPage() {
               さや & ゆめと話す
             </Link>
             <p className="text-[11px] text-muted-foreground/60">クレカ不要 · 30秒で登録 · 無料スタート</p>
+            <p className="text-[11px] font-medium text-pink-400">🎉 クローズドβ特典: 有料プラン最初の1ヶ月無料！</p>
           </div>
         </div>
       </section>
