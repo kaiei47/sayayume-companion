@@ -93,6 +93,7 @@ export default function TokushohoPage() {
             <dt className="text-sm font-semibold text-foreground sm:w-48 flex-shrink-0">キャンセル・解約</dt>
             <dd className="text-sm text-muted-foreground space-y-1">
               <p>サブスクリプションはいつでもキャンセルが可能です。</p>
+              <p>【解約手順】ログイン後、画面右上のメニューより「設定」→「プラン管理」→「サブスクリプションをキャンセル」を選択してください。</p>
               <p>キャンセル後も、現在の請求期間の終了まではサービスをご利用いただけます。</p>
               <p>日割り計算による返金は行いません。</p>
             </dd>
