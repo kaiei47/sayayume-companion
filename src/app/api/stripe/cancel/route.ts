@@ -45,9 +45,8 @@ export async function POST() {
     }
 
     // 期間終了時にキャンセル
-    let updated;
     try {
-      updated = await stripe.subscriptions.update(sub.external_subscription_id, {
+      await stripe.subscriptions.update(sub.external_subscription_id, {
         cancel_at_period_end: true,
       });
     } catch (stripeErr: unknown) {
@@ -56,16 +55,18 @@ export async function POST() {
       return NextResponse.json({ error: `Stripe error: ${msg}` }, { status: 500 });
     }
 
-    // DBの cancel_at_period_end フラグを更新
-    await admin
+    // DBの cancel_at_period_end フラグを更新し、current_period_end を取得
+    const { data: updatedSub } = await admin
       .from('subscriptions')
       .update({ cancel_at_period_end: true })
-      .eq('external_subscription_id', sub.external_subscription_id);
+      .eq('external_subscription_id', sub.external_subscription_id)
+      .select('current_period_end')
+      .single();
 
     return NextResponse.json({
       success: true,
       cancel_at_period_end: true,
-      current_period_end: new Date(((updated as unknown as { current_period_end: number }).current_period_end) * 1000).toISOString(),
+      current_period_end: updatedSub?.current_period_end ?? null,
     });
   } catch (error) {
     console.error('Cancel subscription error:', error);
@@ -111,19 +112,27 @@ export async function DELETE() {
     }
 
     // 解約を取り消す
-    const updated = await stripe.subscriptions.update(sub.external_subscription_id, {
-      cancel_at_period_end: false,
-    });
+    try {
+      await stripe.subscriptions.update(sub.external_subscription_id, {
+        cancel_at_period_end: false,
+      });
+    } catch (stripeErr: unknown) {
+      console.error('Stripe reactivate error:', stripeErr);
+      const msg = stripeErr instanceof Error ? stripeErr.message : String(stripeErr);
+      return NextResponse.json({ error: `Stripe error: ${msg}` }, { status: 500 });
+    }
 
-    await admin
+    const { data: updatedSub } = await admin
       .from('subscriptions')
       .update({ cancel_at_period_end: false })
-      .eq('external_subscription_id', sub.external_subscription_id);
+      .eq('external_subscription_id', sub.external_subscription_id)
+      .select('current_period_end')
+      .single();
 
     return NextResponse.json({
       success: true,
       cancel_at_period_end: false,
-      current_period_end: new Date(((updated as unknown as { current_period_end: number }).current_period_end) * 1000).toISOString(),
+      current_period_end: updatedSub?.current_period_end ?? null,
     });
   } catch (error) {
     console.error('Reactivate subscription error:', error);
