@@ -23,31 +23,40 @@ export async function GET(req: NextRequest) {
       return Response.json({ images: [] });
     }
 
-    // キャラのアシスタントメッセージのうち image_url があるものを取得
-    let query = supabase
+    // Step 1: ユーザーの会話IDを全取得（duo含む全キャラ）
+    let convQuery = supabase
+      .from('conversations')
+      .select('id, character_id')
+      .eq('user_id', dbUser.id);
+
+    if (characterId) {
+      convQuery = convQuery.eq('character_id', characterId);
+    }
+
+    const { data: conversations } = await convQuery;
+    if (!conversations || conversations.length === 0) {
+      return Response.json({ images: [] });
+    }
+
+    const convMap = new Map(conversations.map(c => [c.id, c.character_id]));
+    const convIds = conversations.map(c => c.id);
+
+    // Step 2: その会話IDの中から image_url があるメッセージを取得
+    const { data: messages } = await supabase
       .from('messages')
-      .select('id, image_url, created_at, conversation_id, conversations!inner(character_id, user_id)')
-      .eq('conversations.user_id', dbUser.id)
+      .select('id, image_url, created_at, conversation_id')
+      .in('conversation_id', convIds)
       .eq('role', 'assistant')
       .not('image_url', 'is', null)
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (characterId) {
-      query = query.eq('conversations.character_id', characterId);
-    }
-
-    const { data: messages } = await query;
-
-    const images = (messages || []).map((m) => {
-      const conv = m.conversations as { character_id?: string; user_id?: string } | null;
-      return {
-        id: m.id,
-        url: m.image_url,
-        created_at: m.created_at,
-        character_id: conv?.character_id ?? '',
-      };
-    }).filter(img => img.character_id);
+    const images = (messages || []).map(m => ({
+      id: m.id,
+      url: m.image_url as string,
+      created_at: m.created_at,
+      character_id: convMap.get(m.conversation_id) ?? '',
+    })).filter(img => img.character_id && img.url);
 
     return Response.json({ images });
   } catch (error) {
