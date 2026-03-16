@@ -1006,8 +1006,8 @@ function Dashboard({
               </div>
             </section>
 
-            {/* 初めての人向けガイド（画像0枚かつメッセージなし） */}
-            {receivedImages.length === 0 && Object.keys(lastMessages).length === 0 && (
+            {/* 初めての人向けガイド（画像0枚かつメッセージなし・ローディング完了後のみ表示） */}
+            {!isLoadingImages && receivedImages.length === 0 && Object.keys(lastMessages).length === 0 && (
               <section className="rounded-2xl border border-border/30 bg-card/20 p-4 space-y-3">
                 <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider px-1">はじめに</p>
                 <div className="flex items-start gap-3">
