@@ -354,6 +354,10 @@ export async function POST(req: NextRequest) {
     if (isFirstEverMessage && !userName) {
       basePrompt = `【初回挨拶の追加指示】これはあなたとこのユーザーの最初の会話です。返答の中で自然な流れで「ところで、なんて呼んだらいい？」とユーザーの名前を聞いてください（1回だけ。強制しない）。\n\n` + basePrompt;
     }
+    // ゲスト: 名前不明なので「ゲストさん」で固定、名前を聞かない
+    if (!user) {
+      basePrompt = `【ユーザー名】相手のことは「ゲストさん」と呼ぶこと。名前は聞かない。\n\n` + basePrompt;
+    }
     // JST時間帯コンテキストを注入（さやの深夜モード等を時刻ベースで制御）
     basePrompt += buildTimeContext(character_id);
     const intimacyAwarePrompt = applyIntimacyToPrompt(
@@ -600,7 +604,7 @@ export async function POST(req: NextRequest) {
           } else if (imageDescriptions.length > 0 && !canGenerateImages) {
             savedContent = cleanText;
             const upgradeMsg = !dbUserId
-              ? '\n\n無料登録すると毎日3枚まで写真が見れるよ♡ アカウント作って続きを楽しもう！'
+              ? '\n\n今日の無料体験分の写真はもう使ったよ♡ 無料登録したら毎日3枚まで見れるようになるよ！ /login から登録してね♡'
               : imageQuotaExceeded
               ? `\n\n今日の写真は${planLimits.dailyImages}枚まで...明日またね♡ もっと見たいならプランアップグレードで増えるよ！`
               : '\n\n写真を見るにはプランのアップグレードが必要だよ♡ Basicプランなら画像付きでチャットできるよ！';
