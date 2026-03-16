@@ -216,7 +216,7 @@ export default function AdminPage() {
         {/* Recent Signups */}
         <div className="rounded-2xl border border-border/50 bg-card/50 p-6">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-            Recent Signups
+            Recent Active
           </h2>
           {stats.recentUsers.length === 0 ? (
             <p className="text-sm text-muted-foreground">No users yet</p>
