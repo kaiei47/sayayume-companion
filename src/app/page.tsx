@@ -448,6 +448,7 @@ function LandingPage() {
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 無制限</li>
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span>ボイスメッセージ & 限定コンテンツ</li>
+              <li className="flex items-center gap-2"><span className="text-pink-400">✦</span>さやゆめモード（ふたりと同時チャット）</li>
             </ul>
           </div>
         </div>
@@ -682,7 +683,7 @@ function Dashboard({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium">Duo Mode</span>
+                    <span className="text-sm font-medium">さやゆめモード</span>
                     <span className="text-[9px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">PRO</span>
                   </div>
                   <p className="text-xs text-muted-foreground">ふたりと同時にチャット♡</p>
@@ -828,7 +829,7 @@ function Dashboard({
                     </div>
                     <div className="flex-1 min-w-0 ml-3">
                       <div className="flex items-baseline gap-2">
-                        <h3 className="font-semibold group-hover:text-primary">Duo Mode</h3>
+                        <h3 className="font-semibold group-hover:text-primary">さやゆめモード</h3>
                         <span className="text-[10px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-2 py-0.5 rounded-full">PREMIUM</span>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">ふたりと同時にチャット♡</p>
