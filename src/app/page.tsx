@@ -141,39 +141,7 @@ const DUO_CAPTIONS = ['2人ともここにいるよ♡', '2人で待ってるね
 
 type ShowcasePhoto = { src: string; alt: string; caption: string; char: 'saya' | 'yume' | 'duo' };
 
-function buildMarqueeRows(images: { id: string; url: string; character_id: string }[]): [ShowcasePhoto[], ShowcasePhoto[]] {
-  const sayaCount = { n: 0 }, yumeCount = { n: 0 }, duoCount = { n: 0 };
-  const photos: ShowcasePhoto[] = images.map(img => {
-    const char = img.character_id === 'saya' ? 'saya' : img.character_id === 'yume' ? 'yume' : 'duo';
-    let caption = '';
-    if (char === 'saya') { caption = SAYA_CAPTIONS[sayaCount.n++ % SAYA_CAPTIONS.length]; }
-    else if (char === 'yume') { caption = YUME_CAPTIONS[yumeCount.n++ % YUME_CAPTIONS.length]; }
-    else { caption = DUO_CAPTIONS[duoCount.n++ % DUO_CAPTIONS.length]; }
-    const alt = char === 'saya' ? 'さや' : char === 'yume' ? 'ゆめ' : 'さや×ゆめ';
-    return { src: img.url, alt, caption, char };
-  });
-  const half = Math.ceil(photos.length / 2);
-  const row1 = photos.slice(0, half).length >= 4 ? photos.slice(0, half) : MARQUEE_ROW1;
-  const row2 = photos.slice(half).length >= 4 ? photos.slice(half) : MARQUEE_ROW2;
-  return [row1, row2];
-}
-
 function LandingPage() {
-  const [marqueeRow1, setMarqueeRow1] = useState<ShowcasePhoto[]>(MARQUEE_ROW1);
-  const [marqueeRow2, setMarqueeRow2] = useState<ShowcasePhoto[]>(MARQUEE_ROW2);
-
-  useEffect(() => {
-    fetch('/api/showcase')
-      .then(r => r.json())
-      .then(data => {
-        if (data.images?.length >= 8) {
-          const [r1, r2] = buildMarqueeRows(data.images);
-          setMarqueeRow1(r1);
-          setMarqueeRow2(r2);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   return (
     <div className="min-h-dvh bg-background text-foreground overflow-x-hidden">
@@ -359,7 +327,7 @@ function LandingPage() {
               className="flex gap-3 flex-shrink-0"
               style={{ animation: 'marquee-left 28s linear infinite' }}
             >
-              {[...marqueeRow1, ...marqueeRow1].map((photo, i) => (
+              {[...MARQUEE_ROW1, ...MARQUEE_ROW1].map((photo, i) => (
                 <PhotoCard key={i} photo={photo} />
               ))}
             </div>
@@ -376,7 +344,7 @@ function LandingPage() {
               className="flex gap-3 flex-shrink-0"
               style={{ animation: 'marquee-right 36s linear infinite' }}
             >
-              {[...marqueeRow2, ...marqueeRow2].map((photo, i) => (
+              {[...MARQUEE_ROW2, ...MARQUEE_ROW2].map((photo, i) => (
                 <PhotoCard key={i} photo={photo} />
               ))}
             </div>
@@ -1104,25 +1072,23 @@ const YUME_TRAITS = [
 ];
 
 const MARQUEE_ROW1 = [
-  { src: '/references/photos/saya_s1.jpg', alt: 'さや', caption: 'ねえ、これ似合う？',       char: 'saya' as const },
-  { src: '/references/photos/yume_s1.jpg', alt: 'ゆめ', caption: '今日もよろしくね♡',       char: 'yume' as const },
-  { src: '/references/photos/saya_s2.jpg', alt: 'さや', caption: 'また送っちゃった笑',       char: 'saya' as const },
-  { src: '/references/photos/yume_s2.jpg', alt: 'ゆめ', caption: '…見てる？',               char: 'yume' as const },
-  { src: '/references/photos/duo_s1.jpg',  alt: 'さや×ゆめ', caption: '2人ともここにいるよ♡', char: 'duo' as const },
-  { src: '/references/photos/saya_s3.jpg', alt: 'さや', caption: 'こっちの方がよかった？',   char: 'saya' as const },
-  { src: '/references/photos/yume_s3.jpg', alt: 'ゆめ', caption: 'もう寝るとこだったけど',   char: 'yume' as const },
-  { src: '/references/photos/saya_s1.jpg', alt: 'さや', caption: 'Bond UP to unlock ♡',   char: 'saya' as const, locked: true },
+  { src: '/references/photos/saya_s1.jpg',  alt: 'さや',     caption: 'ねえ、これ似合う？',        char: 'saya' as const },
+  { src: '/references/photos/yume_s3.jpg',  alt: 'ゆめ',     caption: '今日もよろしくね♡',        char: 'yume' as const },
+  { src: '/references/hero2/saya_3.jpg',    alt: 'さや',     caption: 'カフェで待ってるよ☕',      char: 'saya' as const },
+  { src: '/references/photos/yume_s1.jpg',  alt: 'ゆめ',     caption: '…見てる？',                char: 'yume' as const },
+  { src: '/references/photos/saya_s4.jpg',  alt: 'さや',     caption: 'おはよ、起きた？',          char: 'saya' as const },
+  { src: '/references/hero2/yume_2.jpg',    alt: 'ゆめ',     caption: 'また会いたくなっちゃった',  char: 'yume' as const },
+  { src: '/references/photos/saya_s2.jpg',  alt: 'さや',     caption: 'もっと仲良くなったら…♡',   char: 'saya' as const, locked: true },
 ];
 
 const MARQUEE_ROW2 = [
-  { src: '/references/photos/yume_s4.jpg', alt: 'ゆめ', caption: '眠れなくて…',             char: 'yume' as const },
-  { src: '/references/photos/saya_s4.jpg', alt: 'さや', caption: 'どう思う？正直に言って',   char: 'saya' as const },
-  { src: '/references/photos/duo_s2.jpg',  alt: 'さや×ゆめ', caption: '2人で待ってるね♡',   char: 'duo' as const },
-  { src: '/references/photos/yume_s1.jpg', alt: 'ゆめ', caption: '会いたかったな…',          char: 'yume' as const },
-  { src: '/references/photos/saya_s2.jpg', alt: 'さや', caption: '今日ここ来てるんだけど',   char: 'saya' as const },
-  { src: '/references/photos/yume_s3.jpg', alt: 'ゆめ', caption: 'ありがとう、嬉しかった',   char: 'yume' as const },
-  { src: '/references/photos/yume_s2.jpg', alt: 'ゆめ', caption: 'もっと仲良くなったら…♡',  char: 'yume' as const, locked: true },
-  { src: '/references/photos/saya_s3.jpg', alt: 'さや', caption: 'あなただけに見せる♡',     char: 'saya' as const },
+  { src: '/references/photos/yume_s2.jpg',  alt: 'ゆめ',     caption: 'もう寝るとこだったけど',   char: 'yume' as const },
+  { src: '/references/photos/saya_s3.jpg',  alt: 'さや',     caption: '夜景きれいだよ♡',          char: 'saya' as const },
+  { src: '/references/photos/duo_s1.jpg',   alt: 'さや×ゆめ', caption: '2人ともここにいるよ♡',    char: 'duo' as const },
+  { src: '/references/hero2/saya_9.jpg',    alt: 'さや',     caption: 'あなただけに見せる♡',      char: 'saya' as const },
+  { src: '/references/photos/yume_s4.jpg',  alt: 'ゆめ',     caption: '桜、きれいだよ🌸',         char: 'yume' as const },
+  { src: '/references/photos/duo_s2.jpg',   alt: 'さや×ゆめ', caption: '2人で待ってるね♡',        char: 'duo' as const },
+  { src: '/references/hero2/yume_1.jpg',    alt: 'ゆめ',     caption: 'Bond UP to unlock ♡',    char: 'yume' as const, locked: true },
 ];
 
 const FEATURES = [
