@@ -338,7 +338,7 @@ export default function LoginPage() {
             </div>
 
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/chat/saya')}
               className="w-full rounded-xl border border-border/40 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-border/70 transition-colors"
             >
               ゲストとして試す

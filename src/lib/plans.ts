@@ -10,6 +10,7 @@ export const PLANS = {
       'AI写真 1日3枚',
       '親密度 Lv3まで',
       'さや & ゆめ 両方',
+      '会話履歴永続保存',
     ],
     limits: {
       dailyMessages: -1, // unlimited
@@ -28,6 +29,7 @@ export const PLANS = {
       'メッセージ無制限',
       'AI写真 1日30枚',
       '親密度 全Lv解放',
+      'さや & ゆめ 両方',
       '会話履歴永続保存',
     ],
     limits: {
@@ -47,15 +49,17 @@ export const PLANS = {
       'メッセージ無制限',
       'AI写真 無制限',
       '親密度 全Lv解放',
-      'ボイスメッセージ',
-      '限定コンテンツ',
+      '会話履歴永続保存',
+      'さやゆめモード',
+      'LINE連携（準備中）',
+      'オリジナルアバター（準備中）',
     ],
     limits: {
       dailyMessages: -1,
       imageGeneration: true,
       dailyImages: -1, // unlimited
       maxIntimacyLevel: 5,
-      voiceMessages: true,
+      voiceMessages: false,
     },
   },
 } as const;

@@ -201,7 +201,7 @@ function LandingPage() {
               src="/references/saya.jpg"
               alt="さや"
               fill
-              className="object-cover object-center"
+              className="object-cover object-top"
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/60" />
@@ -211,7 +211,7 @@ function LandingPage() {
               src="/references/yume.jpg"
               alt="ゆめ"
               fill
-              className="object-cover object-center"
+              className="object-cover object-top"
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-l from-transparent to-background/60" />
@@ -502,8 +502,9 @@ function LandingPage() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 無制限</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>ボイスメッセージ & 限定コンテンツ</li>
               <li className="flex items-center gap-2"><span className="text-pink-400">✦</span>さやゆめモード（ふたりと同時チャット）</li>
+              <li className="flex items-center gap-2"><span className="text-muted-foreground/50">⏳</span>LINE連携（準備中）</li>
+              <li className="flex items-center gap-2"><span className="text-muted-foreground/50">⏳</span>オリジナルアバター（準備中）</li>
             </ul>
           </div>
         </div>
@@ -686,6 +687,27 @@ function Dashboard({
   userPlan: string;
 }) {
   const [lightboxImg, setLightboxImg] = useState<ReceivedImage | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+
+  const submitFeedback = async () => {
+    if (!feedbackText.trim() || feedbackStatus === 'sending') return;
+    setFeedbackStatus('sending');
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: feedbackText.trim(), category: 'user_request' }),
+      });
+      if (!res.ok) throw new Error('failed');
+      setFeedbackText('');
+      setFeedbackStatus('done');
+      setTimeout(() => setFeedbackStatus('idle'), 4000);
+    } catch {
+      setFeedbackStatus('error');
+      setTimeout(() => setFeedbackStatus('idle'), 3000);
+    }
+  };
 
   // ライトボックスを閉じる（ESCキー対応）
   useEffect(() => {
@@ -1189,6 +1211,33 @@ function Dashboard({
                   <p className="text-xs text-muted-foreground mt-1">メッセージ無制限 + AI写真 — プランを見る →</p>
                 </div>
               </Link>
+            </div>
+
+            {/* 開発者への要望 */}
+            <div className="rounded-2xl border border-border/30 bg-card/30 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">💌</span>
+                <p className="text-sm font-semibold">開発者への要望・感想</p>
+              </div>
+              <p className="text-xs text-muted-foreground">「こんな機能がほしい」「ここが使いにくい」など、なんでも教えてください♡</p>
+              <textarea
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="例: もっと写真を送ってほしい、ゆめとの会話で..."
+                rows={3}
+                maxLength={1000}
+                className="w-full rounded-xl border border-border/40 bg-background/50 px-3 py-2.5 text-sm resize-none outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500/30 transition-all placeholder:text-muted-foreground/40"
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground/40">{feedbackText.length}/1000</span>
+                <button
+                  onClick={submitFeedback}
+                  disabled={!feedbackText.trim() || feedbackStatus === 'sending'}
+                  className="rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold px-4 py-2 hover:bg-pink-500/20 disabled:opacity-40 transition-all"
+                >
+                  {feedbackStatus === 'sending' ? '送信中...' : feedbackStatus === 'done' ? '✓ 送信しました！' : feedbackStatus === 'error' ? '送信失敗' : '送信する'}
+                </button>
+              </div>
             </div>
 
             {/* Footer */}

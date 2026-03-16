@@ -388,7 +388,7 @@ function PricingContent() {
               },
               {
                 q: 'BasicとPremiumの違いは？',
-                a: 'BasicはAI写真30枚/日。PremiumはAI写真無制限＋将来のボイスメッセージや限定コンテンツも対象です。',
+                a: 'BasicはAI写真30枚/日。PremiumはAI写真無制限＋さやゆめモード（ふたりと同時チャット）＋LINE連携・オリジナルアバターなどの先行機能が対象です。',
               },
               {
                 q: 'プランを変更するとどうなる？',
