@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          message: `${plan === 'premium' ? 'プレミアム' : 'ベーシック'}プランに変更しました`,
+          message: `${plan === 'premium' ? 'Premium' : 'Basic'}プランに変更しました`,
           redirect: `${origin}/pricing?success=true`,
         });
       } catch (stripeError) {

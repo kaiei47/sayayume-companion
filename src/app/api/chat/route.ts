@@ -583,7 +583,7 @@ export async function POST(req: NextRequest) {
             savedContent = cleanText;
             const upgradeMsg = imageQuotaExceeded
               ? `\n\n今日の写真は${planLimits.dailyImages}枚まで...明日またね♡ もっと見たいならプランアップグレードで増えるよ！`
-              : '\n\n写真を見るにはプランのアップグレードが必要だよ♡ ベーシックプランなら画像付きでチャットできるよ！';
+              : '\n\n写真を見るにはプランのアップグレードが必要だよ♡ Basicプランなら画像付きでチャットできるよ！';
             savedContent += upgradeMsg;
             controller.enqueue(
               encoder.encode(

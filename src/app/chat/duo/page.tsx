@@ -385,13 +385,13 @@ export default function DuoChatPage() {
           <h2 className="text-xl font-bold">さやゆめモード</h2>
           <p className="text-muted-foreground text-sm">
             さやとゆめの2人と同時にチャットできる特別モード♡<br />
-            プレミアムプラン限定機能です。
+            Premiumプラン限定機能です。
           </p>
           <Link
             href="/pricing"
             className="inline-block rounded-xl bg-gradient-to-r from-pink-600 to-blue-600 text-white px-6 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            プレミアムにアップグレード
+            Premiumにアップグレード
           </Link>
           <div>
             <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
