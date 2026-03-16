@@ -116,10 +116,13 @@ export async function POST(req: NextRequest) {
         supabase.from('users').update({ last_active_at: new Date().toISOString() }).eq('id', dbUser.id)
           .then(({ error }) => { if (error) console.error('last_active_at update failed:', error.message); });
 
-        // 管理者アカウントはpremium扱い（Stripe不要）
+        // バイパスアカウント（Stripe不要）
         const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+        const basicEmails = (process.env.BASIC_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
         if (user.email && adminEmails.includes(user.email)) {
           userPlan = 'premium';
+        } else if (user.email && basicEmails.includes(user.email)) {
+          userPlan = 'basic';
         } else {
           // ユーザーのプランを取得
           const { data: sub } = await supabase
