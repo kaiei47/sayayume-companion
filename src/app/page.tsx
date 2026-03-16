@@ -1357,14 +1357,12 @@ function Dashboard({
           onClick={(e) => e.stopPropagation()}
         >
           {/* 拡大画像 */}
-          <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-2xl">
-            <Image
+          <div className="rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={lightboxImg.url}
               alt="受け取った写真"
-              fill
-              className="object-cover"
-              sizes="(max-width: 512px) 100vw, 512px"
-              priority
+              className="max-w-full max-h-[75vh] object-contain rounded-2xl block mx-auto"
             />
           </div>
 
