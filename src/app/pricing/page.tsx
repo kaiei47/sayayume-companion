@@ -287,7 +287,7 @@ function PricingContent() {
                         disabled={loading !== null}
                         className="w-full rounded-xl py-3 text-sm font-medium border border-border/50 hover:bg-muted/50 transition-colors disabled:opacity-50 text-muted-foreground"
                       >
-                        {loading ? '読み込み中...' : 'ダウングレード / キャンセル'}
+                        {loading ? '読み込み中...' : 'プランを変更する'}
                       </button>
                     ) : (
                       <button
