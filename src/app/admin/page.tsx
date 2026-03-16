@@ -319,7 +319,7 @@ export default function AdminPage() {
                           type="text"
                           value={replyInputs[thread.user_id] ?? ''}
                           onChange={e => setReplyInputs(prev => ({ ...prev, [thread.user_id]: e.target.value }))}
-                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(thread.user_id); } }}
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); sendReply(thread.user_id); } }}
                           placeholder="返信を入力..."
                           className="flex-1 rounded-xl border border-border/40 bg-background/50 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-pink-500/30 placeholder:text-muted-foreground/40"
                         />

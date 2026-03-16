@@ -1310,7 +1310,7 @@ function Dashboard({
                       type="text"
                       value={supportInput}
                       onChange={e => setSupportInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSupport(); } }}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); sendSupport(); } }}
                       placeholder="メッセージを入力..."
                       maxLength={2000}
                       className="flex-1 rounded-xl border border-border/40 bg-background/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500/30 transition-all placeholder:text-muted-foreground/40"
