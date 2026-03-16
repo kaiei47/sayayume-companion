@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     // Step 2: 画像付きメッセージを取得
     const { data: messages } = await admin
       .from('messages')
-      .select('id, image_url, created_at, conversation_id')
+      .select('id, image_url, created_at, conversation_id, is_favorite')
       .in('conversation_id', convIds)
       .eq('role', 'assistant')
       .not('image_url', 'is', null)
@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
       url: m.image_url as string,
       created_at: m.created_at,
       character_id: convMap.get(m.conversation_id) ?? '',
+      is_favorite: m.is_favorite ?? false,
     })).filter(img => img.character_id && img.url);
 
     return Response.json({ images });

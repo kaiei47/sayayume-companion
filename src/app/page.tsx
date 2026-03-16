@@ -27,6 +27,7 @@ interface ReceivedImage {
   url: string;
   created_at: string;
   character_id: string;
+  is_favorite: boolean;
 }
 
 export default function Home() {
@@ -36,7 +37,28 @@ export default function Home() {
   const [intimacy, setIntimacy] = useState<Record<string, IntimacyInfo>>({});
   const [receivedImages, setReceivedImages] = useState<ReceivedImage[]>([]);
   const [isLoadingImages, setIsLoadingImages] = useState(true);
+  const [imageFilter, setImageFilter] = useState<'all' | 'favorite'>('all');
   const [userPlan, setUserPlan] = useState<string>('free');
+
+  const toggleFavorite = async (messageId: string, current: boolean) => {
+    // optimistic update
+    setReceivedImages(prev => prev.map(img =>
+      img.id === messageId ? { ...img, is_favorite: !current } : img
+    ));
+    try {
+      const res = await fetch('/api/images/favorite', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: messageId, is_favorite: !current }),
+      });
+      if (!res.ok) throw new Error('failed');
+    } catch {
+      // rollback on error
+      setReceivedImages(prev => prev.map(img =>
+        img.id === messageId ? { ...img, is_favorite: current } : img
+      ));
+    }
+  };
 
   const fetchImages = () => {
     setIsLoadingImages(true);
@@ -129,6 +151,9 @@ export default function Home() {
     intimacy={intimacy}
     receivedImages={receivedImages}
     isLoadingImages={isLoadingImages}
+    imageFilter={imageFilter}
+    setImageFilter={setImageFilter}
+    toggleFavorite={toggleFavorite}
     userPlan={userPlan}
   />;
 }
@@ -601,6 +626,9 @@ function Dashboard({
   intimacy,
   receivedImages,
   isLoadingImages,
+  imageFilter,
+  setImageFilter,
+  toggleFavorite,
   userPlan,
 }: {
   user: User;
@@ -608,6 +636,9 @@ function Dashboard({
   intimacy: Record<string, IntimacyInfo>;
   receivedImages: ReceivedImage[];
   isLoadingImages: boolean;
+  imageFilter: 'all' | 'favorite';
+  setImageFilter: (v: 'all' | 'favorite') => void;
+  toggleFavorite: (id: string, current: boolean) => void;
   userPlan: string;
 }) {
   // Push notification subscription — triggered after 2 chat messages for better UX
@@ -809,7 +840,25 @@ function Dashboard({
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📸 もらった写真</h2>
-                  {!isLoadingImages && <span className="text-[10px] text-muted-foreground/50">{receivedImages.length}枚</span>}
+                  <div className="flex items-center gap-2">
+                    {!isLoadingImages && receivedImages.some(img => img.is_favorite) && (
+                      <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5">
+                        <button
+                          onClick={() => setImageFilter('all')}
+                          className={`text-[10px] px-2 py-0.5 rounded-md transition-colors ${imageFilter === 'all' ? 'bg-background text-foreground font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                        >
+                          すべて
+                        </button>
+                        <button
+                          onClick={() => setImageFilter('favorite')}
+                          className={`text-[10px] px-2 py-0.5 rounded-md transition-colors ${imageFilter === 'favorite' ? 'bg-background text-foreground font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                        >
+                          ❤️ お気に入り
+                        </button>
+                      </div>
+                    )}
+                    {!isLoadingImages && <span className="text-[10px] text-muted-foreground/50">{receivedImages.length}枚</span>}
+                  </div>
                 </div>
                 {isLoadingImages ? (
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 animate-pulse">
@@ -818,23 +867,43 @@ function Dashboard({
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
-                    {receivedImages.slice(0, 10).map((img) => (
-                      <Link
-                        key={img.id}
-                        href={`/chat/${img.character_id}`}
-                        className="relative aspect-square rounded-xl overflow-hidden group"
-                      >
-                        <Image
-                          src={img.url}
-                          alt="受け取った写真"
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                      </Link>
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
+                      {(imageFilter === 'favorite'
+                        ? receivedImages.filter(img => img.is_favorite)
+                        : receivedImages
+                      ).slice(0, 10).map((img) => (
+                        <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group">
+                          <Link href={`/chat/${img.character_id}`}>
+                            <Image
+                              src={img.url}
+                              alt="受け取った写真"
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                          </Link>
+                          {/* ハートボタン */}
+                          <button
+                            onClick={(e) => { e.preventDefault(); toggleFavorite(img.id, img.is_favorite); }}
+                            className="absolute bottom-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95 z-10"
+                            aria-label={img.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+                          >
+                            <span className={`text-sm leading-none transition-all ${img.is_favorite ? 'text-red-400' : 'text-white/70'}`}>
+                              {img.is_favorite ? '❤️' : '🤍'}
+                            </span>
+                          </button>
+                          {/* お気に入り中は常時表示のインジケーター */}
+                          {img.is_favorite && (
+                            <span className="absolute bottom-1.5 right-1.5 text-sm leading-none pointer-events-none group-hover:opacity-0 transition-opacity">❤️</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {imageFilter === 'favorite' && receivedImages.filter(img => img.is_favorite).length === 0 && (
+                      <p className="text-xs text-muted-foreground/60 text-center py-4">まだお気に入りがないよ♡<br />写真にカーソルを合わせて❤️を押してね</p>
+                    )}
+                  </>
                 )}
               </section>
             )}
