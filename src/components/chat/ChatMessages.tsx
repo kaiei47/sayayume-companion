@@ -45,21 +45,21 @@ export default function ChatMessages({
         {isLoadingHistory && (
           <div className="space-y-4 animate-pulse pt-4">
             <div className="flex items-end gap-2">
-              <div className="h-7 w-7 rounded-full bg-muted flex-shrink-0" />
+              <div className="h-9 w-9 rounded-full bg-muted flex-shrink-0" />
               <div className="h-10 w-52 rounded-2xl rounded-bl-md bg-muted" />
             </div>
             <div className="flex justify-end">
               <div className="h-8 w-32 rounded-2xl rounded-br-md bg-muted/50" />
             </div>
             <div className="flex items-end gap-2">
-              <div className="h-7 w-7 rounded-full bg-muted invisible flex-shrink-0" />
+              <div className="h-9 w-9 rounded-full bg-muted invisible flex-shrink-0" />
               <div className="h-16 w-64 rounded-2xl rounded-bl-md bg-muted" />
             </div>
             <div className="flex justify-end">
               <div className="h-8 w-44 rounded-2xl rounded-br-md bg-muted/50" />
             </div>
             <div className="flex items-end gap-2">
-              <div className="h-7 w-7 rounded-full bg-muted flex-shrink-0" />
+              <div className="h-9 w-9 rounded-full bg-muted flex-shrink-0" />
               <div className="h-8 w-40 rounded-2xl rounded-bl-md bg-muted" />
             </div>
           </div>
@@ -71,7 +71,7 @@ export default function ChatMessages({
             <div className="flex flex-col items-center justify-center pt-8 pb-4 text-center">
               <div className="relative mb-4">
                 <Avatar className="h-20 w-20 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
-                  <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
+                  <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-top" />
                   <AvatarFallback className="text-2xl">
                     {character.nameJa[0]}
                   </AvatarFallback>
@@ -83,8 +83,8 @@ export default function ChatMessages({
             </div>
             {/* キャラの挨拶吹き出し */}
             <div className="flex items-end gap-2 mt-2">
-              <Avatar className="h-7 w-7 flex-shrink-0">
-                <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
+              <Avatar className="h-9 w-9 flex-shrink-0">
+                <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-top" />
                 <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
               </Avatar>
               <div className="bg-muted rounded-2xl rounded-bl-md px-3.5 py-2 max-w-[78%]">
@@ -131,8 +131,8 @@ export default function ChatMessages({
         {/* タイピングインジケータ */}
         {isLoading && !streamingContent && !isGeneratingImage && (
           <div className="flex items-end gap-2">
-            <Avatar className="h-7 w-7 flex-shrink-0">
-              <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
+            <Avatar className="h-9 w-9 flex-shrink-0">
+              <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-top" />
               <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
             </Avatar>
             <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
@@ -144,8 +144,8 @@ export default function ChatMessages({
         {/* 撮影中インジケータ */}
         {isGeneratingImage && (
           <div className="flex items-end gap-2">
-            <Avatar className="h-7 w-7 flex-shrink-0">
-              <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
+            <Avatar className="h-9 w-9 flex-shrink-0">
+              <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-top" />
               <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
             </Avatar>
             <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
@@ -245,8 +245,8 @@ function MessageBubble({
       >
         {/* アバター（連続メッセージなら非表示でスペース確保） */}
         {!isUser && (
-          <Avatar className={cn('h-7 w-7 flex-shrink-0', isConsecutive && 'invisible')}>
-            <AvatarImage src={character.avatarUrl} alt={character.nameJa} />
+          <Avatar className={cn('h-9 w-9 flex-shrink-0', isConsecutive && 'invisible')}>
+            <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-top" />
             <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
           </Avatar>
         )}
