@@ -890,10 +890,10 @@ function Dashboard({
                 ) : (
                   <div className="space-y-5">
                     {(['saya', 'yume', 'duo'] as Array<'saya' | 'yume' | 'duo'>)
-                      /* やり取り順（最終メッセージが新しい順）でソート */
+                      /* 直近に写真をもらったキャラ順 */
                       .sort((a, b) => {
-                        const ta = lastMessages[a]?.created_at ?? '';
-                        const tb = lastMessages[b]?.created_at ?? '';
+                        const ta = receivedImages.find(img => img.character_id === a)?.created_at ?? '';
+                        const tb = receivedImages.find(img => img.character_id === b)?.created_at ?? '';
                         return tb.localeCompare(ta);
                       })
                       .map(charId => {
