@@ -147,7 +147,7 @@ function PricingContent() {
             {/* Left: text */}
             <div className="lg:max-w-lg">
               <div className="inline-flex items-center gap-2 rounded-full bg-pink-500/10 border border-pink-500/20 px-3 py-1 text-xs font-medium text-pink-400 mb-4">
-                🎉 クローズドβ限定 — 最初の1ヶ月無料！
+                🎉 クローズドβ限定 — 新規契約の最初の1ヶ月無料！
               </div>
               <h1 className="text-3xl lg:text-4xl font-bold tracking-tight mb-3">
                 さやとゆめと、<br className="hidden lg:block" />もっと深く。
@@ -259,9 +259,9 @@ function PricingContent() {
                         <span className="text-sm text-muted-foreground mb-1">/月</span>
                       )}
                     </div>
-                    {plan.price > 0 && (
+                    {plan.price > 0 && !hasActiveSub && (
                       <div className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-pink-400 bg-pink-500/10 border border-pink-500/20 rounded-full px-2.5 py-0.5">
-                        🎉 最初の1ヶ月無料
+                        🎉 初回契約のみ — 最初の1ヶ月無料
                       </div>
                     )}
                   </div>
@@ -396,7 +396,7 @@ function PricingContent() {
               },
               {
                 q: 'クローズドβ無料って？',
-                a: 'βローンチ期間限定で、有料プランの最初の1ヶ月が無料になるクーポンが自動適用されます。',
+                a: 'βローンチ期間限定で、新規契約の最初の1ヶ月が無料になるクーポンが自動適用されます。すでに有料プランをお持ちのかたがプランを変更した場合は適用されません。',
               },
             ].map(({ q, a }) => (
               <div key={q} className="rounded-2xl border border-border/40 bg-card/30 p-5">
