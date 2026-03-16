@@ -154,16 +154,22 @@ export default function ChatPage() {
   }, [loadConversation]);
 
   // ホームのgreetingメッセージをチャット画面に引き継ぐ
+  const greetingInserted = useRef(false);
   useEffect(() => {
-    if (!isLoadingHistory && messages.length === 0) {
+    if (!isLoadingHistory && !greetingInserted.current) {
       const greeting = searchParams.get('greeting');
       if (greeting) {
-        setMessages([{
-          id: `greeting-${Date.now()}`,
-          role: 'assistant',
-          content: greeting,
-          created_at: new Date().toISOString(),
-        }]);
+        greetingInserted.current = true;
+        setMessages(prev => {
+          // 既に同じ内容のメッセージがあれば追加しない（リロード対策）
+          if (prev.some(m => m.role === 'assistant' && m.content === greeting)) return prev;
+          return [...prev, {
+            id: `greeting-${Date.now()}`,
+            role: 'assistant',
+            content: greeting,
+            created_at: new Date().toISOString(),
+          }];
+        });
       }
     }
   }, [isLoadingHistory, searchParams]);
