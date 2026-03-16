@@ -702,7 +702,7 @@ function Dashboard({
                 >
                   <div className="relative flex-shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={char.avatarUrl} alt={char.nameJa} className="h-10 w-10 rounded-full object-cover object-top" />
+                    <img src={char.avatarUrl} alt={char.nameJa} className="h-12 w-12 rounded-full object-cover object-top" />
                     <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -734,9 +734,9 @@ function Dashboard({
             <Link href="/chat/duo" className="group relative flex items-center gap-3 rounded-xl p-[1px] transition-all overflow-hidden">
               <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:opacity-80 transition-opacity" />
               <div className="relative flex items-center gap-3 rounded-[11px] bg-background/95 p-3 w-full">
-                <div className="relative flex-shrink-0 w-10 h-10">
-                  <Image src="/avatars/saya_avatar.jpg" alt="さや" width={28} height={28} className="h-7 w-7 rounded-full object-cover absolute top-0 left-0" />
-                  <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={28} height={28} className="h-7 w-7 rounded-full object-cover absolute bottom-0 right-0 ring-1 ring-background" />
+                <div className="relative flex-shrink-0 w-12 h-12">
+                  <Image src="/avatars/saya_avatar.jpg" alt="さや" width={36} height={36} className="h-9 w-9 rounded-full object-cover object-top absolute top-0 left-0" />
+                  <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={36} height={36} className="h-9 w-9 rounded-full object-cover object-top absolute bottom-0 right-0 ring-1 ring-background" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -889,8 +889,8 @@ function Dashboard({
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:from-pink-500/60 group-hover:via-purple-500/60 group-hover:to-blue-500/60 transition-all" />
                   <div className="relative flex items-center gap-4 rounded-[15px] bg-background/95 p-4 w-full">
                     <div className="relative flex-shrink-0">
-                      <Image src="/avatars/saya_avatar.jpg" alt="さや" width={48} height={48} className="h-12 w-12 rounded-full object-cover" />
-                      <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={48} height={48} className="h-12 w-12 rounded-full object-cover absolute -right-4 top-0 ring-2 ring-background" />
+                      <Image src="/avatars/saya_avatar.jpg" alt="さや" width={48} height={48} className="h-12 w-12 rounded-full object-cover object-top" />
+                      <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={48} height={48} className="h-12 w-12 rounded-full object-cover object-top absolute -right-4 top-0 ring-2 ring-background" />
                     </div>
                     <div className="flex-1 min-w-0 ml-3">
                       <div className="flex items-baseline gap-2">
