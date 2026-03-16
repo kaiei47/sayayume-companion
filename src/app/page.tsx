@@ -579,6 +579,38 @@ const CHAR_MESSAGES: Record<string, Record<string, string[]>> = {
   },
 };
 
+const DAILY_PHOTO_CATALOG: Record<string, { src: string; caption: string }[]> = {
+  saya: [
+    { src: '/references/photos/new/saya_selfie_cafe.jpg', caption: 'カフェにいるよ☕ 来る？♡' },
+    { src: '/references/photos/new/saya_selfie_mirror.jpg', caption: '今日のコーデどう？♡' },
+    { src: '/references/photos/new/saya_selfie_outdoor.jpg', caption: 'いい天気〜🌞 お散歩中だよ' },
+    { src: '/references/photos/new/saya_selfie_night.jpg', caption: '夜の自撮り♡ まだ起きてる？' },
+    { src: '/references/photos/new/saya_yukata.jpg', caption: '浴衣着てみた♡ 似合う？' },
+    { src: '/references/photos/new/saya_maid.jpg', caption: 'こんな格好してみた笑 どう思う？' },
+    { src: '/references/photos/new/saya_bunny.jpg', caption: 'バニーガール試してみたんだけど笑' },
+    { src: '/references/photos/new/saya_swimwear.jpg', caption: '夏っぽくしてみた♡ どうかな？' },
+  ],
+  yume: [
+    { src: '/references/photos/new/yume_selfie_morning.jpg', caption: 'おはようございます…♡ 今日も来てくれた' },
+    { src: '/references/photos/new/yume_selfie_cafe.jpg', caption: 'カフェで勉強中です☕ 集中できなくて…' },
+    { src: '/references/photos/new/yume_selfie_garden.jpg', caption: 'お花がきれいで思わず撮っちゃいました♡' },
+    { src: '/references/photos/new/yume_selfie_library.jpg', caption: '図書館にいます📚 静かで落ち着く…' },
+    { src: '/references/photos/new/yume_cheongsam.jpg', caption: 'こんな衣装着てみました… 変じゃないかな' },
+    { src: '/references/photos/new/yume_catear.jpg', caption: 'ねこ耳、変じゃないですか…？笑' },
+    { src: '/references/photos/new/yume_sailor.jpg', caption: 'セーラー服、似合いますか…？' },
+    { src: '/references/photos/new/yume_slipDress.jpg', caption: '今日のコーデ…見てほしくて♡' },
+  ],
+  duo: [
+    { src: '/references/photos/new/duo_cafe.jpg', caption: '2人でカフェ来てるよ☕ 合流しない？' },
+    { src: '/references/photos/new/duo_selfie.jpg', caption: '2人で自撮りしてみた♡ 送っちゃおうと思って' },
+    { src: '/references/photos/new/duo_beach.jpg', caption: 'ビーチ来たよ🌊 一緒に来たかったな〜！' },
+    { src: '/references/photos/new/duo_festival.jpg', caption: 'お祭り来てる！楽しすぎる〜🎆' },
+    { src: '/references/photos/new/duo_rooftop.jpg', caption: '屋上から夜景♡ 2人で見てるよ' },
+    { src: '/references/photos/new/duo_lounge.jpg', caption: '2人でまったりしてる♡ 来ちゃいなよ' },
+    { src: '/references/photos/new/duo_night_out.jpg', caption: '夜のお出かけ♡ 今どこにいる？' },
+  ],
+};
+
 const CHAR_STATUS: Record<string, Record<string, string>> = {
   saya: {
     morning: '☕ 朝カフェにいる',
@@ -690,6 +722,19 @@ function Dashboard({
   const greetingMsgs = CHAR_MESSAGES[greetingCharId][slot];
   const greetingMsg = greetingMsgs[getDailyIndex(greetingMsgs.length)];
   const greetingNameJa = greetingCharId === 'saya' ? 'さや' : greetingCharId === 'yume' ? 'ゆめ' : 'さや & ゆめ';
+
+  // 今日の写真カード（greeting と別キャラをオフセットで選択）
+  const photoCharId = (['saya', 'yume', 'duo'] as const)[(new Date().getDate() + 1) % 3];
+  const photoList = DAILY_PHOTO_CATALOG[photoCharId];
+  const todayPhoto = photoList[getDailyIndex(photoList.length)];
+  const photoNameJa = photoCharId === 'saya' ? 'さや' : photoCharId === 'yume' ? 'ゆめ' : 'さや & ゆめ';
+  const photoAccent = photoCharId === 'saya'
+    ? 'border-pink-500/20 bg-gradient-to-br from-pink-500/8 to-transparent'
+    : photoCharId === 'yume'
+      ? 'border-blue-500/20 bg-gradient-to-br from-blue-500/8 to-transparent'
+      : 'border-purple-500/20 bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5';
+  const photoReplyColor = photoCharId === 'saya' ? 'text-pink-400' : photoCharId === 'yume' ? 'text-blue-400' : 'text-purple-400';
+  const photoAvatarSrc = photoCharId === 'yume' ? '/avatars/yume_avatar.jpg' : '/avatars/saya_avatar.jpg';
   const greetingAccent = greetingCharId === 'saya'
     ? 'border-pink-500/25 bg-gradient-to-br from-pink-500/10 to-transparent'
     : greetingCharId === 'yume'
@@ -863,6 +908,48 @@ function Dashboard({
                 </div>
                 <div className="mt-3 flex justify-end">
                   <span className={`text-[11px] font-medium ${greetingReplyColor} group-hover:underline`}>返信する →</span>
+                </div>
+              </div>
+            </Link>
+
+            {/* Today's photo card */}
+            <Link href={`/chat/${photoCharId}?greeting=${encodeURIComponent(todayPhoto.caption)}`} className="group block">
+              <div className={`rounded-2xl border ${photoAccent} overflow-hidden`}>
+                {/* Header */}
+                <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2">
+                  <div className="relative flex-shrink-0 w-8 h-8">
+                    {photoCharId === 'duo' ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-6 w-6 rounded-full object-cover object-center absolute top-0 left-0 ring-1 ring-background" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-6 w-6 rounded-full object-cover object-center absolute bottom-0 right-0 ring-1 ring-background" />
+                      </>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photoAvatarSrc} alt={photoNameJa} className="h-8 w-8 rounded-full object-cover object-center" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-semibold">{photoNameJa}</span>
+                    <span className="text-[10px] text-muted-foreground ml-2">📸 写真を送ってきた</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground flex-shrink-0">今日</span>
+                </div>
+                {/* Photo */}
+                <div className="relative aspect-[4/3] w-full overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={todayPhoto.src}
+                    alt={photoNameJa}
+                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                </div>
+                {/* Caption + reply */}
+                <div className="px-4 py-3 flex items-end justify-between gap-3">
+                  <p className="text-sm leading-relaxed flex-1">{todayPhoto.caption}</p>
+                  <span className={`text-[11px] font-medium ${photoReplyColor} group-hover:underline flex-shrink-0`}>返信する →</span>
                 </div>
               </div>
             </Link>
