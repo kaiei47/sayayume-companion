@@ -774,7 +774,7 @@ function Dashboard({
                       <div className="flex items-center justify-between gap-1 mb-1">
                         <div className="flex items-center gap-1.5">
                           <span className="text-sm font-medium">さやゆめモード</span>
-                          <span className="text-[9px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">PRO</span>
+                          <span className="text-[9px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">Premium</span>
                         </div>
                         {duoStatus && (
                           <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">{duoStatus}</span>
