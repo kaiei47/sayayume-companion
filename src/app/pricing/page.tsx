@@ -332,7 +332,7 @@ function PricingContent() {
         {/* Footer note */}
         <div className="mt-6 text-center space-y-2">
           <p className="text-xs text-muted-foreground">
-            いつでもキャンセル可能 · 日割り返金なし · 18歳以上限定
+            いつでもキャンセル可 · アップグレードは差額を日割りで即時請求 · ダウングレードは期間終了後に適用 · 18歳以上限定
           </p>
           {currentPlan !== 'free' && (
             <button
@@ -368,6 +368,10 @@ function PricingContent() {
               {
                 q: 'BasicとPremiumの違いは？',
                 a: 'BasicはAI写真30枚/日。PremiumはAI写真無制限＋将来のボイスメッセージや限定コンテンツも対象です。',
+              },
+              {
+                q: 'プランを変更するとどうなる？',
+                a: 'アップグレード（例: Basic→Premium）は即時適用。現在の残り期間分のBasic料金がクレジットされ、Premiumとの差額を日割りで即時請求します。ダウングレード（例: Premium→Free/Basic）は現在の請求期間が終わった後に新プランが適用されます。',
               },
               {
                 q: 'クローズドβ無料って？',
