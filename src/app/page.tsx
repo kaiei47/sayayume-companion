@@ -969,34 +969,70 @@ function Dashboard({
 /* ───── Photo Card (reusable) ───── */
 
 function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: string; char: 'saya' | 'yume' | 'duo'; locked?: boolean } }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="relative flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-card/40 border border-border/20">
-      <div className="relative w-36 aspect-[3/4]">
-        <Image
-          src={photo.src}
-          alt={photo.alt}
-          fill
-          className={`object-cover object-top${photo.locked ? ' blur-sm brightness-50' : ''}`}
-          sizes="144px"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-        {photo.locked ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-            <span className="text-2xl">🔒</span>
-            <span className="text-[10px] text-white/80 font-medium text-center leading-tight">仲良くなると<br />解放♡</span>
-          </div>
-        ) : (
-          <>
-            <div className={`absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full ${photo.char === 'saya' ? 'bg-pink-500/80 text-white' : photo.char === 'duo' ? 'bg-purple-500/80 text-white' : 'bg-blue-500/80 text-white'}`}>
+    <>
+      {open && !photo.locked && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setOpen(false)}
+        >
+          <button
+            onClick={() => setOpen(false)}
+            className="absolute top-4 right-4 text-white/70 hover:text-white p-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+              <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <div className="relative max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <Image
+              src={photo.src}
+              alt={photo.alt}
+              width={480}
+              height={640}
+              className="w-full rounded-2xl object-cover object-top"
+            />
+            <div className={`absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full ${photo.char === 'saya' ? 'bg-pink-500/80 text-white' : photo.char === 'duo' ? 'bg-purple-500/80 text-white' : 'bg-blue-500/80 text-white'}`}>
               {photo.char === 'saya' ? 'さや' : photo.char === 'duo' ? 'さや×ゆめ' : 'ゆめ'}
             </div>
-            <p className="absolute bottom-2 left-2 right-2 text-[10px] text-white/90 leading-tight italic">
+            <p className="absolute bottom-3 left-3 right-3 text-sm text-white/90 italic text-center drop-shadow">
               &ldquo;{photo.caption}&rdquo;
             </p>
-          </>
-        )}
+          </div>
+        </div>
+      )}
+      <div
+        className={`relative flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-card/40 border border-border/20 ${!photo.locked ? 'cursor-pointer' : ''}`}
+        onClick={() => !photo.locked && setOpen(true)}
+      >
+        <div className="relative w-36 aspect-[3/4]">
+          <Image
+            src={photo.src}
+            alt={photo.alt}
+            fill
+            className={`object-cover object-top transition-transform duration-300 ${!photo.locked ? 'hover:scale-105' : 'blur-sm brightness-50'}`}
+            sizes="144px"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+          {photo.locked ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+              <span className="text-2xl">🔒</span>
+              <span className="text-[10px] text-white/80 font-medium text-center leading-tight">仲良くなると<br />解放♡</span>
+            </div>
+          ) : (
+            <>
+              <div className={`absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full ${photo.char === 'saya' ? 'bg-pink-500/80 text-white' : photo.char === 'duo' ? 'bg-purple-500/80 text-white' : 'bg-blue-500/80 text-white'}`}>
+                {photo.char === 'saya' ? 'さや' : photo.char === 'duo' ? 'さや×ゆめ' : 'ゆめ'}
+              </div>
+              <p className="absolute bottom-2 left-2 right-2 text-[10px] text-white/90 leading-tight italic">
+                &ldquo;{photo.caption}&rdquo;
+              </p>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
