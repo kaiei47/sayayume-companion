@@ -230,6 +230,10 @@ export default function ChatPage() {
             setIsLoading(false);
             return;
           }
+          // 会話が見つからない場合: IDをリセットして次回自動再作成
+          if (response.status === 404) {
+            setConversationId(null);
+          }
           throw new Error(`API error: ${response.status}`);
         }
 

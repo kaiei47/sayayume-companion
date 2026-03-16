@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
 
         // 会話が無ければ新規作成
         if (!conversation_id) {
-          const { data: conv } = await supabase
+          const { data: conv, error: convError } = await supabase
             .from('conversations')
             .insert({
               user_id: dbUserId,
@@ -214,16 +214,42 @@ export async function POST(req: NextRequest) {
             .select('id')
             .single();
 
-          conversation_id = conv?.id || `guest-${Date.now()}`;
+          if (convError || !conv?.id) {
+            console.error('Conversation creation failed:', convError);
+            return new Response(
+              JSON.stringify({ error: 'Failed to create conversation' }),
+              { status: 500, headers: { 'Content-Type': 'application/json' } }
+            );
+          }
+          conversation_id = conv.id;
+        } else {
+          // conversation_idが提供された場合: このユーザーの会話か検証
+          const { data: existingConv } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('id', conversation_id)
+            .eq('user_id', dbUserId)
+            .single();
+
+          if (!existingConv) {
+            console.error(`Conversation ${conversation_id} not found for user ${dbUserId}`);
+            return new Response(
+              JSON.stringify({ error: 'Conversation not found' }),
+              { status: 404, headers: { 'Content-Type': 'application/json' } }
+            );
+          }
         }
 
         // ユーザーメッセージを保存
-        await supabase.from('messages').insert({
+        const { error: userMsgError } = await supabase.from('messages').insert({
           conversation_id,
           role: 'user',
           content: message,
           content_type: 'text',
         });
+        if (userMsgError) {
+          console.error('Failed to save user message:', userMsgError.message, { conversation_id });
+        }
 
         // 親密度の更新（duo以外のみ個別追跡）
         const targetCharId = character_id === 'duo' ? 'saya' : character_id;
@@ -640,8 +666,8 @@ export async function POST(req: NextRequest) {
           }
 
           // 認証ユーザーの場合: アシスタントメッセージをDB保存
-          if (dbUserId && fullResponse && conversation_id && !conversation_id.startsWith('guest-')) {
-            await supabase.from('messages').insert({
+          if (dbUserId && fullResponse && conversation_id) {
+            const { error: assistantMsgError } = await supabase.from('messages').insert({
               conversation_id,
               role: 'assistant',
               content: savedContent,
@@ -649,13 +675,16 @@ export async function POST(req: NextRequest) {
               image_url: imageUrl && !imageUrl.startsWith('data:') ? imageUrl : null,
               model_used: GEMINI_MODEL,
             });
+            if (assistantMsgError) {
+              console.error('Failed to save assistant message:', assistantMsgError.message, { conversation_id });
+            }
 
+            // currentTotalMessageCount はユーザーメッセージ保存後に取得した値
+            // アシスタントメッセージを今保存したので +1 が正確
             await supabase
               .from('conversations')
               .update({
-                // currentTotalMessageCount: DBから取得した正確な総数（圧縮後でも壊れない）
-                // +2: 今回の user + assistant メッセージ分
-                message_count: currentTotalMessageCount + 2,
+                message_count: currentTotalMessageCount + 1,
                 last_message_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               })
