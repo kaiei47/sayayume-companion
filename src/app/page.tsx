@@ -34,7 +34,17 @@ export default function Home() {
   const [lastMessages, setLastMessages] = useState<Record<string, LastMessage>>({});
   const [intimacy, setIntimacy] = useState<Record<string, IntimacyInfo>>({});
   const [receivedImages, setReceivedImages] = useState<ReceivedImage[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [userPlan, setUserPlan] = useState<string>('free');
+
+  const fetchImages = () => {
+    setIsLoadingImages(true);
+    fetch('/api/images?limit=12', { cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => { if (data.images) setReceivedImages(data.images); })
+      .catch(() => {})
+      .finally(() => setIsLoadingImages(false));
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -46,7 +56,7 @@ export default function Home() {
         // 各キャラの最新メッセージを取得
         Object.keys(CHARACTERS).forEach(async (charId) => {
           try {
-            const res = await fetch(`/api/conversations?character_id=${charId}`);
+            const res = await fetch(`/api/conversations?character_id=${charId}`, { cache: 'no-store' });
             if (res.ok) {
               const data = await res.json();
               if (data.messages?.length > 0) {
@@ -61,16 +71,13 @@ export default function Home() {
         });
 
         // 親密度を取得
-        fetch('/api/intimacy')
+        fetch('/api/intimacy', { cache: 'no-store' })
           .then(res => res.json())
           .then(data => { if (data.intimacy) setIntimacy(data.intimacy); })
           .catch(() => {});
 
         // 過去に受け取った画像を取得
-        fetch('/api/images?limit=12')
-          .then(res => res.json())
-          .then(data => { if (data.images) setReceivedImages(data.images); })
-          .catch(() => {});
+        fetchImages();
 
         // 現在のプランを取得
         supabase
@@ -91,8 +98,16 @@ export default function Home() {
                 });
             }
           });
+
+        // タブ復帰・画面フォーカス時に写真を再取得
+        const handleVisibility = () => {
+          if (document.visibilityState === 'visible') fetchImages();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (authLoading) {
@@ -112,6 +127,7 @@ export default function Home() {
     lastMessages={lastMessages}
     intimacy={intimacy}
     receivedImages={receivedImages}
+    isLoadingImages={isLoadingImages}
     userPlan={userPlan}
   />;
 }
@@ -560,12 +576,14 @@ function Dashboard({
   lastMessages,
   intimacy,
   receivedImages,
+  isLoadingImages,
   userPlan,
 }: {
   user: User;
   lastMessages: Record<string, LastMessage>;
   intimacy: Record<string, IntimacyInfo>;
   receivedImages: ReceivedImage[];
+  isLoadingImages: boolean;
   userPlan: string;
 }) {
   // Push notification subscription — triggered after 2 chat messages for better UX
@@ -735,29 +753,37 @@ function Dashboard({
             </Link>
 
             {/* 思い出フォト */}
-            {receivedImages.length > 0 && (
+            {(isLoadingImages || receivedImages.length > 0) && (
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📸 もらった写真</h2>
-                  <span className="text-[10px] text-muted-foreground/50">{receivedImages.length}枚</span>
+                  {!isLoadingImages && <span className="text-[10px] text-muted-foreground/50">{receivedImages.length}枚</span>}
                 </div>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
-                  {receivedImages.slice(0, 10).map((img) => (
-                    <Link
-                      key={img.id}
-                      href={`/chat/${img.character_id}`}
-                      className="relative aspect-square rounded-xl overflow-hidden group"
-                    >
-                      <Image
-                        src={img.url}
-                        alt="受け取った写真"
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                    </Link>
-                  ))}
-                </div>
+                {isLoadingImages ? (
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 animate-pulse">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="aspect-square rounded-xl bg-muted" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
+                    {receivedImages.slice(0, 10).map((img) => (
+                      <Link
+                        key={img.id}
+                        href={`/chat/${img.character_id}`}
+                        className="relative aspect-square rounded-xl overflow-hidden group"
+                      >
+                        <Image
+                          src={img.url}
+                          alt="受け取った写真"
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </section>
             )}
 
