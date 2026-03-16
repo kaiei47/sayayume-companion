@@ -82,6 +82,7 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
 
 // プラン別の制限
 const PLAN_LIMITS = {
+  guest:   { dailyMessages: -1, imageGeneration: true,  dailyImages: 1,  maxIntimacyLevel: 1 },
   free:    { dailyMessages: -1, imageGeneration: true,  dailyImages: 3,  maxIntimacyLevel: 3 },
   basic:   { dailyMessages: -1, imageGeneration: true,  dailyImages: 30, maxIntimacyLevel: 5 },
   premium: { dailyMessages: -1, imageGeneration: true,  dailyImages: -1, maxIntimacyLevel: 5 },
@@ -329,6 +330,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ゲストの場合
+    if (!user) {
+      userPlan = 'guest';
+    }
     if (!conversation_id) {
       conversation_id = `guest-${Date.now()}`;
     }
@@ -487,9 +491,15 @@ export async function POST(req: NextRequest) {
           const { cleanText, imageDescriptions } = extractImageTags(fullResponse);
 
           // 1日の画像生成枚数チェック
-          const planLimits = PLAN_LIMITS[userPlan] || PLAN_LIMITS.free;
+          const planLimits = PLAN_LIMITS[userPlan] || PLAN_LIMITS.guest;
           let dailyImageCount = 0;
-          if (planLimits.dailyImages > 0 && dbUserId) {
+          if (planLimits.dailyImages > 0 && !dbUserId) {
+            // ゲスト: IPベースのrate-limitで1枚/日制限
+            const guestImgCheck = rateLimit(`guest-img:${clientIp}`, planLimits.dailyImages, 24 * 60 * 60 * 1000);
+            if (!guestImgCheck.success) {
+              dailyImageCount = planLimits.dailyImages;
+            }
+          } else if (planLimits.dailyImages > 0 && dbUserId) {
             const todayJST = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
             todayJST.setUTCHours(0, 0, 0, 0);
             const todayStartUTC = new Date(todayJST.getTime() - 9 * 60 * 60 * 1000).toISOString();
@@ -581,7 +591,9 @@ export async function POST(req: NextRequest) {
             }
           } else if (imageDescriptions.length > 0 && !canGenerateImages) {
             savedContent = cleanText;
-            const upgradeMsg = imageQuotaExceeded
+            const upgradeMsg = !dbUserId
+              ? '\n\n無料登録すると毎日3枚まで写真が見れるよ♡ アカウント作って続きを楽しもう！'
+              : imageQuotaExceeded
               ? `\n\n今日の写真は${planLimits.dailyImages}枚まで...明日またね♡ もっと見たいならプランアップグレードで増えるよ！`
               : '\n\n写真を見るにはプランのアップグレードが必要だよ♡ Basicプランなら画像付きでチャットできるよ！';
             savedContent += upgradeMsg;

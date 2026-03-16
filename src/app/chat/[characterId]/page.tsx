@@ -42,6 +42,7 @@ export default function ChatPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   const [userPlan, setUserPlan] = useState<string>('free');
+  const [isGuest, setIsGuest] = useState<boolean>(false);
   const [conversationList, setConversationList] = useState<Array<{
     id: string; title: string; message_count: number; last_message_at: string;
   }>>([]);
@@ -79,7 +80,7 @@ export default function ChatPage() {
     async function loadUserData() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { setIsGuest(true); return; }
       const { data: dbUser } = await supabase.from('users').select('id').eq('auth_id', user.id).single();
       if (!dbUser) return;
       const { data: sub } = await supabase.from('subscriptions').select('plan').eq('user_id', dbUser.id).eq('status', 'active').single();
@@ -396,13 +397,20 @@ export default function ChatPage() {
             🔥{streak}
           </button>
         )}
-        {/* フリープランのアップグレードバッジ */}
-        {userPlan === 'free' && (
+        {/* ゲスト・フリープランのバッジ */}
+        {isGuest ? (
+          <Link
+            href="/login"
+            className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-2 py-1 rounded-full hover:bg-muted transition-colors border border-border/40"
+          >
+            GUEST
+          </Link>
+        ) : userPlan === 'free' && (
           <Link
             href="/pricing"
             className="text-[10px] font-medium bg-blue-600/20 text-blue-400 px-2 py-1 rounded-full hover:bg-blue-600/30 transition-colors"
           >
-            PRO
+            FREE
           </Link>
         )}
         {/* メニューボタン */}
@@ -523,6 +531,22 @@ export default function ChatPage() {
           </div>
         );
       })()}
+
+      {/* ゲスト向け登録促進バナー */}
+      {isGuest && messages.length >= 2 && (
+        <div className="border-t border-border/20 bg-gradient-to-r from-pink-500/5 via-purple-500/5 to-blue-500/5 px-4 py-2.5 flex items-center justify-between gap-3">
+          <p className="text-[11px] text-muted-foreground leading-tight">
+            💾 会話履歴を残したい？<br />
+            <span className="text-[10px] text-muted-foreground/60">無料登録で毎日3枚の写真＋履歴保存</span>
+          </p>
+          <Link
+            href="/login"
+            className="flex-shrink-0 text-[11px] font-semibold bg-gradient-to-r from-pink-500 to-purple-500 text-white px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity"
+          >
+            無料登録 →
+          </Link>
+        </div>
+      )}
 
       {/* 入力エリア */}
       <ChatInput
