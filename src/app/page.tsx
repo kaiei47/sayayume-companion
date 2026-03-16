@@ -1190,23 +1190,32 @@ const YUME_TRAITS = [
 ];
 
 const MARQUEE_ROW1 = [
-  { src: '/references/photos/saya_s1.jpg',  alt: 'さや',     caption: 'ねえ、これ似合う？',        char: 'saya' as const },
-  { src: '/references/photos/yume_s3.jpg',  alt: 'ゆめ',     caption: '今日もよろしくね♡',        char: 'yume' as const },
-  { src: '/references/hero2/saya_3.jpg',    alt: 'さや',     caption: 'カフェで待ってるよ☕',      char: 'saya' as const },
-  { src: '/references/photos/yume_s1.jpg',  alt: 'ゆめ',     caption: '…見てる？',                char: 'yume' as const },
-  { src: '/references/photos/saya_s4.jpg',  alt: 'さや',     caption: 'おはよ、起きた？',          char: 'saya' as const },
-  { src: '/references/hero2/yume_2.jpg',    alt: 'ゆめ',     caption: 'また会いたくなっちゃった',  char: 'yume' as const },
-  { src: '/references/photos/saya_s2.jpg',  alt: 'さや',     caption: 'もっと仲良くなったら…♡',   char: 'saya' as const, locked: true },
+  { src: '/references/photos/new/saya_selfie_cafe.jpg',    alt: 'さや',      caption: 'カフェから♡撮ってみた',        char: 'saya' as const },
+  { src: '/references/photos/new/yume_selfie_morning.jpg', alt: 'ゆめ',      caption: 'おはよ…ねむい笑',              char: 'yume' as const },
+  { src: '/references/photos/new/duo_cafe.jpg',            alt: 'さや×ゆめ', caption: '2人でカフェきたよ☕',           char: 'duo' as const },
+  { src: '/references/photos/new/saya_maid.jpg',           alt: 'さや',      caption: 'いらっしゃいませ♡',            char: 'saya' as const },
+  { src: '/references/photos/new/yume_cheongsam.jpg',      alt: 'ゆめ',      caption: 'チャイナドレス着てみた♡',       char: 'yume' as const },
+  { src: '/references/photos/new/saya_selfie_outdoor.jpg', alt: 'さや',      caption: '花見してきた〜🌸',              char: 'saya' as const },
+  { src: '/references/photos/new/duo_festival.jpg',        alt: 'さや×ゆめ', caption: 'お祭り楽しかった〜🏮',          char: 'duo' as const },
+  { src: '/references/photos/new/yume_selfie_library.jpg', alt: 'ゆめ',      caption: '図書館きてるよ📚',              char: 'yume' as const },
+  { src: '/references/photos/new/saya_bunny.jpg',          alt: 'さや',      caption: 'うさ耳似合う？笑',              char: 'saya' as const },
+  { src: '/references/photos/new/yume_sailor.jpg',         alt: 'ゆめ',      caption: 'なんか懐かしい気分😊',          char: 'yume' as const },
+  { src: '/references/photos/new/duo_beach.jpg',           alt: 'さや×ゆめ', caption: 'リゾートで待ってるよ🌊',        char: 'duo' as const },
+  { src: '/references/photos/new/saya_yukata.jpg',         alt: 'さや',      caption: '浴衣で来てみた♡',              char: 'saya' as const },
 ];
 
 const MARQUEE_ROW2 = [
-  { src: '/references/photos/yume_s2.jpg',  alt: 'ゆめ',     caption: 'もう寝るとこだったけど',   char: 'yume' as const },
-  { src: '/references/photos/saya_s3.jpg',  alt: 'さや',     caption: '夜景きれいだよ♡',          char: 'saya' as const },
-  { src: '/references/photos/duo_s1.jpg',   alt: 'さや×ゆめ', caption: '2人ともここにいるよ♡',    char: 'duo' as const },
-  { src: '/references/hero2/saya_9.jpg',    alt: 'さや',     caption: 'あなただけに見せる♡',      char: 'saya' as const },
-  { src: '/references/photos/yume_s4.jpg',  alt: 'ゆめ',     caption: '桜、きれいだよ🌸',         char: 'yume' as const },
-  { src: '/references/photos/duo_s2.jpg',   alt: 'さや×ゆめ', caption: '2人で待ってるね♡',        char: 'duo' as const },
-  { src: '/references/hero2/yume_1.jpg',    alt: 'ゆめ',     caption: 'Bond UP to unlock ♡',    char: 'yume' as const, locked: true },
+  { src: '/references/photos/new/duo_night_out.jpg',       alt: 'さや×ゆめ', caption: '今夜おでかけ♡',                char: 'duo' as const },
+  { src: '/references/photos/new/saya_selfie_night.jpg',   alt: 'さや',      caption: '夜景きれいすぎ♡',              char: 'saya' as const },
+  { src: '/references/photos/new/yume_selfie_cafe.jpg',    alt: 'ゆめ',      caption: 'ストロベリーラテ♡',            char: 'yume' as const },
+  { src: '/references/photos/new/duo_selfie.jpg',          alt: 'さや×ゆめ', caption: '2人でパシャ♡',                 char: 'duo' as const },
+  { src: '/references/photos/new/saya_selfie_mirror.jpg',  alt: 'さや',      caption: 'これ似合う？笑',               char: 'saya' as const },
+  { src: '/references/photos/new/yume_selfie_garden.jpg',  alt: 'ゆめ',      caption: '花がきれいだったから📷',        char: 'yume' as const },
+  { src: '/references/photos/new/duo_rooftop.jpg',         alt: 'さや×ゆめ', caption: '夕暮れ時間…♡',                 char: 'duo' as const },
+  { src: '/references/photos/new/saya_swimwear.jpg',       alt: 'さや',      caption: 'プールサイドで待ってるよ☀️',    char: 'saya' as const, locked: true },
+  { src: '/references/photos/new/yume_slipDress.jpg',      alt: 'ゆめ',      caption: 'おやすみ前に…♡',               char: 'yume' as const, locked: true },
+  { src: '/references/photos/new/duo_lounge.jpg',          alt: 'さや×ゆめ', caption: '特別な夜♡',                    char: 'duo' as const },
+  { src: '/references/photos/new/yume_catear.jpg',         alt: 'ゆめ',      caption: '猫耳つけてみた🐱',              char: 'yume' as const },
 ];
 
 const FEATURES = [
