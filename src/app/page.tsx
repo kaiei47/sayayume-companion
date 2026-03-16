@@ -970,35 +970,55 @@ function Dashboard({
 
 function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: string; char: 'saya' | 'yume' | 'duo'; locked?: boolean } }) {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (open) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
   return (
     <>
       {open && !photo.locked && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center"
           onClick={() => setOpen(false)}
         >
+          {/* backdrop */}
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
+
+          {/* close button */}
           <button
             onClick={() => setOpen(false)}
-            className="absolute top-4 right-4 text-white/70 hover:text-white p-2"
+            className="absolute top-4 right-4 z-10 text-white/70 hover:text-white bg-black/40 rounded-full p-2 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
               <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
             </svg>
           </button>
-          <div className="relative max-w-sm w-full" onClick={e => e.stopPropagation()}>
-            <Image
-              src={photo.src}
-              alt={photo.alt}
-              width={480}
-              height={640}
-              className="w-full rounded-2xl object-cover object-top"
-            />
-            <div className={`absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full ${photo.char === 'saya' ? 'bg-pink-500/80 text-white' : photo.char === 'duo' ? 'bg-purple-500/80 text-white' : 'bg-blue-500/80 text-white'}`}>
-              {photo.char === 'saya' ? 'さや' : photo.char === 'duo' ? 'さや×ゆめ' : 'ゆめ'}
+
+          {/* image card */}
+          <div
+            className="relative z-10 mx-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+              <Image
+                src={photo.src}
+                alt={photo.alt}
+                width={480}
+                height={640}
+                className="max-h-[78vh] max-w-[88vw] w-auto h-auto block rounded-2xl object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-2xl" />
+              <div className={`absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full ${photo.char === 'saya' ? 'bg-pink-500/80 text-white' : photo.char === 'duo' ? 'bg-purple-500/80 text-white' : 'bg-blue-500/80 text-white'}`}>
+                {photo.char === 'saya' ? 'さや' : photo.char === 'duo' ? 'さや×ゆめ' : 'ゆめ'}
+              </div>
+              <p className="absolute bottom-3 left-3 right-3 text-sm text-white/90 italic text-center drop-shadow">
+                &ldquo;{photo.caption}&rdquo;
+              </p>
             </div>
-            <p className="absolute bottom-3 left-3 right-3 text-sm text-white/90 italic text-center drop-shadow">
-              &ldquo;{photo.caption}&rdquo;
-            </p>
+            <p className="text-center text-xs text-white/40 mt-3">タップして閉じる</p>
           </div>
         </div>
       )}
