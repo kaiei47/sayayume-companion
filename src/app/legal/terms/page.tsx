@@ -89,7 +89,7 @@ export default function TermsPage() {
               </li>
               <li className="flex gap-2">
                 <span className="text-muted-foreground/60">•</span>
-                <span>Premiumプラン: 月額¥4,980（税込）</span>
+                <span>Premiumプラン: 月額¥2,980（税込）</span>
               </li>
             </ul>
             <p className="text-sm text-muted-foreground leading-relaxed">

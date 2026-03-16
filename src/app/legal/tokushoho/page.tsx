@@ -56,7 +56,7 @@ export default function TokushohoPage() {
             <dt className="text-sm font-semibold text-foreground sm:w-48 flex-shrink-0">販売価格</dt>
             <dd className="text-sm text-muted-foreground space-y-1">
               <p>Basicプラン: 月額¥1,980（税込）</p>
-              <p>Premiumプラン: 月額¥4,980（税込）</p>
+              <p>Premiumプラン: 月額¥2,980（税込）</p>
               <p>追加トークン・PPVコンテンツ: 購入時に画面上に表示される金額</p>
             </dd>
           </div>

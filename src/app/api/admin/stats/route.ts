@@ -64,7 +64,7 @@ export async function GET() {
     // MRR estimate based on active subscriptions
     const planPrices: Record<string, number> = {
       basic: 1980,
-      premium: 4980,
+      premium: 2980,
       free: 0,
     };
     let mrrEstimate = 0;
