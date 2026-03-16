@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CHARACTERS } from '@/lib/characters';
@@ -979,9 +980,9 @@ function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: stri
 
   return (
     <>
-      {open && !photo.locked && (
+      {open && !photo.locked && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center"
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
           onClick={() => setOpen(false)}
         >
           {/* backdrop */}
@@ -1020,7 +1021,8 @@ function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: stri
             </div>
             <p className="text-center text-xs text-white/40 mt-3">タップして閉じる</p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       <div
         className={`relative flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-card/40 border border-border/20 ${!photo.locked ? 'cursor-pointer' : ''}`}
