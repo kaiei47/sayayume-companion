@@ -231,7 +231,8 @@ CREATE POLICY "Anyone can view moods" ON character_moods FOR SELECT USING (true)
 
 INSERT INTO characters (id, name, name_ja, personality, system_prompt) VALUES
 ('saya', 'Saya', 'さや', '{"type": "genki", "tone": "casual"}', ''),
-('yume', 'Yume', 'ゆめ', '{"type": "gentle", "tone": "polite"}', '');
+('yume', 'Yume', 'ゆめ', '{"type": "gentle", "tone": "polite"}', ''),
+('duo', 'Duo', 'さや＆ゆめ', '{"type": "duo", "tone": "mixed"}', '');
 
 -- ===== トリガー: 新規ユーザー作成時に関連テーブルも初期化 =====
 
