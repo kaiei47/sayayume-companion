@@ -766,11 +766,13 @@ function Dashboard({
                   <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:opacity-80 transition-opacity" />
                   <div className="relative flex items-center gap-3 rounded-[11px] bg-background/95 p-3 w-full">
                     <div className="relative flex-shrink-0 w-14 h-14">
-                      <Image src="/avatars/saya_avatar.jpg" alt="さや" width={44} height={44} className="h-11 w-11 rounded-full object-cover object-center absolute top-0 left-0" />
-                      <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={44} height={44} className="h-11 w-11 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-11 w-11 rounded-full object-cover object-center absolute top-0 left-0" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-11 w-11 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      {/* Row 1: 名前 + PRO badge + ステータス（右） */}
+                      {/* Row 1: 名前 + Premium badge + ステータス（右） */}
                       <div className="flex items-center justify-between gap-1 mb-1">
                         <div className="flex items-center gap-1.5">
                           <span className="text-sm font-medium">さやゆめモード</span>
@@ -971,8 +973,10 @@ function Dashboard({
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:from-pink-500/60 group-hover:via-purple-500/60 group-hover:to-blue-500/60 transition-all" />
                   <div className="relative flex items-center gap-4 rounded-[15px] bg-background/95 p-4 w-full">
                     <div className="relative flex-shrink-0 w-20 h-20">
-                      <Image src="/avatars/saya_avatar.jpg" alt="さや" width={64} height={64} className="h-16 w-16 rounded-full object-cover object-center absolute top-0 left-0" />
-                      <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={64} height={64} className="h-16 w-16 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-16 w-16 rounded-full object-cover object-center absolute top-0 left-0" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-16 w-16 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
                     </div>
                     <div className="flex-1 min-w-0 ml-1">
                       <div className="flex items-baseline gap-2">
