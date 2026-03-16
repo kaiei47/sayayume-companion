@@ -392,9 +392,9 @@ function LandingPage() {
               <p className="text-xs text-muted-foreground mt-0.5">ずっと無料</p>
             </div>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>1日5メッセージ</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>さや・ゆめとチャット</li>
-              <li className="flex items-center gap-2"><span className="text-muted-foreground/40">–</span>AI写真生成なし</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 1日3枚</li>
+              <li className="flex items-center gap-2"><span className="text-muted-foreground/40">–</span>親密度 Lv3まで</li>
             </ul>
           </div>
 
@@ -407,8 +407,8 @@ function LandingPage() {
             </div>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 月30枚</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>親密度システム解放</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 1日30枚</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>親密度 全Lv解放</li>
             </ul>
           </div>
 
@@ -425,7 +425,7 @@ function LandingPage() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 無制限</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>全コンテンツ解放</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>ボイスメッセージ & 限定コンテンツ</li>
             </ul>
           </div>
         </div>
