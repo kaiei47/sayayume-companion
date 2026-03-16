@@ -82,10 +82,10 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
 
 // プラン別の制限
 const PLAN_LIMITS = {
-  free: { dailyMessages: 5, imageGeneration: false },
-  basic: { dailyMessages: -1, imageGeneration: true },
-  premium: { dailyMessages: -1, imageGeneration: true },
-  vip: { dailyMessages: -1, imageGeneration: true },
+  free:    { dailyMessages: -1, imageGeneration: true,  dailyImages: 3,  maxIntimacyLevel: 3 },
+  basic:   { dailyMessages: -1, imageGeneration: true,  dailyImages: 30, maxIntimacyLevel: 5 },
+  premium: { dailyMessages: -1, imageGeneration: true,  dailyImages: -1, maxIntimacyLevel: 5 },
+  vip:     { dailyMessages: -1, imageGeneration: true,  dailyImages: -1, maxIntimacyLevel: 5 },
 } as const;
 
 interface ChatRequest {
@@ -189,37 +189,8 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // フリープランのメッセージ制限チェック
+        // プラン制限を取得（メッセージは全プラン無制限）
         const limits = PLAN_LIMITS[userPlan] || PLAN_LIMITS.free;
-        if (limits.dailyMessages > 0) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          const { count } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('role', 'user')
-            .gte('created_at', today.toISOString())
-            .in('conversation_id',
-              (await supabase
-                .from('conversations')
-                .select('id')
-                .eq('user_id', dbUser.id)
-              ).data?.map(c => c.id) || []
-            );
-
-          if ((count || 0) >= limits.dailyMessages) {
-            return new Response(
-              JSON.stringify({
-                error: 'daily_limit',
-                message: `今日のメッセージ上限（${limits.dailyMessages}回）に達しました。プランをアップグレードすると無制限にチャットできます♡`,
-                limit: limits.dailyMessages,
-                used: count,
-              }),
-              { status: 429, headers: { 'Content-Type': 'application/json' } }
-            );
-          }
-        }
 
         // 会話が無ければ新規作成
         if (!conversation_id) {
@@ -514,7 +485,29 @@ export async function POST(req: NextRequest) {
           let imageUrl: string | null = null;
           let savedContent = fullResponse;
           const { cleanText, imageDescriptions } = extractImageTags(fullResponse);
-          const canGenerateImages = PLAN_LIMITS[userPlan]?.imageGeneration === true;
+
+          // 1日の画像生成枚数チェック
+          const planLimits = PLAN_LIMITS[userPlan] || PLAN_LIMITS.free;
+          let dailyImageCount = 0;
+          if (planLimits.dailyImages > 0 && dbUserId) {
+            const todayJST = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+            todayJST.setUTCHours(0, 0, 0, 0);
+            const todayStartUTC = new Date(todayJST.getTime() - 9 * 60 * 60 * 1000).toISOString();
+            const { count: imgCount } = await supabase
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('role', 'assistant')
+              .eq('content_type', 'image')
+              .gte('created_at', todayStartUTC)
+              .in('conversation_id',
+                (await supabase.from('conversations').select('id').eq('user_id', dbUserId))
+                  .data?.map(c => c.id) || []
+              );
+            dailyImageCount = imgCount || 0;
+          }
+          const imageQuotaExceeded = planLimits.dailyImages > 0 && dailyImageCount >= planLimits.dailyImages;
+
+          const canGenerateImages = planLimits.imageGeneration === true && !imageQuotaExceeded;
           if (imageDescriptions.length > 0 && canGenerateImages) {
             savedContent = cleanText;
 
@@ -587,9 +580,10 @@ export async function POST(req: NextRequest) {
               );
             }
           } else if (imageDescriptions.length > 0 && !canGenerateImages) {
-            // フリープランで画像リクエスト → アップグレード案内
             savedContent = cleanText;
-            const upgradeMsg = '\n\n写真を見るにはプランのアップグレードが必要だよ♡ ベーシックプランなら画像付きでチャットできるよ！';
+            const upgradeMsg = imageQuotaExceeded
+              ? `\n\n今日の写真は${planLimits.dailyImages}枚まで...明日またね♡ もっと見たいならプランアップグレードで増えるよ！`
+              : '\n\n写真を見るにはプランのアップグレードが必要だよ♡ ベーシックプランなら画像付きでチャットできるよ！';
             savedContent += upgradeMsg;
             controller.enqueue(
               encoder.encode(
