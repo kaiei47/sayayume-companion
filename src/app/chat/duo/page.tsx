@@ -58,11 +58,29 @@ export default function DuoChatPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [intimacyInfo, setIntimacyInfo] = useState<Record<string, { level: number; progress: number; levelInfo: { nameJa: string; emoji: string; color: string } }>>({});
   const [levelUpNotice, setLevelUpNotice] = useState<{ from: number; to: number; nameJa: string; emoji: string } | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const initialScrollDone = useRef(false);
+  const prevMessagesLength = useRef(0);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingContent]);
+    if (isLoadingHistory) {
+      initialScrollDone.current = false;
+      return;
+    }
+    const container = scrollRef.current;
+    if (!container) return;
+
+    if (!initialScrollDone.current && messages.length > 0) {
+      container.scrollTop = container.scrollHeight;
+      setTimeout(() => { container.scrollTop = container.scrollHeight; }, 120);
+      initialScrollDone.current = true;
+      prevMessagesLength.current = messages.length;
+    } else if (messages.length > prevMessagesLength.current || streamingContent) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      prevMessagesLength.current = messages.length;
+    }
+  }, [messages, streamingContent, isLoadingHistory]);
 
   // 認証 & プランチェック
   useEffect(() => {
@@ -478,7 +496,7 @@ export default function DuoChatPage() {
       )}
 
       {/* メッセージエリア */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-2xl space-y-3">
           {/* ローディング */}
           {isLoadingHistory && (
