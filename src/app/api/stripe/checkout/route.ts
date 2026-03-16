@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
 
     // 新規サブスク → Stripe Checkout Session作成
     const betaCouponId = process.env.STRIPE_BETA_COUPON_ID;
+    const trialDays = process.env.STRIPE_TRIAL_DAYS ? parseInt(process.env.STRIPE_TRIAL_DAYS) : 0;
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -145,6 +146,7 @@ export async function POST(req: NextRequest) {
         plan,
       },
       ...(betaCouponId ? { discounts: [{ coupon: betaCouponId }] } : {}),
+      ...(trialDays > 0 ? { subscription_data: { trial_period_days: trialDays } } : {}),
       success_url: `${origin}/pricing?success=true`,
       cancel_url: `${origin}/pricing?canceled=true`,
     });
