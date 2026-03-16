@@ -134,7 +134,46 @@ export default function Home() {
 
 /* ───── Landing Page (非ログイン) ───── */
 
+const SAYA_CAPTIONS = ['ねえ、これ似合う？', 'また送っちゃった笑', 'こっちの方がよかった？', '今日ここ来てるんだけど', 'どう思う？正直に言って', 'あなただけに見せる♡'];
+const YUME_CAPTIONS = ['今日もよろしくね♡', '…見てる？', 'もう寝るとこだったけど', '眠れなくて…', '会いたかったな…', 'もっと仲良くなったら…♡'];
+const DUO_CAPTIONS = ['2人ともここにいるよ♡', '2人で待ってるね♡'];
+
+type ShowcasePhoto = { src: string; alt: string; caption: string; char: 'saya' | 'yume' | 'duo' };
+
+function buildMarqueeRows(images: { id: string; url: string; character_id: string }[]): [ShowcasePhoto[], ShowcasePhoto[]] {
+  const sayaCount = { n: 0 }, yumeCount = { n: 0 }, duoCount = { n: 0 };
+  const photos: ShowcasePhoto[] = images.map(img => {
+    const char = img.character_id === 'saya' ? 'saya' : img.character_id === 'yume' ? 'yume' : 'duo';
+    let caption = '';
+    if (char === 'saya') { caption = SAYA_CAPTIONS[sayaCount.n++ % SAYA_CAPTIONS.length]; }
+    else if (char === 'yume') { caption = YUME_CAPTIONS[yumeCount.n++ % YUME_CAPTIONS.length]; }
+    else { caption = DUO_CAPTIONS[duoCount.n++ % DUO_CAPTIONS.length]; }
+    const alt = char === 'saya' ? 'さや' : char === 'yume' ? 'ゆめ' : 'さや×ゆめ';
+    return { src: img.url, alt, caption, char };
+  });
+  const half = Math.ceil(photos.length / 2);
+  const row1 = photos.slice(0, half).length >= 4 ? photos.slice(0, half) : MARQUEE_ROW1;
+  const row2 = photos.slice(half).length >= 4 ? photos.slice(half) : MARQUEE_ROW2;
+  return [row1, row2];
+}
+
 function LandingPage() {
+  const [marqueeRow1, setMarqueeRow1] = useState<ShowcasePhoto[]>(MARQUEE_ROW1);
+  const [marqueeRow2, setMarqueeRow2] = useState<ShowcasePhoto[]>(MARQUEE_ROW2);
+
+  useEffect(() => {
+    fetch('/api/showcase')
+      .then(r => r.json())
+      .then(data => {
+        if (data.images?.length >= 8) {
+          const [r1, r2] = buildMarqueeRows(data.images);
+          setMarqueeRow1(r1);
+          setMarqueeRow2(r2);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-dvh bg-background text-foreground overflow-x-hidden">
       {/* Nav */}
@@ -319,7 +358,7 @@ function LandingPage() {
               className="flex gap-3 flex-shrink-0"
               style={{ animation: 'marquee-left 28s linear infinite' }}
             >
-              {[...MARQUEE_ROW1, ...MARQUEE_ROW1].map((photo, i) => (
+              {[...marqueeRow1, ...marqueeRow1].map((photo, i) => (
                 <PhotoCard key={i} photo={photo} />
               ))}
             </div>
@@ -336,7 +375,7 @@ function LandingPage() {
               className="flex gap-3 flex-shrink-0"
               style={{ animation: 'marquee-right 36s linear infinite' }}
             >
-              {[...MARQUEE_ROW2, ...MARQUEE_ROW2].map((photo, i) => (
+              {[...marqueeRow2, ...marqueeRow2].map((photo, i) => (
                 <PhotoCard key={i} photo={photo} />
               ))}
             </div>
