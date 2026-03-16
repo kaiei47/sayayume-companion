@@ -25,6 +25,11 @@ export default function SettingsPage() {
   const [nicknameSaved, setNicknameSaved] = useState(false);
   const [dbUserId, setDbUserId] = useState<string | null>(null);
 
+  // 解約フロー
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+
   useEffect(() => {
     async function loadData() {
       const supabase = createClient();
@@ -93,6 +98,51 @@ export default function SettingsPage() {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true);
+    setCancelError('');
+    try {
+      const res = await fetch('/api/stripe/cancel', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setSubscription(prev => prev ? {
+          ...prev,
+          cancel_at_period_end: true,
+          current_period_end: data.current_period_end,
+        } : prev);
+        setShowCancelModal(false);
+      } else {
+        setCancelError(data.error || '解約処理に失敗しました。もう一度お試しください。');
+      }
+    } catch {
+      setCancelError('解約処理に失敗しました。もう一度お試しください。');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    setCancelLoading(true);
+    setCancelError('');
+    try {
+      const res = await fetch('/api/stripe/cancel', { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setSubscription(prev => prev ? {
+          ...prev,
+          cancel_at_period_end: false,
+          current_period_end: data.current_period_end,
+        } : prev);
+      } else {
+        setCancelError(data.error || '処理に失敗しました。もう一度お試しください。');
+      }
+    } catch {
+      setCancelError('処理に失敗しました。もう一度お試しください。');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -108,6 +158,11 @@ export default function SettingsPage() {
   }
 
   const plan = subscription ? PLANS[subscription.plan] : PLANS.free;
+  const isPaid = subscription?.plan !== 'free';
+  const isCancelScheduled = subscription?.cancel_at_period_end === true;
+  const periodEndDate = subscription?.current_period_end
+    ? new Date(subscription.current_period_end).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+    : null;
 
   return (
     <div className="min-h-dvh bg-background px-4 py-8">
@@ -152,14 +207,19 @@ export default function SettingsPage() {
 
         {/* サブスクリプション */}
         <div className="rounded-2xl border border-border/50 bg-card/50 p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">プラン</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">プラン管理</h2>
 
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-2">
               <span className="text-lg font-bold">{plan.nameJa}</span>
-              {subscription?.plan !== 'free' && (
-                <span className="ml-2 text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
+              {isPaid && !isCancelScheduled && (
+                <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
                   利用中
+                </span>
+              )}
+              {isCancelScheduled && (
+                <span className="text-xs text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded-full">
+                  解約予定
                 </span>
               )}
             </div>
@@ -180,32 +240,63 @@ export default function SettingsPage() {
             ))}
           </ul>
 
-          {/* 更新日 */}
-          {subscription?.current_period_end && (
+          {/* 解約予定ステータス */}
+          {isCancelScheduled && periodEndDate && (
+            <div className="rounded-xl bg-orange-500/10 border border-orange-500/20 p-3 space-y-2">
+              <p className="text-sm text-orange-300">
+                <span className="font-medium">{periodEndDate}</span> までサービスを利用できます。
+              </p>
+              <p className="text-xs text-muted-foreground">
+                それ以降は自動的にFreeプランに移行します。
+              </p>
+              <button
+                onClick={handleReactivate}
+                disabled={cancelLoading}
+                className="text-sm text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors disabled:opacity-50"
+              >
+                {cancelLoading ? '処理中...' : '解約を取り消す'}
+              </button>
+            </div>
+          )}
+
+          {/* 更新日（解約予定でない場合） */}
+          {!isCancelScheduled && periodEndDate && (
             <p className="text-xs text-muted-foreground">
-              {subscription.cancel_at_period_end
-                ? `Ends on ${new Date(subscription.current_period_end).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`
-                : `Next renewal: ${new Date(subscription.current_period_end).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`}
+              次回更新日: {periodEndDate}
             </p>
           )}
 
+          {cancelError && (
+            <p className="text-xs text-red-400">{cancelError}</p>
+          )}
+
           {/* ボタン */}
-          <div className="flex gap-2 pt-1">
-            {subscription?.plan === 'free' ? (
+          <div className="space-y-2 pt-1">
+            {!isPaid ? (
               <a
                 href="/pricing"
-                className="flex-1 rounded-xl bg-blue-600 text-white py-2.5 text-sm font-medium text-center hover:bg-blue-500 transition-colors"
+                className="block w-full rounded-xl bg-blue-600 text-white py-2.5 text-sm font-medium text-center hover:bg-blue-500 transition-colors"
               >
                 プランをアップグレード
               </a>
             ) : (
-              <button
-                onClick={handleManageSubscription}
-                disabled={portalLoading}
-                className="flex-1 rounded-xl border border-border/50 py-2.5 text-sm font-medium hover:bg-muted/50 transition-colors disabled:opacity-50"
-              >
-                {portalLoading ? '読み込み中...' : 'サブスクを管理する'}
-              </button>
+              <>
+                {!isCancelScheduled && (
+                  <button
+                    onClick={() => { setShowCancelModal(true); setCancelError(''); }}
+                    className="w-full rounded-xl border border-red-500/30 py-2.5 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    サブスクリプションを解約する
+                  </button>
+                )}
+                <button
+                  onClick={handleManageSubscription}
+                  disabled={portalLoading}
+                  className="w-full rounded-xl border border-border/50 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  {portalLoading ? '読み込み中...' : 'Stripeで詳細を確認する'}
+                </button>
+              </>
             )}
           </div>
           {portalError && (
@@ -227,6 +318,46 @@ export default function SettingsPage() {
           <p className="text-xs text-muted-foreground">18+ only · AI-generated content</p>
         </div>
       </div>
+
+      {/* 解約確認モーダル */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-card border border-border/50 p-6 space-y-5 mb-4 sm:mb-0">
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold">本当に解約しますか？</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                解約しても{periodEndDate ? (
+                  <span className="text-foreground font-medium"> {periodEndDate} </span>
+                ) : '現在の請求期間終了'}まではご利用いただけます。
+              </p>
+              <p className="text-sm text-muted-foreground">
+                期間終了後は自動的にFreeプランに移行します。日割り返金はありません。
+              </p>
+            </div>
+
+            {cancelError && (
+              <p className="text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{cancelError}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowCancelModal(false); setCancelError(''); }}
+                disabled={cancelLoading}
+                className="flex-1 rounded-xl border border-border/50 py-3 text-sm font-medium hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleCancelSubscription}
+                disabled={cancelLoading}
+                className="flex-1 rounded-xl bg-red-600 text-white py-3 text-sm font-medium hover:bg-red-500 transition-colors disabled:opacity-50"
+              >
+                {cancelLoading ? '処理中...' : '解約する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
