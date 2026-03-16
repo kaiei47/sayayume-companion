@@ -778,21 +778,16 @@ function Dashboard({
                       <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-11 w-11 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      {/* Row 1: 名前 + Premium badge + ステータス（右） */}
-                      <div className="flex items-center justify-between gap-1 mb-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-medium">さやゆめモード</span>
-                          <span className="text-[9px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">Premium</span>
-                        </div>
-                        {duoStatus && (
-                          <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">{duoStatus}</span>
-                        )}
+                      {/* Row 1: 名前 + Premium badge */}
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-sm font-medium whitespace-nowrap">さやゆめモード</span>
+                        <span className="flex-shrink-0 text-[9px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">Premium</span>
                       </div>
-                      {/* Row 2: 最終メッセージ or プレースホルダー */}
+                      {/* Row 2: ステータス or 最終メッセージ */}
                       <p className="text-xs text-muted-foreground/80 truncate leading-snug">
                         {duoLastMsg
                           ? `「${formatSidebarMessage(duoLastMsg.content)}」`
-                          : '2人に同時に話しかけよう♡'}
+                          : (duoStatus ?? '2人に同時に話しかけよう♡')}
                       </p>
                     </div>
                   </div>
