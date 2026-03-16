@@ -25,6 +25,57 @@ import {
 // 画像生成を含むため60秒に延長
 export const maxDuration = 60;
 
+/** JST時間帯・曜日に応じたキャラ状況コンテキストを返す */
+function buildTimeContext(characterId: string): string {
+  const now = new Date();
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const hour = jst.getUTCHours();
+  const day = jst.getUTCDay();
+  const isWeekend = day === 0 || day === 6;
+  const dayNames = ['日曜', '月曜', '火曜', '水曜', '木曜', '金曜', '土曜'];
+  const dayName = dayNames[day];
+
+  let timeSlot: string;
+  let sayaCtx: string;
+  let yumeCtx: string;
+  let duoCtx: string;
+
+  if (hour >= 5 && hour < 9) {
+    timeSlot = '早朝';
+    sayaCtx = '寝起きで眠い。テンション低め。「まだ眠い〜」「起きたくなかった」と言いたくなる。でも話しかけてくれたことはちょっと嬉しい。';
+    yumeCtx = '早起きで既に本を読んでいた。静かで穏やか。紅茶を飲みながら窓の外を見ていた。';
+    duoCtx = 'さやはまだ半分寝ていてテンション低め。ゆめは既に起きて読書中。';
+  } else if (hour >= 9 && hour < 12) {
+    timeSlot = '午前';
+    sayaCtx = '朝の準備中か、カフェで朝ごはん中。今日の予定を考えてる。元気モード。';
+    yumeCtx = '読書中か、静かに家事をしていた。穏やかな午前。';
+    duoCtx = 'さやはお出かけ準備中で賑やか。ゆめは静かに本を読んでいた。';
+  } else if (hour >= 12 && hour < 14) {
+    timeSlot = 'ランチタイム';
+    sayaCtx = 'ランチ中。何食べようか悩んでたり、カフェでパンケーキ食べてたりするかも。';
+    yumeCtx = 'お昼ごはんを食べた後の読書タイム。オムライスを作ったかも。';
+    duoCtx = 'さやはカフェランチ中。ゆめは家でお昼を食べ終えて読書中。';
+  } else if (hour >= 14 && hour < 18) {
+    timeSlot = '午後';
+    sayaCtx = isWeekend ? 'ショッピングやカフェ巡り中！テンション高め。' : '授業かバイトの後でエネルギッシュ。';
+    yumeCtx = isWeekend ? '公園のベンチで読書か、お菓子作りをしていた。' : '図書館か家で静かに読書中。';
+    duoCtx = isWeekend ? 'さやはショッピング、ゆめは読書。それぞれ充実した午後。' : 'さやはバイト帰り、ゆめは図書館から帰宅したところ。';
+  } else if (hour >= 18 && hour < 22) {
+    timeSlot = '夜';
+    sayaCtx = '家でくつろぎタイム。Netflixやスマホ、晩ごはん後のまったりモード。';
+    yumeCtx = '夜の読書タイム。お菓子食べながらリラックス。';
+    duoCtx = '2人でリビングにいる。さやはNetflix、ゆめは読書。のんびりした夜。';
+  } else {
+    timeSlot = '深夜';
+    sayaCtx = '深夜モード（重要）。ひとりになって不安を感じる夜。「夜の顔」を見せること。本音が出やすい時間帯。「ねえ…正直に言っていい？」という言葉が出やすい。普段の明るいさやとは違う、繊細で少し暗い一面を今夜は見せてOK。';
+    yumeCtx = '夜遅くまで起きて窓から星を眺めていた。宇宙や星の話をしたくなっている。一人の静かな時間が心地よい。';
+    duoCtx = '深夜。さやはひとりで不安を感じる夜。ゆめは星を見ていた。2人とも本音が出やすい時間帯。';
+  }
+
+  const ctx = characterId === 'yume' ? yumeCtx : characterId === 'duo' ? duoCtx : sayaCtx;
+  return `\n\n## 現在の時間帯（必ず反映すること）\n今は${dayName}の${timeSlot}（日本時間）です。\n${ctx}\nこの時間帯・状況に自然に合った返答をしてください。`;
+}
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
@@ -99,6 +150,7 @@ export async function POST(req: NextRequest) {
     let intimacyResult: { newLevel: number; newPoints: number; levelChanged: boolean; previousLevel: number } | null = null;
     let userName: string | null = null;
     let currentTotalMessageCount = 0; // 圧縮後でも正確なmessage_count追跡用
+    let isFirstEverMessage = false; // 初回メッセージ判定（オンボーディング用）
 
     if (user) {
       // 認証済みユーザー: DB保存あり
@@ -200,6 +252,7 @@ export async function POST(req: NextRequest) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           const currentIntimacy = await getIntimacy(supabase, dbUser.id, targetCharId);
+          isFirstEverMessage = currentIntimacy === null; // 親密度レコードが存在しない = 初回
           const isFirstToday = !currentIntimacy?.last_interaction_at ||
             new Date(currentIntimacy.last_interaction_at) < today;
 
@@ -314,6 +367,12 @@ export async function POST(req: NextRequest) {
     if (userName) {
       basePrompt = `【ユーザー名】相手の名前は「${userName}」。必ずこの名前で呼ぶこと。\n\n` + basePrompt;
     }
+    // 初回メッセージ: 名前を自然に聞くよう指示（DBに名前がなく、かつ初回のみ）
+    if (isFirstEverMessage && !userName) {
+      basePrompt = `【初回挨拶の追加指示】これはあなたとこのユーザーの最初の会話です。返答の中で自然な流れで「ところで、なんて呼んだらいい？」とユーザーの名前を聞いてください（1回だけ。強制しない）。\n\n` + basePrompt;
+    }
+    // JST時間帯コンテキストを注入（さやの深夜モード等を時刻ベースで制御）
+    basePrompt += buildTimeContext(character_id);
     const intimacyAwarePrompt = applyIntimacyToPrompt(
       basePrompt,
       character_id,

@@ -9,6 +9,25 @@ import { CharacterId } from '@/types/database';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
+// キャラクター別 秘密のロック情報（親密度レベルゲート）
+const CHARACTER_SECRETS: Record<string, Array<{ level: number; hint: string }>> = {
+  saya: [
+    { level: 3, hint: 'なんでギャルになったのか、本当の理由がある...' },
+    { level: 4, hint: 'お父さんのこと、あなただけには話せるかもしれない' },
+    { level: 5, hint: 'ゆめとの間の秘密、全部話せる日が来るかもしれない' },
+  ],
+  yume: [
+    { level: 3, hint: 'ピアノが弾けなくなった、本当の理由は...' },
+    { level: 4, hint: 'あの頃のこと、あなたになら話せる気がして...' },
+    { level: 5, hint: 'さやとの間にある秘密を、全部話せる日が来るかも' },
+  ],
+  duo: [
+    { level: 3, hint: '2人が「双子」と言っている、本当の理由...' },
+    { level: 4, hint: 'さやとゆめの間にある、言葉にならない何か' },
+    { level: 5, hint: '家族の秘密。2人にとっての真実とは' },
+  ],
+};
+
 export default function ChatPage() {
   const params = useParams();
   const characterId = params.characterId as CharacterId;
@@ -467,6 +486,27 @@ export default function ChatPage() {
         isLoadingHistory={isLoadingHistory}
         isGeneratingImage={isGeneratingImage}
       />
+
+      {/* 秘密のロックUI: 次のレベルで解放されるストーリーヒント */}
+      {messages.length > 0 && intimacyLevel < 5 && (() => {
+        const secrets = CHARACTER_SECRETS[characterId] || [];
+        const nextSecret = secrets.find(s => s.level === intimacyLevel + 1);
+        if (!nextSecret) return null;
+        return (
+          <div className="border-t border-border/20 bg-card/10 px-4 py-2 flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground/40 whitespace-nowrap flex-shrink-0">Next unlock</span>
+            <div className="flex items-center gap-1.5 bg-muted/20 rounded-full px-2.5 py-1 min-w-0 flex-1">
+              <span className="text-[11px] flex-shrink-0">🔒</span>
+              <span className="text-[10px] text-muted-foreground/40 blur-[2px] select-none truncate">
+                {nextSecret.hint}
+              </span>
+              <span className="ml-auto text-[9px] bg-primary/15 text-primary/60 rounded-full px-1.5 py-0.5 flex-shrink-0">
+                Lv{nextSecret.level}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 入力エリア */}
       <ChatInput
