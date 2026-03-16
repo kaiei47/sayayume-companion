@@ -34,6 +34,7 @@ export default function Home() {
   const [lastMessages, setLastMessages] = useState<Record<string, LastMessage>>({});
   const [intimacy, setIntimacy] = useState<Record<string, IntimacyInfo>>({});
   const [receivedImages, setReceivedImages] = useState<ReceivedImage[]>([]);
+  const [userPlan, setUserPlan] = useState<string>('free');
 
   useEffect(() => {
     const supabase = createClient();
@@ -70,6 +71,26 @@ export default function Home() {
           .then(res => res.json())
           .then(data => { if (data.images) setReceivedImages(data.images); })
           .catch(() => {});
+
+        // 現在のプランを取得
+        supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', user.id)
+          .single()
+          .then(({ data: dbUser }) => {
+            if (dbUser) {
+              supabase
+                .from('subscriptions')
+                .select('plan')
+                .eq('user_id', dbUser.id)
+                .eq('status', 'active')
+                .maybeSingle()
+                .then(({ data: sub }) => {
+                  if (sub?.plan) setUserPlan(sub.plan);
+                });
+            }
+          });
       }
     });
   }, []);
@@ -91,6 +112,7 @@ export default function Home() {
     lastMessages={lastMessages}
     intimacy={intimacy}
     receivedImages={receivedImages}
+    userPlan={userPlan}
   />;
 }
 
@@ -537,11 +559,13 @@ function Dashboard({
   lastMessages,
   intimacy,
   receivedImages,
+  userPlan,
 }: {
   user: User;
   lastMessages: Record<string, LastMessage>;
   intimacy: Record<string, IntimacyInfo>;
   receivedImages: ReceivedImage[];
+  userPlan: string;
 }) {
   // Push notification subscription — triggered after 2 chat messages for better UX
   useEffect(() => {
@@ -584,8 +608,14 @@ function Dashboard({
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/20 flex-shrink-0 bg-background/95 backdrop-blur-sm">
         <SayayumeLogo size="md" />
         <div className="flex items-center gap-3">
-          <Link href="/pricing" className="text-[11px] text-muted-foreground bg-card/50 border border-border/30 px-2.5 py-1 rounded-full hover:bg-card transition-colors">
-            プラン
+          <Link href="/pricing" className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors hover:opacity-80 ${
+            userPlan === 'premium'
+              ? 'bg-gradient-to-r from-pink-500/20 to-purple-500/20 border-pink-500/40 text-pink-300'
+              : userPlan === 'basic'
+              ? 'bg-blue-500/15 border-blue-500/30 text-blue-300'
+              : 'bg-card/50 border-border/30 text-muted-foreground'
+          }`}>
+            {userPlan === 'premium' ? '✦ Premium' : userPlan === 'basic' ? '◈ Basic' : 'Free'}
           </Link>
           <Link href="/settings" className="text-muted-foreground hover:text-foreground transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
