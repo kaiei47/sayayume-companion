@@ -702,7 +702,7 @@ function Dashboard({
                 >
                   <div className="relative flex-shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={char.avatarUrl} alt={char.nameJa} className="h-12 w-12 rounded-full object-cover object-top" />
+                    <img src={char.avatarUrl} alt={char.nameJa} className="h-14 w-14 rounded-full object-cover object-center" />
                     <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -734,9 +734,9 @@ function Dashboard({
             <Link href="/chat/duo" className="group relative flex items-center gap-3 rounded-xl p-[1px] transition-all overflow-hidden">
               <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:opacity-80 transition-opacity" />
               <div className="relative flex items-center gap-3 rounded-[11px] bg-background/95 p-3 w-full">
-                <div className="relative flex-shrink-0 w-12 h-12">
-                  <Image src="/avatars/saya_avatar.jpg" alt="さや" width={36} height={36} className="h-9 w-9 rounded-full object-cover object-top absolute top-0 left-0" />
-                  <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={36} height={36} className="h-9 w-9 rounded-full object-cover object-top absolute bottom-0 right-0 ring-1 ring-background" />
+                <div className="relative flex-shrink-0 w-14 h-14">
+                  <Image src="/avatars/saya_avatar.jpg" alt="さや" width={44} height={44} className="h-11 w-11 rounded-full object-cover object-center absolute top-0 left-0" />
+                  <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={44} height={44} className="h-11 w-11 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -772,7 +772,7 @@ function Dashboard({
                 <div className="flex items-start gap-3">
                   <div className="relative flex-shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={greetingAvatarUrl} alt={greetingNameJa} className="h-12 w-12 rounded-full object-cover object-top" />
+                    <img src={greetingAvatarUrl} alt={greetingNameJa} className="h-14 w-14 rounded-full object-cover object-center" />
                     <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -843,7 +843,7 @@ function Dashboard({
                     >
                       <div className="relative flex-shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={char.avatarUrl} alt={char.nameJa} className="h-16 w-16 rounded-full object-cover object-top" />
+                        <img src={char.avatarUrl} alt={char.nameJa} className="h-20 w-20 rounded-full object-cover object-center" />
                         <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -888,11 +888,11 @@ function Dashboard({
                 <Link href="/chat/duo" className="group relative flex items-center gap-4 rounded-2xl p-[1px] transition-all overflow-hidden">
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:from-pink-500/60 group-hover:via-purple-500/60 group-hover:to-blue-500/60 transition-all" />
                   <div className="relative flex items-center gap-4 rounded-[15px] bg-background/95 p-4 w-full">
-                    <div className="relative flex-shrink-0">
-                      <Image src="/avatars/saya_avatar.jpg" alt="さや" width={48} height={48} className="h-12 w-12 rounded-full object-cover object-top" />
-                      <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={48} height={48} className="h-12 w-12 rounded-full object-cover object-top absolute -right-4 top-0 ring-2 ring-background" />
+                    <div className="relative flex-shrink-0 w-20 h-20">
+                      <Image src="/avatars/saya_avatar.jpg" alt="さや" width={64} height={64} className="h-16 w-16 rounded-full object-cover object-center absolute top-0 left-0" />
+                      <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={64} height={64} className="h-16 w-16 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
                     </div>
-                    <div className="flex-1 min-w-0 ml-3">
+                    <div className="flex-1 min-w-0 ml-1">
                       <div className="flex items-baseline gap-2">
                         <h3 className="font-semibold group-hover:text-primary">さやゆめモード</h3>
                         <span className="text-[10px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-2 py-0.5 rounded-full">PREMIUM</span>
@@ -910,7 +910,7 @@ function Dashboard({
                 <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider px-1">はじめに</p>
                 <div className="flex items-start gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-9 w-9 rounded-full object-cover object-top flex-shrink-0 mt-0.5" />
+                  <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-9 w-9 rounded-full object-cover object-center flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-[11px] text-muted-foreground mb-1">さや</p>
                     <div className="bg-pink-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
@@ -920,7 +920,7 @@ function Dashboard({
                 </div>
                 <div className="flex items-start gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-9 w-9 rounded-full object-cover object-top flex-shrink-0 mt-0.5" />
+                  <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-9 w-9 rounded-full object-cover object-center flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-[11px] text-muted-foreground mb-1">ゆめ</p>
                     <div className="bg-blue-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
@@ -1008,7 +1008,7 @@ function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: stri
                 alt={photo.alt}
                 width={480}
                 height={640}
-                className="max-h-[78vh] max-w-[88vw] w-auto h-auto block rounded-2xl object-cover object-top"
+                className="max-h-[78vh] max-w-[88vw] w-auto h-auto block rounded-2xl object-cover object-center"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-2xl" />
               <div className={`absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full ${photo.char === 'saya' ? 'bg-pink-500/80 text-white' : photo.char === 'duo' ? 'bg-purple-500/80 text-white' : 'bg-blue-500/80 text-white'}`}>
@@ -1031,7 +1031,7 @@ function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: stri
             src={photo.src}
             alt={photo.alt}
             fill
-            className={`object-cover object-top transition-transform duration-300 ${!photo.locked ? 'hover:scale-105' : 'blur-sm brightness-50'}`}
+            className={`object-cover object-center transition-transform duration-300 ${!photo.locked ? 'hover:scale-105' : 'blur-sm brightness-50'}`}
             sizes="144px"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
