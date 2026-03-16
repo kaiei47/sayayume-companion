@@ -647,6 +647,16 @@ function Dashboard({
   toggleFavorite: (id: string, current: boolean) => void;
   userPlan: string;
 }) {
+  const [lightboxImg, setLightboxImg] = useState<ReceivedImage | null>(null);
+
+  // ライトボックスを閉じる（ESCキー対応）
+  useEffect(() => {
+    if (!lightboxImg) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightboxImg(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxImg]);
+
   // Push notification subscription — triggered after 2 chat messages for better UX
   useEffect(() => {
     const totalMsgs = Object.keys(lastMessages).length;
@@ -682,6 +692,7 @@ function Dashboard({
   const greetingReplyColor = greetingCharId === 'saya' ? 'text-pink-400' : 'text-blue-400';
 
   return (
+    <>
     <div className="h-dvh bg-background text-foreground flex flex-col">
 
       {/* ── Sticky top nav ── */}
@@ -877,7 +888,11 @@ function Dashboard({
                         : receivedImages
                       ).slice(0, 10).map((img) => (
                         <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group">
-                          <Link href={`/chat/${img.character_id}`}>
+                          <button
+                            onClick={() => setLightboxImg(img)}
+                            className="absolute inset-0 w-full h-full"
+                            aria-label="写真を拡大"
+                          >
                             <Image
                               src={img.url}
                               alt="受け取った写真"
@@ -885,7 +900,7 @@ function Dashboard({
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                          </Link>
+                          </button>
                           {/* ハートボタン */}
                           <button
                             onClick={(e) => { e.preventDefault(); toggleFavorite(img.id, img.is_favorite); }}
@@ -1048,6 +1063,58 @@ function Dashboard({
         </main>
       </div>
     </div>
+
+    {/* ライトボックス */}
+    {lightboxImg && (
+
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+        onClick={() => setLightboxImg(null)}
+      >
+        <div
+          className="relative max-w-lg w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* 拡大画像 */}
+          <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-2xl">
+            <Image
+              src={lightboxImg.url}
+              alt="受け取った写真"
+              fill
+              className="object-cover"
+              sizes="(max-width: 512px) 100vw, 512px"
+              priority
+            />
+          </div>
+
+          {/* 操作バー */}
+          <div className="flex items-center justify-between mt-3 px-1">
+            <Link
+              href={`/chat/${lightboxImg.character_id}`}
+              className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors"
+            >
+              <span>{lightboxImg.character_id === 'saya' ? 'さや' : lightboxImg.character_id === 'yume' ? 'ゆめ' : 'さや&ゆめ'}に話しかける →</span>
+            </Link>
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleFavorite(lightboxImg.id, lightboxImg.is_favorite); setLightboxImg({ ...lightboxImg, is_favorite: !lightboxImg.is_favorite }); }}
+              className="flex items-center gap-1 text-sm text-white/70 hover:text-white transition-colors"
+            >
+              <span>{lightboxImg.is_favorite ? '❤️' : '🤍'}</span>
+            </button>
+          </div>
+
+          {/* 閉じるボタン */}
+          <button
+            onClick={() => setLightboxImg(null)}
+            className="absolute -top-3 -right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-sm"
+            aria-label="閉じる"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
