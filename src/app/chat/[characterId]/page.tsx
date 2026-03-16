@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import ChatMessages, { ChatMessage } from '@/components/chat/ChatMessages';
 import ChatInput from '@/components/chat/ChatInput';
 import { CHARACTERS } from '@/lib/characters';
@@ -30,6 +30,7 @@ const CHARACTER_SECRETS: Record<string, Array<{ level: number; hint: string }>> 
 
 export default function ChatPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const characterId = params.characterId as CharacterId;
   const character = CHARACTERS[characterId];
 
@@ -148,6 +149,21 @@ export default function ChatPage() {
   useEffect(() => {
     loadConversation();
   }, [loadConversation]);
+
+  // ホームのgreetingメッセージをチャット画面に引き継ぐ
+  useEffect(() => {
+    if (!isLoadingHistory && messages.length === 0) {
+      const greeting = searchParams.get('greeting');
+      if (greeting) {
+        setMessages([{
+          id: `greeting-${Date.now()}`,
+          role: 'assistant',
+          content: greeting,
+          created_at: new Date().toISOString(),
+        }]);
+      }
+    }
+  }, [isLoadingHistory, searchParams]);
 
   const sendMessage = useCallback(
     async (content: string) => {

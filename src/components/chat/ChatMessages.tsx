@@ -41,11 +41,27 @@ export default function ChatMessages({
   return (
     <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
       <div className="mx-auto max-w-2xl space-y-3">
-        {/* 履歴ロード中 */}
+        {/* 履歴ロード中 — スケルトンUI */}
         {isLoadingHistory && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <TypingDots />
-            <p className="text-muted-foreground text-xs mt-2">Loading history...</p>
+          <div className="space-y-4 animate-pulse pt-4">
+            <div className="flex items-end gap-2">
+              <div className="h-7 w-7 rounded-full bg-muted flex-shrink-0" />
+              <div className="h-10 w-52 rounded-2xl rounded-bl-md bg-muted" />
+            </div>
+            <div className="flex justify-end">
+              <div className="h-8 w-32 rounded-2xl rounded-br-md bg-muted/50" />
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="h-7 w-7 rounded-full bg-muted invisible flex-shrink-0" />
+              <div className="h-16 w-64 rounded-2xl rounded-bl-md bg-muted" />
+            </div>
+            <div className="flex justify-end">
+              <div className="h-8 w-44 rounded-2xl rounded-br-md bg-muted/50" />
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="h-7 w-7 rounded-full bg-muted flex-shrink-0" />
+              <div className="h-8 w-40 rounded-2xl rounded-bl-md bg-muted" />
+            </div>
           </div>
         )}
 

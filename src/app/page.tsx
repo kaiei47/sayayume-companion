@@ -372,6 +372,69 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* Pricing Summary */}
+      <section className="px-4 py-14 max-w-3xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 rounded-full bg-pink-500/10 border border-pink-500/20 px-4 py-1.5 mb-4">
+            <span className="text-xs font-semibold text-pink-400">🎉 クローズドβ特典</span>
+            <span className="text-xs text-pink-300">有料プラン最初の1ヶ月無料！</span>
+          </div>
+          <h2 className="text-2xl font-bold mb-2">シンプルな料金プラン</h2>
+          <p className="text-sm text-muted-foreground">いつでもキャンセル可能。まずは無料から。</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Free */}
+          <div className="rounded-2xl border border-border/40 bg-card/30 p-5 space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Free</p>
+              <p className="text-3xl font-bold">¥0</p>
+              <p className="text-xs text-muted-foreground mt-0.5">ずっと無料</p>
+            </div>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>1日5メッセージ</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>さや・ゆめとチャット</li>
+              <li className="flex items-center gap-2"><span className="text-muted-foreground/40">–</span>AI写真生成なし</li>
+            </ul>
+          </div>
+
+          {/* Basic */}
+          <div className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-5 space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-1">Basic</p>
+              <p className="text-3xl font-bold">¥1,980</p>
+              <p className="text-xs text-muted-foreground mt-0.5">月額（税込）</p>
+            </div>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 月30枚</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>親密度システム解放</li>
+            </ul>
+          </div>
+
+          {/* Premium */}
+          <div className="relative rounded-2xl border border-pink-500/40 bg-gradient-to-b from-pink-500/10 to-purple-500/5 p-5 space-y-4">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <span className="text-[10px] font-bold bg-gradient-to-r from-pink-500 to-purple-500 text-white px-3 py-1 rounded-full">人気No.1</span>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-pink-400 uppercase tracking-wider mb-1">Premium</p>
+              <p className="text-3xl font-bold">¥2,980</p>
+              <p className="text-xs text-muted-foreground mt-0.5">月額（税込）</p>
+            </div>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 無制限</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>全コンテンツ解放</li>
+            </ul>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          <Link href="/pricing" className="underline underline-offset-2 hover:text-foreground transition-colors">プランの詳細を見る →</Link>
+        </p>
+      </section>
+
       {/* Final CTA */}
       <section className="px-4 pb-20 max-w-md mx-auto text-center space-y-4">
         <h2 className="text-2xl font-bold">話せば、きっとわかる。</h2>
@@ -616,7 +679,7 @@ function Dashboard({
           <div className="px-4 pb-10 pt-5 md:px-8 md:max-w-2xl md:mx-auto space-y-5">
 
             {/* Daily greeting card */}
-            <Link href={`/chat/${greetingCharId}`} className="group block">
+            <Link href={`/chat/${greetingCharId}?greeting=${encodeURIComponent(greetingMsg)}`} className="group block">
               <div className={`rounded-2xl border ${greetingAccent} p-4`}>
                 <div className="flex items-start gap-3">
                   <div className="relative flex-shrink-0">
