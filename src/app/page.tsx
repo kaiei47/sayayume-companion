@@ -687,27 +687,64 @@ function Dashboard({
   userPlan: string;
 }) {
   const [lightboxImg, setLightboxImg] = useState<ReceivedImage | null>(null);
-  const [feedbackText, setFeedbackText] = useState('');
-  const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
 
-  const submitFeedback = async () => {
-    if (!feedbackText.trim() || feedbackStatus === 'sending') return;
-    setFeedbackStatus('sending');
+  // サポートチャット
+  type SupportMessage = { id: string; sender: 'user' | 'admin'; message: string; created_at: string };
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [supportInput, setSupportInput] = useState('');
+  const [supportSending, setSupportSending] = useState(false);
+  const [supportLoaded, setSupportLoaded] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const supportBottomRef = useRef<HTMLDivElement>(null);
+
+  const fetchSupport = async () => {
     try {
-      const res = await fetch('/api/feedback', {
+      const res = await fetch('/api/support');
+      if (!res.ok) return;
+      const data = await res.json();
+      setSupportMessages(data.messages ?? []);
+      setSupportLoaded(true);
+    } catch { /* ignore */ }
+  };
+
+  const sendSupport = async () => {
+    if (!supportInput.trim() || supportSending) return;
+    setSupportSending(true);
+    const text = supportInput.trim();
+    setSupportInput('');
+    try {
+      const res = await fetch('/api/support', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: feedbackText.trim(), category: 'user_request' }),
+        body: JSON.stringify({ message: text }),
       });
-      if (!res.ok) throw new Error('failed');
-      setFeedbackText('');
-      setFeedbackStatus('done');
-      setTimeout(() => setFeedbackStatus('idle'), 4000);
+      if (!res.ok) { setSupportInput(text); return; }
+      const data = await res.json();
+      setSupportMessages(prev => [...prev, data.message]);
+      setTimeout(() => supportBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     } catch {
-      setFeedbackStatus('error');
-      setTimeout(() => setFeedbackStatus('idle'), 3000);
+      setSupportInput(text);
+    } finally {
+      setSupportSending(false);
     }
   };
+
+  useEffect(() => {
+    if (supportOpen && !supportLoaded) fetchSupport();
+  }, [supportOpen, supportLoaded]);
+
+  // 開いている間は60秒ごとにポーリング（管理者からの返信確認）
+  useEffect(() => {
+    if (!supportOpen) return;
+    const interval = setInterval(fetchSupport, 60000);
+    return () => clearInterval(interval);
+  }, [supportOpen]);
+
+  useEffect(() => {
+    if (supportOpen && supportMessages.length > 0) {
+      setTimeout(() => supportBottomRef.current?.scrollIntoView({ behavior: 'instant' }), 50);
+    }
+  }, [supportOpen, supportMessages.length]);
 
   // ライトボックスを閉じる（ESCキー対応）
   useEffect(() => {
@@ -1213,31 +1250,81 @@ function Dashboard({
               </Link>
             </div>
 
-            {/* 開発者への要望 */}
-            <div className="rounded-2xl border border-border/30 bg-card/30 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-base">💌</span>
-                <p className="text-sm font-semibold">開発者への要望・感想</p>
-              </div>
-              <p className="text-xs text-muted-foreground">「こんな機能がほしい」「ここが使いにくい」など、なんでも教えてください♡</p>
-              <textarea
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-                placeholder="例: もっと写真を送ってほしい、ゆめとの会話で..."
-                rows={3}
-                maxLength={1000}
-                className="w-full rounded-xl border border-border/40 bg-background/50 px-3 py-2.5 text-sm resize-none outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500/30 transition-all placeholder:text-muted-foreground/40"
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-muted-foreground/40">{feedbackText.length}/1000</span>
-                <button
-                  onClick={submitFeedback}
-                  disabled={!feedbackText.trim() || feedbackStatus === 'sending'}
-                  className="rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold px-4 py-2 hover:bg-pink-500/20 disabled:opacity-40 transition-all"
-                >
-                  {feedbackStatus === 'sending' ? '送信中...' : feedbackStatus === 'done' ? '✓ 送信しました！' : feedbackStatus === 'error' ? '送信失敗' : '送信する'}
-                </button>
-              </div>
+            {/* 開発者とのやり取り */}
+            <div className="rounded-2xl border border-border/30 bg-card/30 overflow-hidden">
+              {/* ヘッダー（タップで開閉） */}
+              <button
+                onClick={() => setSupportOpen(v => !v)}
+                className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💌</span>
+                  <span className="text-sm font-semibold">開発者とのやり取り</span>
+                  {supportMessages.some(m => m.sender === 'admin') && (
+                    <span className="text-[10px] bg-pink-500/20 text-pink-400 px-1.5 py-0.5 rounded-full font-medium">返信あり</span>
+                  )}
+                </div>
+                <span className="text-muted-foreground text-xs">{supportOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {supportOpen && (
+                <div className="border-t border-border/20">
+                  {/* メッセージ一覧 */}
+                  <div className="max-h-72 overflow-y-auto px-4 py-3 space-y-3">
+                    {!supportLoaded ? (
+                      <p className="text-xs text-muted-foreground text-center py-4 animate-pulse">読み込み中...</p>
+                    ) : supportMessages.length === 0 ? (
+                      <div className="text-center py-4 space-y-1">
+                        <p className="text-sm">✉️</p>
+                        <p className="text-xs text-muted-foreground">「こんな機能がほしい」「ここが使いにくい」</p>
+                        <p className="text-xs text-muted-foreground">なんでも教えてください♡ 開発者が直接返信します。</p>
+                      </div>
+                    ) : (
+                      supportMessages.map(msg => (
+                        <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          {msg.sender === 'admin' && (
+                            <div className="mr-2 mt-1 flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-blue-500 flex items-center justify-center text-[10px] text-white font-bold">S</div>
+                          )}
+                          <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                            msg.sender === 'user'
+                              ? 'bg-pink-500/20 text-foreground rounded-br-sm'
+                              : 'bg-card border border-border/40 rounded-bl-sm'
+                          }`}>
+                            {msg.sender === 'admin' && (
+                              <p className="text-[10px] text-pink-400 font-semibold mb-0.5">さやゆめ運営</p>
+                            )}
+                            <p>{msg.message}</p>
+                            <p className="text-[10px] text-muted-foreground/50 mt-1 text-right">
+                              {new Date(msg.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div ref={supportBottomRef} />
+                  </div>
+
+                  {/* 入力エリア */}
+                  <div className="border-t border-border/20 p-3 flex gap-2">
+                    <input
+                      type="text"
+                      value={supportInput}
+                      onChange={e => setSupportInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSupport(); } }}
+                      placeholder="メッセージを入力..."
+                      maxLength={2000}
+                      className="flex-1 rounded-xl border border-border/40 bg-background/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500/30 transition-all placeholder:text-muted-foreground/40"
+                    />
+                    <button
+                      onClick={sendSupport}
+                      disabled={!supportInput.trim() || supportSending}
+                      className="rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold px-3 py-2 hover:bg-pink-500/20 disabled:opacity-40 transition-all whitespace-nowrap"
+                    >
+                      {supportSending ? '...' : '送信'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
