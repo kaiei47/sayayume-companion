@@ -198,7 +198,7 @@ function LandingPage() {
         <div className="absolute inset-0 flex">
           <div className="relative flex-1">
             <Image
-              src="/references/saya.jpg"
+              src="/hero/saya.jpg"
               alt="さや"
               fill
               className="object-cover object-top"
@@ -208,7 +208,7 @@ function LandingPage() {
           </div>
           <div className="relative flex-1">
             <Image
-              src="/references/yume.jpg"
+              src="/hero/yume.jpg"
               alt="ゆめ"
               fill
               className="object-cover object-top"
