@@ -1,10 +1,12 @@
 import { NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // 認証確認だけサーバークライアントで行う
+    const authClient = await createServerClient();
+    const { data: { user } } = await authClient.auth.getUser();
 
     if (!user) {
       return Response.json({ images: [] });
@@ -13,7 +15,13 @@ export async function GET(req: NextRequest) {
     const characterId = req.nextUrl.searchParams.get('character_id');
     const limit = parseInt(req.nextUrl.searchParams.get('limit') || '12');
 
-    const { data: dbUser } = await supabase
+    // データクエリはサービスロールキーで RLS をバイパス（auth.getUser()で認証済みのため安全）
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: dbUser } = await admin
       .from('users')
       .select('id')
       .eq('auth_id', user.id)
@@ -23,8 +31,8 @@ export async function GET(req: NextRequest) {
       return Response.json({ images: [] });
     }
 
-    // Step 1: ユーザーの会話IDを全取得（duo含む全キャラ）
-    let convQuery = supabase
+    // Step 1: ユーザーの全会話を取得（duo含む）
+    let convQuery = admin
       .from('conversations')
       .select('id, character_id')
       .eq('user_id', dbUser.id);
@@ -41,8 +49,8 @@ export async function GET(req: NextRequest) {
     const convMap = new Map(conversations.map(c => [c.id, c.character_id]));
     const convIds = conversations.map(c => c.id);
 
-    // Step 2: その会話IDの中から image_url があるメッセージを取得
-    const { data: messages } = await supabase
+    // Step 2: 画像付きメッセージを取得
+    const { data: messages } = await admin
       .from('messages')
       .select('id, image_url, created_at, conversation_id')
       .in('conversation_id', convIds)
