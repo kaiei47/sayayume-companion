@@ -20,6 +20,8 @@ function PricingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentPlan, setCurrentPlan] = useState<string>('free');
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
   const [loading, setLoading] = useState<PlanKey | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -54,13 +56,15 @@ function PricingContent() {
       if (dbUser) {
         const { data: sub } = await supabase
           .from('subscriptions')
-          .select('plan, status')
+          .select('plan, status, current_period_end, cancel_at_period_end')
           .eq('user_id', dbUser.id)
           .eq('status', 'active')
           .single();
 
         if (sub) {
           setCurrentPlan(sub.plan);
+          setPeriodEnd((sub as { plan: string; status: string; current_period_end: string | null; cancel_at_period_end: boolean }).current_period_end);
+          setCancelAtPeriodEnd((sub as { plan: string; status: string; current_period_end: string | null; cancel_at_period_end: boolean }).cancel_at_period_end ?? false);
         }
       }
     }
@@ -277,8 +281,25 @@ function PricingContent() {
 
                   {/* CTA button */}
                   {isCurrent ? (
-                    <div className="w-full rounded-xl py-3 text-sm font-semibold bg-green-500/10 text-green-400 text-center border border-green-500/20">
-                      ✓ 利用中
+                    <div className="space-y-2">
+                      <div className="w-full rounded-xl py-3 text-sm font-semibold bg-green-500/10 text-green-400 text-center border border-green-500/20">
+                        ✓ 利用中
+                      </div>
+                      {key !== 'free' && periodEnd && (
+                        <p className="text-xs text-center text-muted-foreground">
+                          {cancelAtPeriodEnd ? (
+                            <>
+                              <span className="text-orange-400">解約予定</span>
+                              {' · '}
+                              {new Date(periodEnd).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })} まで利用可
+                            </>
+                          ) : (
+                            <>
+                              次回更新: {new Date(periodEnd).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </>
+                          )}
+                        </p>
+                      )}
                     </div>
                   ) : key === 'free' ? (
                     hasActiveSub ? (
