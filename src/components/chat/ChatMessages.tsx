@@ -36,10 +36,31 @@ export default function ChatMessages({
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const initialScrollDone = useRef(false);
+  const prevMessagesLength = useRef(0);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingContent]);
+    if (isLoadingHistory) {
+      initialScrollDone.current = false;
+      return;
+    }
+
+    const container = scrollRef.current;
+    if (!container) return;
+
+    if (!initialScrollDone.current && messages.length > 0) {
+      // 履歴ロード完了時: アニメーションなしで即座に最下部へ
+      container.scrollTop = container.scrollHeight;
+      // 画像レンダリング後のズレを補正
+      setTimeout(() => { container.scrollTop = container.scrollHeight; }, 120);
+      initialScrollDone.current = true;
+      prevMessagesLength.current = messages.length;
+    } else if (messages.length > prevMessagesLength.current || streamingContent) {
+      // 新しいメッセージ追加時のみ smooth スクロール
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      prevMessagesLength.current = messages.length;
+    }
+  }, [messages, streamingContent, isLoadingHistory]);
 
   return (
     <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
