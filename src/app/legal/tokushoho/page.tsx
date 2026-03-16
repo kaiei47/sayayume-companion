@@ -10,7 +10,7 @@ export default function TokushohoPage() {
             ← トップに戻る
           </a>
           <h1 className="text-2xl font-bold tracking-tight">特定商取引法に基づく表記</h1>
-          <p className="text-sm text-muted-foreground mt-1">最終更新日: 2026年3月11日</p>
+          <p className="text-sm text-muted-foreground mt-1">最終更新日: 2026年3月16日</p>
         </div>
 
         {/* 表記一覧 */}
@@ -32,7 +32,9 @@ export default function TokushohoPage() {
 
           <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 py-4">
             <dt className="text-sm font-semibold text-foreground sm:w-48 flex-shrink-0">所在地</dt>
-            <dd className="text-sm text-muted-foreground">東京都多摩市</dd>
+            <dd className="text-sm text-muted-foreground">
+              〒160-0023 東京都新宿区西新宿3丁目3番13号 西新宿水間ビル2F
+            </dd>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 py-4">
