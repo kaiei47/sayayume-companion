@@ -555,7 +555,23 @@ const CHAR_STATUS: Record<string, Record<string, string>> = {
     evening: '🎨 絵を描いてた',
     night: '🌙 ぼーっとしてた',
   },
+  duo: {
+    morning: '✨ 2人とも起きてる',
+    afternoon: '💬 2人ともオンライン',
+    evening: '🌆 2人でまったり',
+    night: '🌙 深夜も一緒に',
+  },
 };
+
+/** メッセージをサイドバー表示用に整形（タグ除去・整形） */
+function formatSidebarMessage(content: string): string {
+  return content
+    .replace(/\[IMAGE:[^\]]*\]/g, '📸')
+    .replace(/\[SAYA\]\s*/gi, '')
+    .replace(/\[YUME\]\s*/gi, '')
+    .replace(/\n+/g, ' ')
+    .trim();
+}
 
 /* ───── Dashboard (ログイン後) ───── */
 
@@ -663,6 +679,7 @@ function Dashboard({
             {sortedChars.map((char) => {
               const charIntimacy = intimacy[char.id];
               const statusText = CHAR_STATUS[char.id]?.[slot];
+              const lastMsg = lastMessages[char.id];
               return (
                 <Link
                   key={char.id}
@@ -675,19 +692,29 @@ function Dashboard({
                     <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-sm font-medium">{char.nameJa}</span>
-                      {charIntimacy && charIntimacy.level > 1 && (
-                        <span className={`text-[9px] font-medium px-1 py-0.5 rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} text-white`}>
-                          Lv{charIntimacy.level}
-                        </span>
+                    {/* Row 1: 名前 + Lvバッジ（左）+ 現在ステータス（右） */}
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-medium flex-shrink-0">{char.nameJa}</span>
+                        {charIntimacy && charIntimacy.level > 1 && (
+                          <span className={`text-[9px] font-medium px-1 py-0.5 rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} text-white flex-shrink-0`}>
+                            Lv{charIntimacy.level}
+                          </span>
+                        )}
+                      </div>
+                      {statusText && (
+                        <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">{statusText}</span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {lastMessages[char.id] ? lastMessages[char.id].content : (statusText ?? char.tagline)}
+                    {/* Row 2: 最終メッセージ or プレースホルダー */}
+                    <p className="text-xs text-muted-foreground/80 truncate leading-snug">
+                      {lastMsg
+                        ? `「${formatSidebarMessage(lastMsg.content)}」`
+                        : `${char.nameJa}に話しかけてみよう♡`}
                     </p>
+                    {/* Row 3: 親密度バー */}
                     {charIntimacy && (
-                      <div className="mt-1 h-0.5 rounded-full bg-muted/30 overflow-hidden">
+                      <div className="mt-1.5 h-0.5 rounded-full bg-muted/30 overflow-hidden">
                         <div
                           className={`h-full rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color}`}
                           style={{ width: `${charIntimacy.progress}%` }}
@@ -700,22 +727,39 @@ function Dashboard({
             })}
 
             {/* Duo mode（コンパクト版） */}
-            <Link href="/chat/duo" className="group relative flex items-center gap-3 rounded-xl p-[1px] transition-all overflow-hidden">
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:opacity-80 transition-opacity" />
-              <div className="relative flex items-center gap-3 rounded-[11px] bg-background/95 p-3 w-full">
-                <div className="relative flex-shrink-0 w-14 h-14">
-                  <Image src="/avatars/saya_avatar.jpg" alt="さや" width={44} height={44} className="h-11 w-11 rounded-full object-cover object-center absolute top-0 left-0" />
-                  <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={44} height={44} className="h-11 w-11 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium">さやゆめモード</span>
-                    <span className="text-[9px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">PRO</span>
+            {(() => {
+              const duoStatus = CHAR_STATUS['duo']?.[slot];
+              const duoLastMsg = lastMessages['duo'];
+              return (
+                <Link href="/chat/duo" className="group relative flex items-center gap-3 rounded-xl p-[1px] transition-all overflow-hidden">
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:opacity-80 transition-opacity" />
+                  <div className="relative flex items-center gap-3 rounded-[11px] bg-background/95 p-3 w-full">
+                    <div className="relative flex-shrink-0 w-14 h-14">
+                      <Image src="/avatars/saya_avatar.jpg" alt="さや" width={44} height={44} className="h-11 w-11 rounded-full object-cover object-center absolute top-0 left-0" />
+                      <Image src="/avatars/yume_avatar.jpg" alt="ゆめ" width={44} height={44} className="h-11 w-11 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {/* Row 1: 名前 + PRO badge + ステータス（右） */}
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium">さやゆめモード</span>
+                          <span className="text-[9px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">PRO</span>
+                        </div>
+                        {duoStatus && (
+                          <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">{duoStatus}</span>
+                        )}
+                      </div>
+                      {/* Row 2: 最終メッセージ or プレースホルダー */}
+                      <p className="text-xs text-muted-foreground/80 truncate leading-snug">
+                        {duoLastMsg
+                          ? `「${formatSidebarMessage(duoLastMsg.content)}」`
+                          : '2人に同時に話しかけよう♡'}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">ふたりと同時にチャット♡</p>
-                </div>
-              </div>
-            </Link>
+                </Link>
+              );
+            })()}
           </div>
 
           {/* アップグレードバナー（サイドバー下部） */}
