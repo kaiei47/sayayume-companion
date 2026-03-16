@@ -16,8 +16,8 @@ const SUMMARY_MODEL = 'gemini-2.0-flash';
 const SUMMARY_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${SUMMARY_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // 圧縮パラメータ
-export const COMPRESS_THRESHOLD = 20; // この件数を超えたら圧縮
-export const KEEP_RECENT = 8;         // 圧縮後に残す最新メッセージ数
+export const COMPRESS_THRESHOLD = 40; // この件数を超えたら圧縮
+export const KEEP_RECENT = 20;        // 圧縮後に残す最新メッセージ数
 
 interface MessageForSummary {
   role: string;
@@ -58,7 +58,7 @@ ${conversationText}
 - 2人の関係性の進展
 - キャラクターが約束したこと
 
-要約は200文字以内の日本語で書いてください。`
+要約は500文字以内の日本語で書いてください。`
     : `以下は${characterName}とユーザーの会話です。
 
 ${conversationText}
@@ -71,7 +71,7 @@ ${conversationText}
 - 2人の関係性の進展
 - キャラクターが約束したこと
 
-要約は200文字以内の日本語で書いてください。`;
+要約は500文字以内の日本語で書いてください。`;
 
   try {
     const response = await fetch(SUMMARY_API_URL, {
@@ -81,7 +81,7 @@ ${conversationText}
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 300,
+          maxOutputTokens: 600,
         },
       }),
     });

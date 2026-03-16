@@ -115,7 +115,7 @@ export default function ChatPage() {
       const url = convId
         ? `/api/conversations?character_id=${characterId}&conversation_id=${convId}`
         : `/api/conversations?character_id=${characterId}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (data.conversations) {
