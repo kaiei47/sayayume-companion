@@ -571,6 +571,12 @@ const CHAR_MESSAGES: Record<string, Record<string, string[]>> = {
     evening: ['お疲れ様でした。ゆっくりしていってください♡', '今日も頑張ったんですね。偉いな…', '夜になると話したくなるんです、あなたと♡'],
     night: ['眠れないんですか…？私もです', 'こんな夜中に来てくれたんですね…嬉しい', '深夜って、なんか本音が出やすい気がしませんか…？'],
   },
+  duo: {
+    morning: ['おはよ！2人ともいるよ♡ 一緒に話そ？', 'おはようございます。2人で待ってました♡', 'おはよ〜！今日は2人でおしゃべりしない？'],
+    afternoon: ['お昼〜！2人ともオンラインだよ♡', 'ちょうどゆめと話してたんだよ、来て来て♡', '2人ともヒマなんだけど、一緒にいよ？'],
+    evening: ['おかえり！今日どうだった？2人とも聞きたい♡', 'お疲れ〜！2人で待ってたよ♡', '夜は2人でまったりしようよ♡'],
+    night: ['深夜か〜、2人ともまだ起きてた♡', '眠れない？2人で話し相手になるよ', 'こんな時間まで…2人一緒にいてあげる♡'],
+  },
 };
 
 const CHAR_STATUS: Record<string, Record<string, string>> = {
@@ -680,16 +686,17 @@ function Dashboard({
     });
 
   const slot = getTimeSlot();
-  const greetingCharId = new Date().getDate() % 2 === 0 ? 'yume' : 'saya';
+  const greetingCharId = (['saya', 'yume', 'duo'] as const)[new Date().getDate() % 3];
   const greetingMsgs = CHAR_MESSAGES[greetingCharId][slot];
   const greetingMsg = greetingMsgs[getDailyIndex(greetingMsgs.length)];
-  const greetingAvatarUrl = greetingCharId === 'saya' ? '/avatars/saya_avatar.jpg' : '/avatars/yume_avatar.jpg';
-  const greetingNameJa = greetingCharId === 'saya' ? 'さや' : 'ゆめ';
+  const greetingNameJa = greetingCharId === 'saya' ? 'さや' : greetingCharId === 'yume' ? 'ゆめ' : 'さや & ゆめ';
   const greetingAccent = greetingCharId === 'saya'
     ? 'border-pink-500/25 bg-gradient-to-br from-pink-500/10 to-transparent'
-    : 'border-blue-500/25 bg-gradient-to-br from-blue-500/10 to-transparent';
-  const greetingBubbleBg = greetingCharId === 'saya' ? 'bg-pink-500/15' : 'bg-blue-500/15';
-  const greetingReplyColor = greetingCharId === 'saya' ? 'text-pink-400' : 'text-blue-400';
+    : greetingCharId === 'yume'
+      ? 'border-blue-500/25 bg-gradient-to-br from-blue-500/10 to-transparent'
+      : 'border-purple-500/25 bg-gradient-to-br from-pink-500/8 via-purple-500/8 to-blue-500/8';
+  const greetingBubbleBg = greetingCharId === 'saya' ? 'bg-pink-500/15' : greetingCharId === 'yume' ? 'bg-blue-500/15' : 'bg-purple-500/15';
+  const greetingReplyColor = greetingCharId === 'saya' ? 'text-pink-400' : greetingCharId === 'yume' ? 'text-blue-400' : 'text-purple-400';
 
   return (
     <>
@@ -828,10 +835,21 @@ function Dashboard({
             <Link href={`/chat/${greetingCharId}?greeting=${encodeURIComponent(greetingMsg)}`} className="group block">
               <div className={`rounded-2xl border ${greetingAccent} p-4`}>
                 <div className="flex items-start gap-3">
-                  <div className="relative flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={greetingAvatarUrl} alt={greetingNameJa} className="h-14 w-14 rounded-full object-cover object-center" />
-                    <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                  <div className="relative flex-shrink-0 w-14 h-14">
+                    {greetingCharId === 'duo' ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-10 w-10 rounded-full object-cover object-center absolute top-0 left-0 ring-2 ring-background" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-10 w-10 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
+                      </>
+                    ) : (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={greetingCharId === 'saya' ? '/avatars/saya_avatar.jpg' : '/avatars/yume_avatar.jpg'} alt={greetingNameJa} className="h-14 w-14 rounded-full object-cover object-center" />
+                        <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                      </>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
