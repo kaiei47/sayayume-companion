@@ -120,7 +120,7 @@ export default function LoginPage() {
               <div className="relative group cursor-pointer">
                 <div className="w-24 h-32 xl:w-28 xl:h-36 rounded-2xl overflow-hidden ring-2 ring-blue-500/30 group-hover:ring-blue-400/60 transition-all">
                   <Image
-                    src="/avatars/yume.jpg"
+                    src="/avatars/yume_avatar.jpg"
                     alt="ゆめ"
                     width={112}
                     height={144}

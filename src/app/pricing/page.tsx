@@ -181,7 +181,7 @@ function PricingContent() {
               <div className="text-center mb-4">
                 <div className="w-28 h-36 rounded-2xl overflow-hidden ring-2 ring-blue-500/20 shadow-xl shadow-blue-500/10">
                   <Image
-                    src="/avatars/yume.jpg"
+                    src="/avatars/yume_avatar.jpg"
                     alt="ゆめ"
                     width={112}
                     height={144}
