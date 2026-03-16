@@ -10,6 +10,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   image_url?: string | null;
+  is_favorite?: boolean;
   created_at: string;
   isLevelUp?: boolean;
 }
@@ -21,6 +22,7 @@ interface ChatMessagesProps {
   isLoading: boolean;
   isLoadingHistory?: boolean;
   isGeneratingImage?: boolean;
+  onToggleFavorite?: (messageId: string, current: boolean) => void;
 }
 
 export default function ChatMessages({
@@ -30,6 +32,7 @@ export default function ChatMessages({
   isLoading,
   isLoadingHistory = false,
   isGeneratingImage = false,
+  onToggleFavorite,
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -109,6 +112,7 @@ export default function ChatMessages({
               character={character}
               isConsecutive={isConsecutive}
               isLastInGroup={isLastInGroup}
+              onToggleFavorite={onToggleFavorite}
             />
           );
         })}
@@ -222,11 +226,13 @@ function MessageBubble({
   character,
   isConsecutive,
   isLastInGroup,
+  onToggleFavorite,
 }: {
   message: ChatMessage;
   character: CharacterConfig;
   isConsecutive?: boolean;
   isLastInGroup?: boolean;
+  onToggleFavorite?: (messageId: string, current: boolean) => void;
 }) {
   const isUser = message.role === 'user';
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -281,16 +287,34 @@ function MessageBubble({
 
           {/* 画像（バブルとは別に表示） */}
           {message.image_url && (
-            <div
-              className="cursor-pointer overflow-hidden rounded-2xl"
-              onClick={() => setViewerOpen(true)}
-            >
-              <img
-                src={message.image_url}
-                alt="Photo"
-                className="max-w-[240px] rounded-2xl object-cover transition-transform hover:scale-[1.02]"
-                loading="lazy"
-              />
+            <div className="relative group/img">
+              <div
+                className="cursor-pointer overflow-hidden rounded-2xl"
+                onClick={() => setViewerOpen(true)}
+              >
+                <img
+                  src={message.image_url}
+                  alt="Photo"
+                  className="max-w-[240px] rounded-2xl object-cover transition-transform hover:scale-[1.02]"
+                  loading="lazy"
+                />
+              </div>
+              {/* ハートボタン（画像hover時に表示） */}
+              {onToggleFavorite && message.id !== 'streaming' && (
+                <button
+                  onClick={() => onToggleFavorite(message.id, message.is_favorite ?? false)}
+                  className="absolute bottom-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm opacity-0 group-hover/img:opacity-100 transition-all hover:scale-110 active:scale-95"
+                  aria-label={message.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+                >
+                  <span className="text-base leading-none">
+                    {message.is_favorite ? '❤️' : '🤍'}
+                  </span>
+                </button>
+              )}
+              {/* お気に入り済みの常時インジケーター */}
+              {message.is_favorite && (
+                <span className="absolute bottom-2 right-2 text-base leading-none pointer-events-none group-hover/img:opacity-0 transition-opacity">❤️</span>
+              )}
             </div>
           )}
 

@@ -125,11 +125,12 @@ export default function ChatPage() {
         if (data.conversation && data.messages.length > 0) {
           setConversationId(data.conversation.id);
           setMessages(
-            data.messages.map((msg: { id: string; role: string; content: string; image_url?: string; created_at: string }) => ({
+            data.messages.map((msg: { id: string; role: string; content: string; image_url?: string; is_favorite?: boolean; created_at: string }) => ({
               id: msg.id,
               role: msg.role as 'user' | 'assistant',
               content: msg.content,
               image_url: msg.image_url,
+              is_favorite: msg.is_favorite ?? false,
               created_at: msg.created_at,
             }))
           );
@@ -165,6 +166,24 @@ export default function ChatPage() {
       }
     }
   }, [isLoadingHistory, searchParams]);
+
+  const toggleFavorite = async (messageId: string, current: boolean) => {
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, is_favorite: !current } : m
+    ));
+    try {
+      const res = await fetch('/api/images/favorite', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: messageId, is_favorite: !current }),
+      });
+      if (!res.ok) throw new Error('failed');
+    } catch {
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, is_favorite: current } : m
+      ));
+    }
+  };
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -509,6 +528,7 @@ export default function ChatPage() {
         isLoading={isLoading}
         isLoadingHistory={isLoadingHistory}
         isGeneratingImage={isGeneratingImage}
+        onToggleFavorite={toggleFavorite}
       />
 
       {/* 秘密のロックUI: 次のレベルで解放されるストーリーヒント */}

@@ -14,9 +14,11 @@ const duo = CHARACTERS.duo;
 
 interface DuoMessage {
   id: string;
+  message_id?: string; // DBの元メッセージID（お気に入り用）
   role: 'user' | 'saya' | 'yume';
   content: string;
   image_url?: string | null;
+  is_favorite?: boolean;
   created_at: string;
   isLevelUp?: boolean;
 }
@@ -126,9 +128,11 @@ export default function DuoChatPage() {
                 if (parsed.saya) {
                   restored.push({
                     id: `${msg.id}-saya`,
+                    message_id: msg.id,
                     role: 'saya',
                     content: parsed.saya,
                     image_url: msg.image_url,
+                    is_favorite: msg.is_favorite ?? false,
                     created_at: msg.created_at,
                   });
                 }
@@ -144,9 +148,11 @@ export default function DuoChatPage() {
                 if (!parsed.saya && !parsed.yume && msg.content) {
                   restored.push({
                     id: msg.id,
+                    message_id: msg.id,
                     role: 'saya',
                     content: msg.content,
                     image_url: msg.image_url,
+                    is_favorite: msg.is_favorite ?? false,
                     created_at: msg.created_at,
                   });
                 }
@@ -161,6 +167,24 @@ export default function DuoChatPage() {
     }
     loadHistory();
   }, []);
+
+  const toggleFavorite = async (messageId: string, current: boolean) => {
+    setMessages(prev => prev.map(m =>
+      (m.message_id === messageId || m.id === messageId) ? { ...m, is_favorite: !current } : m
+    ));
+    try {
+      const res = await fetch('/api/images/favorite', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: messageId, is_favorite: !current }),
+      });
+      if (!res.ok) throw new Error('failed');
+    } catch {
+      setMessages(prev => prev.map(m =>
+        (m.message_id === messageId || m.id === messageId) ? { ...m, is_favorite: current } : m
+      ));
+    }
+  };
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -493,7 +517,16 @@ export default function DuoChatPage() {
 
           {/* メッセージ一覧 */}
           {messages.map((msg) => (
-            <DuoBubble key={msg.id} role={msg.role} content={msg.content} image_url={msg.image_url} created_at={msg.created_at} />
+            <DuoBubble
+              key={msg.id}
+              role={msg.role}
+              content={msg.content}
+              image_url={msg.image_url}
+              is_favorite={msg.is_favorite}
+              message_id={msg.message_id}
+              created_at={msg.created_at}
+              onToggleFavorite={toggleFavorite}
+            />
           ))}
 
           {/* ストリーミング中（まだパースしないで raw 表示） */}
@@ -584,12 +617,18 @@ function DuoBubble({
   role,
   content,
   image_url,
+  is_favorite,
+  message_id,
   created_at,
+  onToggleFavorite,
 }: {
   role: 'user' | 'saya' | 'yume';
   content: string;
   image_url?: string | null;
+  is_favorite?: boolean;
+  message_id?: string;
   created_at?: string;
+  onToggleFavorite?: (messageId: string, current: boolean) => void;
 }) {
   const isUser = role === 'user';
   const isSaya = role === 'saya';
@@ -640,15 +679,26 @@ function DuoBubble({
         >
           {cleaned && <p className="whitespace-pre-wrap break-words">{cleaned}</p>}
           {image_url && (
-            <img
-              src={image_url}
-              alt="2ショット写真"
-              className={cn(
-                'rounded-xl max-w-full',
-                cleaned ? 'mt-2' : ''
+            <div className={cn('relative group/img', cleaned ? 'mt-2' : '')}>
+              <img
+                src={image_url}
+                alt="2ショット写真"
+                className="rounded-xl max-w-full"
+                loading="lazy"
+              />
+              {onToggleFavorite && message_id && (
+                <button
+                  onClick={() => onToggleFavorite(message_id, is_favorite ?? false)}
+                  className="absolute bottom-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm opacity-0 group-hover/img:opacity-100 transition-all hover:scale-110 active:scale-95"
+                  aria-label={is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+                >
+                  <span className="text-base leading-none">{is_favorite ? '❤️' : '🤍'}</span>
+                </button>
               )}
-              loading="lazy"
-            />
+              {is_favorite && (
+                <span className="absolute bottom-2 right-2 text-base leading-none pointer-events-none group-hover/img:opacity-0 transition-opacity">❤️</span>
+              )}
+            </div>
           )}
         </div>
 

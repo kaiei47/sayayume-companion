@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     // メッセージ履歴を取得（最新50件）
     const { data: messages } = await admin
       .from('messages')
-      .select('id, role, content, content_type, image_url, created_at')
+      .select('id, role, content, content_type, image_url, is_favorite, created_at')
       .eq('conversation_id', conversation.id)
       .order('created_at', { ascending: true })
       .limit(50);
