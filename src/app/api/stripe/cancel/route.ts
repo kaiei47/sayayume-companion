@@ -28,7 +28,7 @@ export async function POST() {
       return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 });
     }
 
-    const { data: sub } = await admin
+    const { data: sub, error: subError } = await admin
       .from('subscriptions')
       .select('external_subscription_id')
       .eq('user_id', dbUser.id)
@@ -36,14 +36,25 @@ export async function POST() {
       .eq('status', 'active')
       .single();
 
+    if (subError) {
+      console.error('Subscription lookup error:', subError);
+      return NextResponse.json({ error: `DB lookup failed: ${subError.message}` }, { status: 500 });
+    }
     if (!sub?.external_subscription_id) {
       return NextResponse.json({ error: 'アクティブなサブスクリプションが見つかりません' }, { status: 404 });
     }
 
     // 期間終了時にキャンセル
-    const updated = await stripe.subscriptions.update(sub.external_subscription_id, {
-      cancel_at_period_end: true,
-    });
+    let updated;
+    try {
+      updated = await stripe.subscriptions.update(sub.external_subscription_id, {
+        cancel_at_period_end: true,
+      });
+    } catch (stripeErr: unknown) {
+      console.error('Stripe update error:', stripeErr);
+      const msg = stripeErr instanceof Error ? stripeErr.message : String(stripeErr);
+      return NextResponse.json({ error: `Stripe error: ${msg}` }, { status: 500 });
+    }
 
     // DBの cancel_at_period_end フラグを更新
     await admin
@@ -58,7 +69,7 @@ export async function POST() {
     });
   } catch (error) {
     console.error('Cancel subscription error:', error);
-    return NextResponse.json({ error: '解約処理に失敗しました' }, { status: 500 });
+    return NextResponse.json({ error: `解約処理に失敗しました: ${error instanceof Error ? error.message : String(error)}` }, { status: 500 });
   }
 }
 
