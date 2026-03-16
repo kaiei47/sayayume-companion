@@ -851,77 +851,117 @@ function Dashboard({
 
             {/* 思い出フォト */}
             {(isLoadingImages || receivedImages.length > 0) && (
-              <section className="space-y-3">
+              <section className="space-y-4">
+                {/* セクションヘッダー */}
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📸 もらった写真</h2>
-                  <div className="flex items-center gap-2">
-                    {!isLoadingImages && receivedImages.some(img => img.is_favorite) && (
-                      <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5">
-                        <button
-                          onClick={() => setImageFilter('all')}
-                          className={`text-[10px] px-2 py-0.5 rounded-md transition-colors ${imageFilter === 'all' ? 'bg-background text-foreground font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                          すべて
-                        </button>
-                        <button
-                          onClick={() => setImageFilter('favorite')}
-                          className={`text-[10px] px-2 py-0.5 rounded-md transition-colors ${imageFilter === 'favorite' ? 'bg-background text-foreground font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                          ❤️ お気に入り
-                        </button>
-                      </div>
-                    )}
-                    {!isLoadingImages && <span className="text-[10px] text-muted-foreground/50">{receivedImages.length}枚</span>}
-                  </div>
+                  {!isLoadingImages && receivedImages.some(img => img.is_favorite) && (
+                    <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5">
+                      <button
+                        onClick={() => setImageFilter('all')}
+                        className={`text-[10px] px-2 py-0.5 rounded-md transition-colors ${imageFilter === 'all' ? 'bg-background text-foreground font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        すべて
+                      </button>
+                      <button
+                        onClick={() => setImageFilter('favorite')}
+                        className={`text-[10px] px-2 py-0.5 rounded-md transition-colors ${imageFilter === 'favorite' ? 'bg-background text-foreground font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        ❤️
+                      </button>
+                    </div>
+                  )}
                 </div>
+
                 {isLoadingImages ? (
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 animate-pulse">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="aspect-square rounded-xl bg-muted" />
+                  /* スケルトン */
+                  <div className="space-y-4">
+                    {[0, 1].map(row => (
+                      <div key={row} className="space-y-2">
+                        <div className="h-3 w-28 bg-muted rounded-full animate-pulse" />
+                        <div className="flex gap-3">
+                          {Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="flex-shrink-0 w-32 rounded-2xl bg-muted animate-pulse" style={{ aspectRatio: '3/4' }} />
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 ) : (
-                  <>
-                    <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
-                      {(imageFilter === 'favorite'
-                        ? receivedImages.filter(img => img.is_favorite)
-                        : receivedImages
-                      ).slice(0, 10).map((img) => (
-                        <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group">
-                          <button
-                            onClick={() => setLightboxImg(img)}
-                            className="absolute inset-0 w-full h-full"
-                            aria-label="写真を拡大"
-                          >
-                            <Image
-                              src={img.url}
-                              alt="受け取った写真"
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                          </button>
-                          {/* ハートボタン */}
-                          <button
-                            onClick={(e) => { e.preventDefault(); toggleFavorite(img.id, img.is_favorite); }}
-                            className="absolute bottom-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95 z-10"
-                            aria-label={img.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
-                          >
-                            <span className={`text-sm leading-none transition-all ${img.is_favorite ? 'text-red-400' : 'text-white/70'}`}>
-                              {img.is_favorite ? '❤️' : '🤍'}
-                            </span>
-                          </button>
-                          {/* お気に入り中は常時表示のインジケーター */}
-                          {img.is_favorite && (
-                            <span className="absolute bottom-1.5 right-1.5 text-sm leading-none pointer-events-none group-hover:opacity-0 transition-opacity">❤️</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                  <div className="space-y-5">
+                    {(['saya', 'yume', 'duo'] as Array<'saya' | 'yume' | 'duo'>)
+                      /* やり取り順（最終メッセージが新しい順）でソート */
+                      .sort((a, b) => {
+                        const ta = lastMessages[a]?.created_at ?? '';
+                        const tb = lastMessages[b]?.created_at ?? '';
+                        return tb.localeCompare(ta);
+                      })
+                      .map(charId => {
+                        const charImages = (imageFilter === 'favorite'
+                          ? receivedImages.filter(img => img.is_favorite)
+                          : receivedImages
+                        ).filter(img => img.character_id === charId);
+
+                        if (charImages.length === 0) return null;
+
+                        const charLabel = charId === 'saya' ? 'さや' : charId === 'yume' ? 'ゆめ' : 'さや&ゆめ';
+                        const charColor = charId === 'saya' ? 'text-pink-400' : charId === 'yume' ? 'text-blue-400' : 'text-purple-400';
+                        const badgeBg = charId === 'saya' ? 'bg-pink-500/80' : charId === 'yume' ? 'bg-blue-500/80' : 'bg-purple-500/80';
+
+                        return (
+                          <div key={charId} className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground px-0.5">
+                              <span className={charColor}>{charLabel}</span>からもらった写真
+                              <span className="ml-1.5 opacity-40">{charImages.length}枚</span>
+                            </p>
+                            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                              {charImages.map(img => (
+                                <div
+                                  key={img.id}
+                                  className="relative flex-shrink-0 w-32 rounded-2xl overflow-hidden group cursor-pointer border border-border/20"
+                                  style={{ aspectRatio: '3/4' }}
+                                >
+                                  <button
+                                    onClick={() => setLightboxImg(img)}
+                                    className="absolute inset-0 w-full h-full"
+                                    aria-label="写真を拡大"
+                                  >
+                                    <Image
+                                      src={img.url}
+                                      alt={`${charLabel}からもらった写真`}
+                                      fill
+                                      className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                                      sizes="128px"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                  </button>
+                                  {/* キャラバッジ */}
+                                  <div className={`absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeBg} text-white pointer-events-none`}>
+                                    {charLabel}
+                                  </div>
+                                  {/* ハートボタン（ホバーで表示） */}
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); toggleFavorite(img.id, img.is_favorite); }}
+                                    className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95 z-10"
+                                    aria-label={img.is_favorite ? 'お気に入りを解除' : 'お気に入りに追加'}
+                                  >
+                                    <span className={`text-sm leading-none ${img.is_favorite ? 'text-red-400' : 'text-white/70'}`}>
+                                      {img.is_favorite ? '❤️' : '🤍'}
+                                    </span>
+                                  </button>
+                                  {img.is_favorite && (
+                                    <span className="absolute bottom-2 right-2 text-sm leading-none pointer-events-none group-hover:opacity-0 transition-opacity">❤️</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     {imageFilter === 'favorite' && receivedImages.filter(img => img.is_favorite).length === 0 && (
                       <p className="text-xs text-muted-foreground/60 text-center py-4">まだお気に入りがないよ♡<br />写真にカーソルを合わせて❤️を押してね</p>
                     )}
-                  </>
+                  </div>
                 )}
               </section>
             )}
