@@ -241,28 +241,38 @@ export default function SettingsPage() {
           </ul>
 
           {/* 解約予定ステータス */}
-          {isCancelScheduled && periodEndDate && (
-            <div className="rounded-xl bg-orange-500/10 border border-orange-500/20 p-3 space-y-2">
-              <p className="text-sm text-orange-300">
-                <span className="font-medium">{periodEndDate}</span> までサービスを利用できます。
-              </p>
-              <p className="text-xs text-muted-foreground">
-                それ以降は自動的にFreeプランに移行します。
-              </p>
+          {isCancelScheduled && (
+            <div className="rounded-xl bg-orange-500/10 border border-orange-500/20 p-4 space-y-3">
+              <div className="flex items-start gap-2.5">
+                <span className="text-lg leading-none mt-0.5">⚠️</span>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-orange-300">自動継続は停止されています</p>
+                  {periodEndDate ? (
+                    <p className="text-sm text-foreground/80">
+                      <span className="font-bold text-white">{periodEndDate}</span> までは引き続き{plan.nameJa}プランをご利用いただけます。
+                    </p>
+                  ) : (
+                    <p className="text-sm text-foreground/80">現在の請求期間が終わるまでご利用いただけます。</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    期間終了後は自動的にFreeプランに切り替わります。追加の請求は発生しません。
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={handleReactivate}
                 disabled={cancelLoading}
-                className="text-sm text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors disabled:opacity-50"
+                className="w-full rounded-lg border border-blue-500/30 py-2 text-sm font-medium text-blue-400 hover:bg-blue-500/10 transition-colors disabled:opacity-50"
               >
-                {cancelLoading ? '処理中...' : '解約を取り消す'}
+                {cancelLoading ? '処理中...' : '解約を取り消して継続する'}
               </button>
             </div>
           )}
 
-          {/* 更新日（解約予定でない場合） */}
+          {/* 次回更新日（解約予定でない場合） */}
           {!isCancelScheduled && periodEndDate && (
             <p className="text-xs text-muted-foreground">
-              次回更新日: {periodEndDate}
+              次回更新日: {periodEndDate}（自動継続）
             </p>
           )}
 
@@ -323,16 +333,33 @@ export default function SettingsPage() {
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-sm rounded-2xl bg-card border border-border/50 p-6 space-y-5 mb-4 sm:mb-0">
-            <div className="space-y-2">
-              <h3 className="text-lg font-bold">本当に解約しますか？</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                解約しても{periodEndDate ? (
-                  <span className="text-foreground font-medium"> {periodEndDate} </span>
-                ) : '現在の請求期間終了'}まではご利用いただけます。
-              </p>
-              <p className="text-sm text-muted-foreground">
-                期間終了後は自動的にFreeプランに移行します。日割り返金はありません。
-              </p>
+            <div className="space-y-3">
+              <h3 className="text-lg font-bold">解約の確認</h3>
+              {/* 解約後の流れを箇条書きで明示 */}
+              <ul className="space-y-2.5">
+                <li className="flex items-start gap-2.5 text-sm">
+                  <span className="text-green-400 mt-0.5 flex-shrink-0">✓</span>
+                  <span>
+                    自動継続が停止されます。{periodEndDate && (
+                      <span className="font-semibold text-foreground">（次回の請求はありません）</span>
+                    )}
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm">
+                  <span className="text-green-400 mt-0.5 flex-shrink-0">✓</span>
+                  <span>
+                    {periodEndDate ? (
+                      <><span className="font-semibold text-foreground">{periodEndDate} まで</span>は引き続き{plan.nameJa}プランをご利用いただけます。</>
+                    ) : (
+                      '現在の請求期間が終わるまで引き続きご利用いただけます。'
+                    )}
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <span className="mt-0.5 flex-shrink-0">·</span>
+                  <span>期間終了後はFreeプランに自動移行します。日割り返金は行いません。</span>
+                </li>
+              </ul>
             </div>
 
             {cancelError && (
