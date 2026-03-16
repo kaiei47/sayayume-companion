@@ -40,6 +40,10 @@ export async function POST(req: NextRequest) {
         // Stripe Subscriptionの詳細取得
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         // v20 SDK: current_period はitems配下に移動
+        if (!subscription.items.data.length) {
+          console.error(`Subscription ${subscriptionId} has no items`);
+          break;
+        }
         const firstItem = subscription.items.data[0];
         const periodStart = firstItem?.current_period_start;
         const periodEnd = firstItem?.current_period_end;
@@ -127,6 +131,10 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         const subscriptionId = subscription.id;
+        if (!subscription.items.data.length) {
+          console.error(`Subscription ${subscriptionId} has no items (updated event)`);
+          break;
+        }
         const updItem = subscription.items.data[0];
         const updPeriodStart = updItem?.current_period_start;
         const updPeriodEnd = updItem?.current_period_end;

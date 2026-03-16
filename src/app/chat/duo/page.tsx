@@ -62,6 +62,7 @@ export default function DuoChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
   const prevMessagesLength = useRef(0);
+  const pendingToggles = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (isLoadingHistory) {
@@ -187,6 +188,8 @@ export default function DuoChatPage() {
   }, []);
 
   const toggleFavorite = async (messageId: string, current: boolean) => {
+    if (pendingToggles.current.has(messageId)) return;
+    pendingToggles.current.add(messageId);
     setMessages(prev => prev.map(m =>
       (m.message_id === messageId || m.id === messageId) ? { ...m, is_favorite: !current } : m
     ));
@@ -201,6 +204,8 @@ export default function DuoChatPage() {
       setMessages(prev => prev.map(m =>
         (m.message_id === messageId || m.id === messageId) ? { ...m, is_favorite: current } : m
       ));
+    } finally {
+      pendingToggles.current.delete(messageId);
     }
   };
 
@@ -396,6 +401,19 @@ export default function DuoChatPage() {
     },
     [isLoading, conversationId]
   );
+
+  // 認証チェック中はローディング表示
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <div className="flex gap-1 items-center h-4">
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:150ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:300ms]" />
+        </div>
+      </div>
+    );
+  }
 
   // プレミアムじゃない場合
   if (isAuthenticated === false) {
@@ -703,6 +721,9 @@ function DuoBubble({
                 alt="2ショット写真"
                 className="rounded-xl max-w-full"
                 loading="lazy"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
               {onToggleFavorite && message_id && (
                 <button

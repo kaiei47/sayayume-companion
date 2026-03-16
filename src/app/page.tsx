@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -40,7 +40,11 @@ export default function Home() {
   const [imageFilter, setImageFilter] = useState<'all' | 'favorite'>('all');
   const [userPlan, setUserPlan] = useState<string>('free');
 
+  const pendingToggles = useRef<Set<string>>(new Set());
+
   const toggleFavorite = async (messageId: string, current: boolean) => {
+    if (pendingToggles.current.has(messageId)) return;
+    pendingToggles.current.add(messageId);
     // optimistic update
     setReceivedImages(prev => prev.map(img =>
       img.id === messageId ? { ...img, is_favorite: !current } : img
@@ -57,6 +61,8 @@ export default function Home() {
       setReceivedImages(prev => prev.map(img =>
         img.id === messageId ? { ...img, is_favorite: current } : img
       ));
+    } finally {
+      pendingToggles.current.delete(messageId);
     }
   };
 

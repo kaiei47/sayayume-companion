@@ -318,6 +318,9 @@ function MessageBubble({
                   alt="Photo"
                   className="max-w-[240px] rounded-2xl object-cover transition-transform hover:scale-[1.02]"
                   loading="lazy"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
               </div>
               {/* ハートボタン（画像hover時に表示） */}

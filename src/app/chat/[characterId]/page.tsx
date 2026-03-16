@@ -56,6 +56,7 @@ export default function ChatPage() {
   const [dailyMissions, setDailyMissions] = useState<Array<{ id: string; label: string; icon: string; points: number; completed: boolean }>>([]);
   const [showMissions, setShowMissions] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pendingToggles = useRef<Set<string>>(new Set());
 
   // メニュー外クリックで閉じる
   useEffect(() => {
@@ -168,6 +169,8 @@ export default function ChatPage() {
   }, [isLoadingHistory, searchParams]);
 
   const toggleFavorite = async (messageId: string, current: boolean) => {
+    if (pendingToggles.current.has(messageId)) return;
+    pendingToggles.current.add(messageId);
     setMessages(prev => prev.map(m =>
       m.id === messageId ? { ...m, is_favorite: !current } : m
     ));
@@ -182,6 +185,8 @@ export default function ChatPage() {
       setMessages(prev => prev.map(m =>
         m.id === messageId ? { ...m, is_favorite: current } : m
       ));
+    } finally {
+      pendingToggles.current.delete(messageId);
     }
   };
 
