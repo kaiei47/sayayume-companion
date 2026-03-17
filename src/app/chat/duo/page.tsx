@@ -118,8 +118,7 @@ export default function DuoChatPage() {
           }
         }
       } catch { /* ignore */ }
-
-      setIsLoadingHistory(false);
+      // isLoadingHistoryはloadHistory()のfinallyでセットするため、ここでは設定しない
     }
     checkAuth();
   }, []);
@@ -184,6 +183,10 @@ export default function DuoChatPage() {
         }
       } catch {
         // ignore
+      } finally {
+        // 履歴ロード完了後にisLoadingHistoryをfalseにする（checkAuthより後に実行される保証はないため、
+        // ここでセットすることでgreetingエフェクトが履歴ロード後に発火するよう保証する）
+        setIsLoadingHistory(false);
       }
     }
     loadHistory();

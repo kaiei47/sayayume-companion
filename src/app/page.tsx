@@ -1026,7 +1026,7 @@ function Dashboard({
                   <span className="text-[10px] text-muted-foreground flex-shrink-0">今日</span>
                 </div>
                 {/* Photo */}
-                <div className="relative aspect-[3/4] w-full overflow-hidden">
+                <div className="relative h-[260px] w-full overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={todayPhoto.src}
