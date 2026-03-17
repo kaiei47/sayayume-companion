@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateImage, generateDuoImage, buildImagePrompt, buildDuoImagePrompt } from '@/lib/gemini-image';
+import { postToInstagram, buildIgCaption } from '@/lib/instagram';
 
 // ── Character config ──────────────────────────────────────────────────────────
 const CHAR_CONFIG = {
@@ -190,6 +191,29 @@ export async function GET(
 
   console.log(`Daily photo generated: ${photoDate} ${slot} ${character} → ${imageUrl}`);
 
-  // SNS posting is handled by morning-post skill (browser automation via LiSA Chrome)
-  return Response.json({ status: 'generated', id: inserted.id, imageUrl, caption, character });
+  // ── IG auto-post ──────────────────────────────────────────────────────────
+  const igToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+  const igUserId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+  let igResult: { success: boolean; postId?: string; error?: string } | null = null;
+
+  if (igToken && igUserId) {
+    const igCaption = buildIgCaption(caption);
+    igResult = await postToInstagram(imageUrl, igCaption, igToken, igUserId);
+    if (igResult.success) {
+      console.log(`IG posted: ${igResult.postId}`);
+    } else {
+      console.error(`IG post failed: ${igResult.error}`);
+    }
+  } else {
+    console.warn('INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID not set, skipping IG post');
+  }
+
+  return Response.json({
+    status: 'generated',
+    id: inserted.id,
+    imageUrl,
+    caption,
+    character,
+    ig: igResult ?? { skipped: true, reason: 'IG credentials not configured' },
+  });
 }
