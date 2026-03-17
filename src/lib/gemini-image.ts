@@ -72,7 +72,6 @@ export async function generateImage(
           responseModalities: ['TEXT', 'IMAGE'],
           imageConfig: {
             aspectRatio: '3:4',
-            imageSize: '1024px',
           },
         },
       }),
@@ -190,7 +189,6 @@ export async function generateDuoImage(
           responseModalities: ['TEXT', 'IMAGE'],
           imageConfig: {
             aspectRatio: '3:4',
-            imageSize: '1024px',
           },
         },
       }),
