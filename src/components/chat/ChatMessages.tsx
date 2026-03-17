@@ -317,7 +317,6 @@ function MessageBubble({
                   src={message.image_url}
                   alt="Photo"
                   className="max-w-[240px] rounded-2xl object-cover transition-transform hover:scale-[1.02]"
-                  loading="lazy"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}

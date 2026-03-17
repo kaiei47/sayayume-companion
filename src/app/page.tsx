@@ -1002,7 +1002,15 @@ function Dashboard({
             </Link>
 
             {/* Today's photo card */}
-            <Link href={`/chat/${photoCharId}?greeting=${encodeURIComponent(todayPhoto.caption)}${todayPhoto.src ? `&image_url=${encodeURIComponent(todayPhoto.src)}` : ''}`} className="group block">
+            <Link
+              href={`/chat/${photoCharId}?greeting=${encodeURIComponent(todayPhoto.caption)}${todayPhoto.src ? `&image_url=${encodeURIComponent(todayPhoto.src)}` : ''}`}
+              className="group block"
+              onClick={() => {
+                if (todayPhoto.src) {
+                  try { sessionStorage.setItem('pendingGreetingImageUrl', todayPhoto.src); } catch { /* ignore */ }
+                }
+              }}
+            >
               <div className={`rounded-2xl border ${photoAccent} overflow-hidden`}>
                 {/* Header */}
                 <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2">

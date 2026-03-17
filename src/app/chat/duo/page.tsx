@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ChatInput from '@/components/chat/ChatInput';
@@ -48,7 +49,7 @@ function formatTime(dateStr: string): string {
   return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function DuoChatPage() {
+function DuoChatPageInner() {
   const searchParams = useSearchParams();
   const [messages, setMessages] = useState<DuoMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
@@ -197,7 +198,8 @@ export default function DuoChatPage() {
   useEffect(() => {
     if (!isLoadingHistory && !greetingInserted.current) {
       const greeting = searchParams.get('greeting');
-      const greetingImageUrl = searchParams.get('image_url');
+      const greetingImageUrl = searchParams.get('image_url') ||
+        (() => { try { const v = sessionStorage.getItem('pendingGreetingImageUrl'); sessionStorage.removeItem('pendingGreetingImageUrl'); return v; } catch { return null; } })();
       if (greeting) {
         greetingInserted.current = true;
         setMessages(prev => {
@@ -746,7 +748,6 @@ function DuoBubble({
                 src={image_url}
                 alt="2ショット写真"
                 className="rounded-xl max-w-full"
-                loading="lazy"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
@@ -774,5 +775,13 @@ function DuoBubble({
         )}
       </div>
     </div>
+  );
+}
+
+export default function DuoChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <DuoChatPageInner />
+    </Suspense>
   );
 }

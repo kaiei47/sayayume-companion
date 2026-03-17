@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import ChatMessages, { ChatMessage } from '@/components/chat/ChatMessages';
@@ -28,7 +29,7 @@ const CHARACTER_SECRETS: Record<string, Array<{ level: number; hint: string }>> 
   ],
 };
 
-export default function ChatPage() {
+function ChatPageInner() {
   const params = useParams();
   const searchParams = useSearchParams();
   const characterId = params.characterId as CharacterId;
@@ -158,7 +159,8 @@ export default function ChatPage() {
   useEffect(() => {
     if (!isLoadingHistory && !greetingInserted.current) {
       const greeting = searchParams.get('greeting');
-      const greetingImageUrl = searchParams.get('image_url');
+      const greetingImageUrl = searchParams.get('image_url') ||
+        (() => { try { const v = sessionStorage.getItem('pendingGreetingImageUrl'); sessionStorage.removeItem('pendingGreetingImageUrl'); return v; } catch { return null; } })();
       if (greeting) {
         greetingInserted.current = true;
         setMessages(prev => {
@@ -606,4 +608,12 @@ function formatMenuTime(dateStr: string): string {
   if (diffHour < 24) return `${diffHour}h ago`;
   if (diffDay < 7) return `${diffDay}d ago`;
   return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChatPageInner />
+    </Suspense>
+  );
 }
