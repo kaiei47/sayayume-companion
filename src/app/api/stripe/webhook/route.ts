@@ -48,11 +48,11 @@ export async function POST(req: NextRequest) {
         const periodStart = firstItem?.current_period_start;
         const periodEnd = firstItem?.current_period_end;
 
-        // subscriptionsテーブルをupsert（既存レコードがなくても対応）
-        await getSupabaseAdmin()
+        // subscriptionsテーブルをUPDATE（ユーザー登録時トリガーで必ずレコードが存在する）
+        // NOTE: upsert + onConflict:'user_id' は UNIQUE 制約がないと silent fail するため UPDATE を使用
+        const { error: subError } = await getSupabaseAdmin()
           .from('subscriptions')
-          .upsert({
-            user_id: userId,
+          .update({
             plan,
             status: 'active',
             payment_provider: 'stripe',
@@ -61,7 +61,12 @@ export async function POST(req: NextRequest) {
             current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
             cancel_at_period_end: false,
             updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id' });
+          })
+          .eq('user_id', userId);
+
+        if (subError) {
+          console.error(`Subscription UPDATE failed: user=${userId}`, subError);
+        }
 
         // ユーザーのis_premiumフラグを更新
         await getSupabaseAdmin()
