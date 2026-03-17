@@ -1039,7 +1039,7 @@ function Dashboard({
                   <img
                     src={todayPhoto.src}
                     alt={photoNameJa}
-                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                 </div>

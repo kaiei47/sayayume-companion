@@ -66,6 +66,7 @@ function DuoChatPageInner() {
   const initialScrollDone = useRef(false);
   const prevMessagesLength = useRef(0);
   const pendingToggles = useRef<Set<string>>(new Set());
+  const pendingGreetingRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isLoadingHistory) {
@@ -202,6 +203,9 @@ function DuoChatPageInner() {
         (() => { try { const v = sessionStorage.getItem('pendingGreetingImageUrl'); sessionStorage.removeItem('pendingGreetingImageUrl'); return v; } catch { return null; } })();
       if (greeting) {
         greetingInserted.current = true;
+        if (!conversationId) {
+          pendingGreetingRef.current = greeting;
+        }
         setMessages(prev => {
           return [...prev, {
             id: `greeting-${Date.now()}`,
@@ -252,6 +256,8 @@ function DuoChatPageInner() {
       setStreamingContent('');
 
       try {
+        const initialMsg = !conversationId ? pendingGreetingRef.current : null;
+        if (initialMsg) pendingGreetingRef.current = null;
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -259,6 +265,7 @@ function DuoChatPageInner() {
             conversation_id: conversationId,
             character_id: 'duo',
             message: content,
+            ...(initialMsg ? { initial_assistant_message: initialMsg } : {}),
           }),
         });
 

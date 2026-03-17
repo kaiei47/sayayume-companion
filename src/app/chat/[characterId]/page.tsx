@@ -58,6 +58,7 @@ function ChatPageInner() {
   const [showMissions, setShowMissions] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pendingToggles = useRef<Set<string>>(new Set());
+  const pendingGreetingRef = useRef<string | null>(null); // greeting text to save as initial AI msg
 
   // メニュー外クリックで閉じる
   useEffect(() => {
@@ -163,6 +164,10 @@ function ChatPageInner() {
         (() => { try { const v = sessionStorage.getItem('pendingGreetingImageUrl'); sessionStorage.removeItem('pendingGreetingImageUrl'); return v; } catch { return null; } })();
       if (greeting) {
         greetingInserted.current = true;
+        // 会話が未開始の場合のみ保存（既存会話に挿入しない）
+        if (!conversationId) {
+          pendingGreetingRef.current = greeting;
+        }
         setMessages(prev => {
           return [...prev, {
             id: `greeting-${Date.now()}`,
@@ -174,7 +179,7 @@ function ChatPageInner() {
         });
       }
     }
-  }, [isLoadingHistory, searchParams]);
+  }, [isLoadingHistory, searchParams, conversationId]);
 
   const toggleFavorite = async (messageId: string, current: boolean) => {
     if (pendingToggles.current.has(messageId)) return;
@@ -214,6 +219,10 @@ function ChatPageInner() {
       setStreamingContent('');
 
       try {
+        // 初回メッセージ時: greeting を initial_assistant_message として渡す
+        const initialMsg = !conversationId ? pendingGreetingRef.current : null;
+        if (initialMsg) pendingGreetingRef.current = null;
+
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -221,6 +230,7 @@ function ChatPageInner() {
             conversation_id: conversationId,
             character_id: characterId,
             message: content,
+            ...(initialMsg ? { initial_assistant_message: initialMsg } : {}),
           }),
         });
 

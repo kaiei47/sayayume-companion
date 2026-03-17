@@ -94,6 +94,7 @@ interface ChatRequest {
   conversation_id: string | null;
   character_id: CharacterId;
   message: string;
+  initial_assistant_message?: string; // greeting from photo card — save as first message in new conv
 }
 
 export async function POST(req: NextRequest) {
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
     } catch {
       return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    const { character_id, message } = body;
+    const { character_id, message, initial_assistant_message } = body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return new Response(JSON.stringify({ error: 'Message is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
@@ -238,6 +239,16 @@ export async function POST(req: NextRequest) {
               { status: 404, headers: { 'Content-Type': 'application/json' } }
             );
           }
+        }
+
+        // 新規会話で greeting があれば最初のassistantメッセージとして保存（AI文脈のため）
+        if (initial_assistant_message && !body.conversation_id) {
+          await supabase.from('messages').insert({
+            conversation_id,
+            role: 'assistant',
+            content: initial_assistant_message,
+            content_type: 'text',
+          });
         }
 
         // ユーザーメッセージを保存
