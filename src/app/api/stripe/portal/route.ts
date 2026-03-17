@@ -34,7 +34,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'サブスクリプションが見つかりません' }, { status: 404 });
     }
 
-    const subscription = await stripe.subscriptions.retrieve(sub.external_subscription_id);
+    let subscription;
+    try {
+      subscription = await stripe.subscriptions.retrieve(sub.external_subscription_id);
+    } catch (stripeErr: unknown) {
+      const isNotFound = stripeErr instanceof Error && stripeErr.message.includes('No such subscription');
+      console.error('Portal stripe retrieve error:', stripeErr);
+      if (isNotFound) {
+        return NextResponse.json({ error: 'サブスクリプションが見つかりません。再度ご購読ください。', code: 'subscription_not_found' }, { status: 404 });
+      }
+      throw stripeErr;
+    }
+
     const customerId = subscription.customer as string;
 
     const origin = req.headers.get('origin') || 'https://www.sayayume.com';
