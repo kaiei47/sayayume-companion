@@ -162,8 +162,6 @@ export default function ChatPage() {
       if (greeting) {
         greetingInserted.current = true;
         setMessages(prev => {
-          // 既に同じ内容のメッセージがあれば追加しない（リロード対策）
-          if (prev.some(m => m.role === 'assistant' && m.content === greeting)) return prev;
           return [...prev, {
             id: `greeting-${Date.now()}`,
             role: 'assistant',

@@ -198,7 +198,6 @@ export default function DuoChatPage() {
       if (greeting) {
         greetingInserted.current = true;
         setMessages(prev => {
-          if (prev.some(m => m.role === 'saya' && m.content === greeting)) return prev;
           return [...prev, {
             id: `greeting-${Date.now()}`,
             role: 'saya',
