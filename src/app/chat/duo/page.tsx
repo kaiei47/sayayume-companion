@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ChatInput from '@/components/chat/ChatInput';
 import { CHARACTERS } from '@/lib/characters';
 import { createClient } from '@/lib/supabase/client';
@@ -48,6 +49,7 @@ function formatTime(dateStr: string): string {
 }
 
 export default function DuoChatPage() {
+  const searchParams = useSearchParams();
   const [messages, setMessages] = useState<DuoMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -186,6 +188,28 @@ export default function DuoChatPage() {
     }
     loadHistory();
   }, []);
+
+  // ホームからのgreetingメッセージ（daily photo返信）をチャットに引き継ぐ
+  const greetingInserted = useRef(false);
+  useEffect(() => {
+    if (!isLoadingHistory && !greetingInserted.current) {
+      const greeting = searchParams.get('greeting');
+      const greetingImageUrl = searchParams.get('image_url');
+      if (greeting) {
+        greetingInserted.current = true;
+        setMessages(prev => {
+          if (prev.some(m => m.role === 'saya' && m.content === greeting)) return prev;
+          return [...prev, {
+            id: `greeting-${Date.now()}`,
+            role: 'saya',
+            content: greeting,
+            image_url: greetingImageUrl || undefined,
+            created_at: new Date().toISOString(),
+          }];
+        });
+      }
+    }
+  }, [isLoadingHistory, searchParams]);
 
   const toggleFavorite = async (messageId: string, current: boolean) => {
     if (pendingToggles.current.has(messageId)) return;

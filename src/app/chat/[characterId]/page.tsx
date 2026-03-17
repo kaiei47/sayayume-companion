@@ -158,6 +158,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!isLoadingHistory && !greetingInserted.current) {
       const greeting = searchParams.get('greeting');
+      const greetingImageUrl = searchParams.get('image_url');
       if (greeting) {
         greetingInserted.current = true;
         setMessages(prev => {
@@ -167,6 +168,7 @@ export default function ChatPage() {
             id: `greeting-${Date.now()}`,
             role: 'assistant',
             content: greeting,
+            image_url: greetingImageUrl || undefined,
             created_at: new Date().toISOString(),
           }];
         });
