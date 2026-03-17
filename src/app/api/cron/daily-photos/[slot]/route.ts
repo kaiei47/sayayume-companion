@@ -28,7 +28,7 @@ const SCENE_PROMPTS: Record<string, string[]> = {
     'morning selfie getting ready, bathroom mirror, fresh face, toothbrush, playful smile, upper body shot',
     'morning coffee selfie, kitchen counter, steam rising from mug, cozy home outfit, content smile, upper body shot',
     'stretching arms up, morning light, bed hair, cozy pajamas, yawning sleepily, candid bedroom selfie, upper body shot',
-    'heading out early, doorstep selfie, casual outfit, school bag, bright morning sky behind, upper body shot',
+    'heading out early, doorstep selfie, casual outfit, bright morning sky behind, upper body shot',
     'post-shower hair wrap, bathroom selfie, fluffy towel, dewy skin, playful wink, upper body shot',
     'balcony morning selfie, overlooking city, holding coffee mug, soft morning haze, relaxed vibe, upper body shot',
   ],
@@ -109,96 +109,6 @@ async function uploadDailyPhoto(base64: string, mimeType: string, slot: string, 
   return data.publicUrl;
 }
 
-async function postToTwitter(imageUrl: string, caption: string, character: string): Promise<void> {
-  const apiKey = process.env.TWITTER_API_KEY;
-  const apiSecret = process.env.TWITTER_API_SECRET;
-  const accessToken = process.env.TWITTER_ACCESS_TOKEN;
-  const accessSecret = process.env.TWITTER_ACCESS_SECRET;
-
-  if (!apiKey || !apiSecret || !accessToken || !accessSecret) {
-    console.log('Twitter API keys not configured, skipping X post');
-    return;
-  }
-
-  try {
-    // Download image
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) throw new Error('Failed to fetch image for Twitter');
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-
-    // Generate OAuth 1.0a header
-    const { TwitterApi } = await import('twitter-api-v2');
-    const client = new TwitterApi({ appKey: apiKey, appSecret: apiSecret, accessToken, accessSecret });
-
-    // Upload media
-    const mediaId = await client.v1.uploadMedia(imgBuffer, { mimeType: 'image/jpeg' });
-
-    // Compose tweet text
-    const charTag = character === 'saya' ? '#さや' : character === 'yume' ? '#ゆめ' : '#さやゆめ';
-    const tweetText = `${caption}\n\n${charTag} #さやゆめ #AIガールフレンド\nhttps://sayayume.com`;
-
-    await client.v2.tweet({ text: tweetText, media: { media_ids: [mediaId] } });
-    console.log(`Posted to X: ${character} ${caption}`);
-  } catch (err) {
-    console.error('Twitter post failed:', err);
-  }
-}
-
-async function postToInstagram(imageUrl: string, caption: string, character: string): Promise<void> {
-  const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const accountId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
-
-  if (!accessToken || !accountId) {
-    console.log('Instagram API not configured, skipping IG post');
-    return;
-  }
-
-  try {
-    const charTag = character === 'saya' ? '#さや' : character === 'yume' ? '#ゆめ' : '#さやゆめ';
-    const igCaption = `${caption}\n\n${charTag} #さやゆめ #AIガールフレンド #AI美女 #さやゆめアプリ\nhttps://sayayume.com`;
-
-    // Step 1: Create media container
-    const containerRes = await fetch(
-      `https://graph.instagram.com/v21.0/${accountId}/media`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image_url: imageUrl,
-          caption: igCaption,
-          access_token: accessToken,
-        }),
-      }
-    );
-
-    if (!containerRes.ok) {
-      console.error('IG container create failed:', await containerRes.text());
-      return;
-    }
-
-    const { id: containerId } = await containerRes.json();
-
-    // Step 2: Publish
-    const publishRes = await fetch(
-      `https://graph.instagram.com/v21.0/${accountId}/media_publish`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ creation_id: containerId, access_token: accessToken }),
-      }
-    );
-
-    if (!publishRes.ok) {
-      console.error('IG publish failed:', await publishRes.text());
-      return;
-    }
-
-    console.log(`Posted to IG: ${character} ${caption}`);
-  } catch (err) {
-    console.error('Instagram post failed:', err);
-  }
-}
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slot: string }> }
@@ -234,7 +144,7 @@ export async function GET(
 
   if (existing) {
     console.log(`Daily photo already exists: ${photoDate} ${slot}`);
-    return Response.json({ status: 'already_exists', id: existing.id });
+    return Response.json({ status: 'already_exists', id: existing.id, imageUrl: existing.image_url, caption: existing.caption });
   }
 
   // Pick scene prompt and caption based on day of week
@@ -280,11 +190,6 @@ export async function GET(
 
   console.log(`Daily photo generated: ${photoDate} ${slot} ${character} → ${imageUrl}`);
 
-  // Post to social media (non-blocking, errors are caught internally)
-  await Promise.allSettled([
-    postToTwitter(imageUrl, caption, character),
-    postToInstagram(imageUrl, caption, character),
-  ]);
-
-  return Response.json({ status: 'generated', id: inserted.id, imageUrl, caption });
+  // SNS posting is handled by morning-post skill (browser automation via LiSA Chrome)
+  return Response.json({ status: 'generated', id: inserted.id, imageUrl, caption, character });
 }
