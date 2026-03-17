@@ -116,6 +116,8 @@ export async function refreshInstagramToken(
 export function buildIgCaption(baseCaption: string): string {
   return `${baseCaption}
 
-#さやゆめ #AIガールフレンド #AI美女 #さや #ゆめ
-もっと話したい人はプロフのリンクから♡`;
+💬 AIガールフレンドアプリ「さやゆめ」で話しかけてみて♡
+👉 無料で始められる → プロフのリンクから
+
+#さやゆめ #AIガールフレンド #AI美女 #さや #ゆめ #AIgirlfriend #日本語AI`;
 }
