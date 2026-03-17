@@ -147,6 +147,7 @@
 | B-1 | Cancel未ログイン→401 | ✅ PASS | - |
 | C-1 | Reactivate未ログイン→401 | ✅ PASS | - |
 | D-1 | Portal未ログイン→401 | ✅ PASS | - |
+| D-2 | Portal（テストmode sub ID）→500→404修正 | ✅ FIXED | BUG-002参照 |
 | E-1 | 無効Webhook署名→400 | ✅ PASS | - |
 | F-1 | Pricingページ表示（有料ユーザー） | ✅ PASS | Premium「現在のプラン」・次回更新日表示OK |
 | F-4 | Success通知（?success=true） | ✅ PASS | ハードリロードで確認（5秒タイマー正常動作） |
@@ -173,4 +174,30 @@
 +   : subscription.status === 'past_due' ? 'past_due'
     : subscription.status === 'canceled' ? 'cancelled'
     : 'expired';
+```
+
+### BUG-002: Portal API がテストmode subscription IDで500エラー（修正済み）
+- **重大度**: 🟠 High
+- **場所**: `src/app/api/stripe/portal/route.ts` L37-47
+- **症状**: 開発中に test mode Stripe で作成した subscription ID (`sub_1T9WpwJAGjU38ife7E1Nis37`) が
+  Supabase DB に残ったまま本番 Stripe に切り替えたため、`stripe.subscriptions.retrieve()` が
+  `StripeInvalidRequestError: No such subscription` を throw → 500 エラーになりユーザーにはエラー表示。
+- **Vercelログ**: `Portal session error: Error: No such subscription: 'sub_1T9WpwJAGjU38ife7E1Nis37'`
+- **修正 (2段階)**:
+  1. **コード**: `stripe.subscriptions.retrieve()` を try/catch でラップ、`No such subscription` エラーを検知して 404 を返す
+  2. **データ**: Supabase で test mode subscription レコードをクリア + `users.is_premium = false` に修正
+- **コミット**: `7f760ff`
+
+```diff
++ let subscription;
++ try {
++   subscription = await stripe.subscriptions.retrieve(sub.external_subscription_id);
++ } catch (stripeErr: unknown) {
++   const isNotFound = stripeErr instanceof Error && stripeErr.message.includes('No such subscription');
++   if (isNotFound) {
++     return NextResponse.json({ error: 'サブスクリプションが見つかりません。再度ご購読ください。', code: 'subscription_not_found' }, { status: 404 });
++   }
++   throw stripeErr;
++ }
+- const subscription = await stripe.subscriptions.retrieve(sub.external_subscription_id);
 ```
