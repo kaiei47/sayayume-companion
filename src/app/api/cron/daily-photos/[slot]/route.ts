@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateImage, generateDuoImage, buildImagePrompt, buildDuoImagePrompt } from '@/lib/gemini-image';
 import { postToInstagram, buildIgCaption } from '@/lib/instagram';
+import { postToTwitter, buildTwitterCaption } from '@/lib/twitter';
 
 // ── Character config ──────────────────────────────────────────────────────────
 const CHAR_CONFIG = {
@@ -208,6 +209,21 @@ export async function GET(
     console.warn('INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID not set, skipping IG post');
   }
 
+  // ── X (Twitter) auto-post ─────────────────────────────────────────────────
+  let xResult: { success: boolean; tweetId?: string; error?: string } | null = null;
+
+  if (process.env.TWITTER_API_KEY) {
+    const twitterCaption = buildTwitterCaption(caption);
+    xResult = await postToTwitter(imageUrl, twitterCaption);
+    if (xResult.success) {
+      console.log(`X posted: ${xResult.tweetId}`);
+    } else {
+      console.error(`X post failed: ${xResult.error}`);
+    }
+  } else {
+    console.warn('TWITTER_API_KEY not set, skipping X post');
+  }
+
   return Response.json({
     status: 'generated',
     id: inserted.id,
@@ -215,5 +231,6 @@ export async function GET(
     caption,
     character,
     ig: igResult ?? { skipped: true, reason: 'IG credentials not configured' },
+    x: xResult ?? { skipped: true, reason: 'Twitter credentials not configured' },
   });
 }
