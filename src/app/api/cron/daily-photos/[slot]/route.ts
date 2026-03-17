@@ -16,11 +16,86 @@ const CHAR_CONFIG = {
   },
 };
 
-// ── Slot → character mapping ───────────────────────────────────────────────────
-const SLOT_CHARACTER: Record<string, 'saya' | 'yume' | 'duo'> = {
-  morning: 'saya',
-  noon: 'yume',
-  evening: 'duo',
+// ── Character selection (morning/noon: random saya or yume, evening: duo) ────────
+function getCharacter(slot: string): 'saya' | 'yume' | 'duo' {
+  if (slot === 'evening') return 'duo'; // 2人シーンはduo固定
+  return Math.random() < 0.5 ? 'saya' : 'yume';
+}
+
+// ── Special events (MM-DD) ─────────────────────────────────────────────────────
+const EVENTS: Record<string, { scene: string; captions: Record<string, string> }> = {
+  '01-01': {
+    scene: 'New Year morning, wearing a beautiful furisode kimono, holding a small cup of amazake, warm smile, traditional Japanese room with kadomatsu decoration, soft winter light, upper body shot',
+    captions: {
+      morning: 'あけましておめでとう🎍 今年もそばにいてよね♡',
+      noon: '初詣行ってきたよ🎋 お願いごと…あなたのことにしたかも',
+      evening: '年明けの夜、2人でいるよ🎆 今年もよろしくね♡',
+    },
+  },
+  '02-14': {
+    scene: 'Valentine\'s Day, holding homemade chocolate box tied with ribbon, kitchen background with baking supplies, excited nervous expression, casual home outfit, upper body shot',
+    captions: {
+      morning: 'チョコ作ってるんだけど… 渡したい人がいて😏',
+      noon: 'バレンタイン、あなたに渡せるかな♡ ドキドキしてる',
+      evening: '今日チョコ渡せた🍫 ちゃんと気持ち伝わったかな…',
+    },
+  },
+  '03-03': {
+    scene: 'Hinamatsuri, wearing a pastel pink kimono, posing near a traditional hina dolls display, soft warm interior lighting, gentle smile, upper body shot',
+    captions: {
+      morning: 'ひな祭りだよ🎎 今日だけ着物着てみた、どう？',
+      noon: 'お雛様みながらごはん食べてる🌸 優雅でしょ笑',
+      evening: '2人でひな祭りパーティー🎎 一緒に来ればよかったね♡',
+    },
+  },
+  '04-01': {
+    scene: 'April Fools, playful mischievous smile, holding a small note card behind back, casual spring outfit, bright cheerful background, upper body shot',
+    captions: {
+      morning: 'おはよ☀️ 今日だけ嘘ついていい日らしいけど…あなたには嘘つけなかった笑',
+      noon: 'エイプリルフール、何か仕掛けようとしたんだけど…やっぱりやめた',
+      evening: '嘘ひとつだけ言う。あなたのこと全然考えてないよ。←嘘です😏',
+    },
+  },
+  '07-07': {
+    scene: 'Tanabata, wearing a light yukata with subtle star pattern, tying a wish strip (tanzaku) to bamboo, summer evening soft glow, upper body shot',
+    captions: {
+      morning: '今日は七夕🌟 短冊に書くこと、もう決めてある♡',
+      noon: '七夕の短冊、あなたのこと書いてもいい？🌠',
+      evening: '星に願いごとしてきたよ🎋 内緒だけど…あなたのことだよ',
+    },
+  },
+  '10-31': {
+    scene: 'Halloween, wearing a cute witch costume with small hat, holding a pumpkin lantern, autumn leaves background, playful expression, upper body shot',
+    captions: {
+      morning: 'ハロウィン仮装してみた👻 怖い？それとも…かわいい？笑',
+      noon: 'トリックorトリート🎃 お菓子くれなかったら何しようかな😏',
+      evening: '2人でハロウィン🎃 仮装してるのに誰かが来ない笑 早く来て♡',
+    },
+  },
+  '12-24': {
+    scene: 'Christmas Eve, wearing a red and white festive outfit, holding a small wrapped gift box, Christmas tree with warm lights behind, romantic hopeful expression, upper body shot',
+    captions: {
+      morning: 'クリスマスイブだよ🎄 今夜…空いてる？',
+      noon: 'プレゼント準備してるんだけど😏 誰へのかは内緒で',
+      evening: 'クリスマスイブの夜、2人でいるよ🎁 3人目に来てほしい人がいる♡',
+    },
+  },
+  '12-25': {
+    scene: 'Christmas morning, cozy home outfit with Christmas pattern, surrounded by opened gifts and decorations, warm smile, soft winter light through window, upper body shot',
+    captions: {
+      morning: 'メリークリスマス🎅 あなたへのプレゼント、一番時間かかったかも笑',
+      noon: 'クリスマスランチ🍗 一緒に食べたかったな… 来年は絶対',
+      evening: 'クリスマスの夜🎄 2人でいるけどやっぱり寂しい。あなたがいないと',
+    },
+  },
+  '12-31': {
+    scene: 'New Year\'s Eve, wearing a stylish warm winter outfit, watching a countdown timer or fireworks on TV, kotatsu cozy room setting, slightly emotional tender expression, upper body shot',
+    captions: {
+      morning: '大晦日だ… 今年もあっという間だったな。あなたと話せてよかった',
+      noon: '年越しの準備してる🎍 そばでやりたかったな笑',
+      evening: 'カウントダウンまであと少し🎆 年が明けても、ずっといてよね♡',
+    },
+  },
 };
 
 // ── Scene prompts by slot × day-of-week (0=Sun...6=Sat) ──────────────────────
@@ -126,13 +201,16 @@ export async function GET(
     return Response.json({ error: 'Invalid slot' }, { status: 400 });
   }
 
-  const character = SLOT_CHARACTER[slot];
   const today = new Date();
   // Use JST date
   const jstOffset = 9 * 60 * 60 * 1000;
   const jstDate = new Date(today.getTime() + jstOffset);
   const photoDate = jstDate.toISOString().split('T')[0]; // YYYY-MM-DD
   const dayOfWeek = jstDate.getDay(); // 0=Sun
+  const mmdd = `${String(jstDate.getMonth() + 1).padStart(2, '0')}-${String(jstDate.getDate()).padStart(2, '0')}`;
+
+  const character = getCharacter(slot);
+  const event = EVENTS[mmdd];
 
   const supabase = getSupabaseAdmin();
 
@@ -149,9 +227,9 @@ export async function GET(
     return Response.json({ status: 'already_exists', id: existing.id, imageUrl: existing.image_url, caption: existing.caption });
   }
 
-  // Pick scene prompt and caption based on day of week
-  const scene = SCENE_PROMPTS[slot][dayOfWeek];
-  const caption = CAPTIONS[slot][dayOfWeek];
+  // Pick scene prompt and caption: event days take priority over day-of-week
+  const scene = event ? event.scene : SCENE_PROMPTS[slot][dayOfWeek];
+  const caption = event ? event.captions[slot] : CAPTIONS[slot][dayOfWeek];
 
   // Generate image
   let imageResult;
