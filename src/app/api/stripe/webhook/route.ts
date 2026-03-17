@@ -159,6 +159,7 @@ export async function POST(req: NextRequest) {
 
         if (sub) {
           const status = subscription.status === 'active' ? 'active'
+            : subscription.status === 'trialing' ? 'active'
             : subscription.status === 'past_due' ? 'past_due'
             : subscription.status === 'canceled' ? 'cancelled'
             : 'expired';
