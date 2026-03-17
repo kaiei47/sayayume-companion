@@ -30,6 +30,14 @@ interface ReceivedImage {
   is_favorite: boolean;
 }
 
+interface DailyPhoto {
+  id: string;
+  slot: 'morning' | 'noon' | 'evening';
+  character_id: 'saya' | 'yume' | 'duo';
+  image_url: string;
+  caption: string;
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -39,6 +47,7 @@ export default function Home() {
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [imageFilter, setImageFilter] = useState<'all' | 'favorite'>('all');
   const [userPlan, setUserPlan] = useState<string>('free');
+  const [dailyPhotos, setDailyPhotos] = useState<DailyPhoto[]>([]);
 
   const pendingToggles = useRef<Set<string>>(new Set());
 
@@ -108,6 +117,12 @@ export default function Home() {
         // 過去に受け取った画像を取得
         fetchImages();
 
+        // 今日のデイリー写真を取得
+        fetch('/api/daily-photos/today', { cache: 'no-store' })
+          .then(res => res.json())
+          .then(data => { if (data.photos?.length) setDailyPhotos(data.photos); })
+          .catch(() => {});
+
         // 現在のプランを取得
         supabase
           .from('users')
@@ -161,6 +176,7 @@ export default function Home() {
     setImageFilter={setImageFilter}
     toggleFavorite={toggleFavorite}
     userPlan={userPlan}
+    dailyPhotos={dailyPhotos}
   />;
 }
 
@@ -675,6 +691,7 @@ function Dashboard({
   setImageFilter,
   toggleFavorite,
   userPlan,
+  dailyPhotos,
 }: {
   user: User;
   lastMessages: Record<string, LastMessage>;
@@ -685,6 +702,7 @@ function Dashboard({
   setImageFilter: (v: 'all' | 'favorite') => void;
   toggleFavorite: (id: string, current: boolean) => void;
   userPlan: string;
+  dailyPhotos: DailyPhoto[];
 }) {
   const [lightboxImg, setLightboxImg] = useState<ReceivedImage | null>(null);
 
@@ -782,10 +800,22 @@ function Dashboard({
   const greetingMsg = greetingMsgs[getDailyIndex(greetingMsgs.length)];
   const greetingNameJa = greetingCharId === 'saya' ? 'さや' : greetingCharId === 'yume' ? 'ゆめ' : 'さや & ゆめ';
 
-  // 今日の写真カード（greeting と別キャラをオフセットで選択）
-  const photoCharId = (['saya', 'yume', 'duo'] as const)[(new Date().getDate() + 1) % 3];
+  // 今日の写真カード: デイリー写真APIから取得。なければ静的カタログにフォールバック
+  const SLOT_ORDER: ('morning' | 'noon' | 'evening')[] = ['morning', 'noon', 'evening'];
+  const slotIndex = SLOT_ORDER.indexOf(slot as 'morning' | 'noon' | 'evening');
+  // 現在のスロット以前で最新のデイリー写真を選択
+  const latestDailyPhoto = dailyPhotos
+    .filter(p => SLOT_ORDER.indexOf(p.slot) <= (slotIndex >= 0 ? slotIndex : 2))
+    .at(-1);
+
+  const photoCharId = latestDailyPhoto
+    ? latestDailyPhoto.character_id
+    : (['saya', 'yume', 'duo'] as const)[(new Date().getDate() + 1) % 3];
   const photoList = DAILY_PHOTO_CATALOG[photoCharId];
-  const todayPhoto = photoList[getDailyIndex(photoList.length)];
+  const staticFallback = photoList[getDailyIndex(photoList.length)];
+  const todayPhoto = latestDailyPhoto
+    ? { src: latestDailyPhoto.image_url, caption: latestDailyPhoto.caption }
+    : staticFallback;
   const photoNameJa = photoCharId === 'saya' ? 'さや' : photoCharId === 'yume' ? 'ゆめ' : 'さや & ゆめ';
   const photoAccent = photoCharId === 'saya'
     ? 'border-pink-500/20 bg-gradient-to-br from-pink-500/8 to-transparent'
