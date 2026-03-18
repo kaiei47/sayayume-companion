@@ -5,6 +5,7 @@ import { getCharacter } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
 import { extractImageTags, buildImagePrompt, generateImage, buildDuoImagePrompt, generateDuoImage } from '@/lib/gemini-image';
 import { isNSFWDescription, generateImageRunware } from '@/lib/runware-image';
+import { generateImageReplicate } from '@/lib/replicate-image';
 import { CHARACTERS } from '@/lib/characters';
 import { uploadChatImage } from '@/lib/supabase/storage';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
@@ -613,11 +614,22 @@ export async function POST(req: NextRequest) {
             const useRunware = character_id !== 'duo' && isNSFWDescription(imgDescription);
 
             if (useRunware) {
-              console.log('[Image] NSFW detected → Runware FLUX.1:', imgDescription);
-              result = await generateImageRunware(imgDescription, character_id);
-              // Runware失敗時はGeminiにフォールバック
+              // さや: Replicate（さやLoRA）→ 顔一致◎
+              // ゆめ: Runware FLUX.1（text2img）→ LoRA未アップのため
+              if (character_id === 'saya') {
+                console.log('[Image] NSFW saya → Replicate LoRA:', imgDescription);
+                result = await generateImageReplicate(imgDescription);
+                if (!result) {
+                  console.log('[Image] Replicate failed, falling back to Runware');
+                  result = await generateImageRunware(imgDescription, character_id);
+                }
+              } else {
+                console.log('[Image] NSFW yume → Runware FLUX.1:', imgDescription);
+                result = await generateImageRunware(imgDescription, character_id);
+              }
+              // 最終フォールバック: Gemini
               if (!result) {
-                console.log('[Image] Runware failed, falling back to Gemini');
+                console.log('[Image] All NSFW generators failed, falling back to Gemini');
                 const imgPrompt = buildImagePrompt(character.imagePromptBase, imgDescription, !!character.referenceImagePath);
                 result = await generateImage(imgPrompt, character.referenceImagePath);
               }
