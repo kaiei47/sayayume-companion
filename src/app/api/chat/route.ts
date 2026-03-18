@@ -417,9 +417,10 @@ export async function POST(req: NextRequest) {
     );
 
     // Gemini API用のcontentsを構築（サマリー対応）
-    // initial_assistant_message は新規会話の greeting photo caption。
+    // initial_assistant_message は greeting photo caption。
     // DBには保存せず synthetic turns として注入することで user/model 交互ルールを維持する。
-    const greetingContext = (!body.conversation_id && initial_assistant_message) ? initial_assistant_message : undefined;
+    // 新規・既存会話どちらでも注入する（既存会話でも返信時に写真の文脈が必要）。
+    const greetingContext = initial_assistant_message || undefined;
     const contents = buildContentsWithSummary(
       intimacyAwarePrompt,
       existingSummary,

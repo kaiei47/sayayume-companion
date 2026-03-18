@@ -164,10 +164,8 @@ function ChatPageInner() {
         (() => { try { const v = sessionStorage.getItem('pendingGreetingImageUrl'); sessionStorage.removeItem('pendingGreetingImageUrl'); return v; } catch { return null; } })();
       if (greeting) {
         greetingInserted.current = true;
-        // 会話が未開始の場合のみ保存（既存会話に挿入しない）
-        if (!conversationId) {
-          pendingGreetingRef.current = greeting;
-        }
+        // 新規・既存どちらでも greeting を保存（返信時にAIへの文脈として渡す）
+        pendingGreetingRef.current = greeting;
         setMessages(prev => {
           return [...prev, {
             id: `greeting-${Date.now()}`,
@@ -219,8 +217,8 @@ function ChatPageInner() {
       setStreamingContent('');
 
       try {
-        // 初回メッセージ時: greeting を initial_assistant_message として渡す
-        const initialMsg = !conversationId ? pendingGreetingRef.current : null;
+        // greeting があれば（新規・既存会話問わず）initial_assistant_message として渡す
+        const initialMsg = pendingGreetingRef.current;
         if (initialMsg) pendingGreetingRef.current = null;
 
         const response = await fetch('/api/chat', {

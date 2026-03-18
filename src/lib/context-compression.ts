@@ -135,27 +135,29 @@ export function buildContentsWithSummary(
     });
   }
 
-  // greeting photo context: inject as synthetic user→model turns to preserve alternation
-  if (initialAssistantMessage) {
-    contents.push({
-      role: 'user',
-      parts: [{ text: '今日の写真、届いたよ。' }],
-    });
-    contents.push({
-      role: 'model',
-      parts: [{ text: initialAssistantMessage }],
-    });
-  }
-
   // 最近のメッセージを追加
-  for (const msg of recentMessages) {
-    contents.push({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }],
-    });
+  // greeting photo context は user's current reply の直前に注入する（正しい文脈順序のため）
+  const msgs = [...recentMessages];
+  if (initialAssistantMessage && msgs.length > 0 && msgs[msgs.length - 1].role === 'user') {
+    // 最後のメッセージ（ユーザーの今回の返信）の直前に greeting を挿入
+    for (const msg of msgs.slice(0, -1)) {
+      contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] });
+    }
+    contents.push({ role: 'user', parts: [{ text: '今日の写真、届いたよ。' }] });
+    contents.push({ role: 'model', parts: [{ text: initialAssistantMessage }] });
+    contents.push({ role: 'user', parts: [{ text: msgs[msgs.length - 1].content }] });
+  } else {
+    for (const msg of msgs) {
+      contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] });
+    }
+    // ゲスト（history空）で greeting がある場合はここで注入
+    if (initialAssistantMessage && msgs.length === 0) {
+      contents.push({ role: 'user', parts: [{ text: '今日の写真、届いたよ。' }] });
+      contents.push({ role: 'model', parts: [{ text: initialAssistantMessage }] });
+    }
   }
 
-  // 現在のメッセージ（履歴に含まれていない場合）
+  // 現在のメッセージ（ゲスト等でhistoryに含まれていない場合）
   if (currentMessage) {
     const lastMsg = recentMessages[recentMessages.length - 1];
     if (!lastMsg || lastMsg.content !== currentMessage || lastMsg.role !== 'user') {

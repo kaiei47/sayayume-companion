@@ -1034,12 +1034,12 @@ function Dashboard({
                   <span className="text-[10px] text-muted-foreground flex-shrink-0">今日</span>
                 </div>
                 {/* Photo */}
-                <div className="relative aspect-[3/2] w-full overflow-hidden">
+                <div className="relative w-full overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={todayPhoto.src}
                     alt={photoNameJa}
-                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-auto block transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                 </div>

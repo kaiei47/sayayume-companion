@@ -203,9 +203,7 @@ function DuoChatPageInner() {
         (() => { try { const v = sessionStorage.getItem('pendingGreetingImageUrl'); sessionStorage.removeItem('pendingGreetingImageUrl'); return v; } catch { return null; } })();
       if (greeting) {
         greetingInserted.current = true;
-        if (!conversationId) {
-          pendingGreetingRef.current = greeting;
-        }
+        pendingGreetingRef.current = greeting;
         setMessages(prev => {
           return [...prev, {
             id: `greeting-${Date.now()}`,
@@ -256,7 +254,7 @@ function DuoChatPageInner() {
       setStreamingContent('');
 
       try {
-        const initialMsg = !conversationId ? pendingGreetingRef.current : null;
+        const initialMsg = pendingGreetingRef.current;
         if (initialMsg) pendingGreetingRef.current = null;
         const response = await fetch('/api/chat', {
           method: 'POST',
