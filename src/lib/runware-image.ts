@@ -1,15 +1,16 @@
 /**
  * Runware FLUX.1 Image Generation
  * Used as fallback when Gemini filters sexy/swimwear prompts.
- * Handles water着・セクシー系コンテンツ（Stripe安全圏の水着止まり）
+ * Handles 水着・セクシー系コンテンツ（Stripe安全圏の水着止まり）
+ *
+ * img2img mode: pass seedImagePath to use reference image for face consistency.
+ * imageDenoisingStrength 0.55-0.65 = face preserved + outfit/scene changes freely.
  */
-
-import { v4 as uuidv4 } from 'uuid';
 
 const RUNWARE_API_KEY = process.env.RUNWARE_API_KEY!;
 const RUNWARE_API_URL = 'https://api.runware.ai/v1';
 
-// FLUX.1 Schnell (fast, good quality)
+// FLUX.1 Schnell — steps:30 + CFGScale:3.5 が実績ある設定（generate_nsfw.pyで確認済み）
 const RUNWARE_MODEL = 'runware:101@1';
 
 interface GenerateImageResult {
@@ -74,33 +75,32 @@ function buildRunwarePrompt(characterId: string, description: string): { positiv
 }
 
 /**
- * RunwareでFLUX.1を使って画像生成
- * URLで画像を受け取りbase64に変換して返す
+ * RunwareでFLUX.1 Schnellを使って画像生成（text2img）
+ * ※ FLUX.1 Schnellはimg2imgに向いていないためtext2imgのみ使用。
+ *   顔の一貫性はプロンプトの特徴記述で担保する。
  */
 export async function generateImageRunware(
   description: string,
-  characterId: string
+  characterId: string,
 ): Promise<GenerateImageResult | null> {
   try {
     const { positive, negative } = buildRunwarePrompt(characterId, description);
 
-    const taskUUID = uuidv4();
-    const payload = [
-      {
-        taskType: 'imageInference',
-        taskUUID,
-        positivePrompt: positive,
-        negativePrompt: negative,
-        model: RUNWARE_MODEL,
-        width: 832,
-        height: 1216,
-        steps: 4,
-        CFGScale: 1,
-        scheduler: 'FlowMatchEulerDiscreteScheduler',
-        outputType: 'URL',
-        outputFormat: 'JPEG',
-      },
-    ];
+    const taskUUID = crypto.randomUUID();
+    const task = {
+      taskType: 'imageInference',
+      taskUUID,
+      positivePrompt: positive,
+      negativePrompt: negative,
+      model: RUNWARE_MODEL,
+      width: 832,
+      height: 1216,
+      steps: 30,
+      CFGScale: 3.5,
+      scheduler: 'FlowMatchEulerDiscreteScheduler',
+      outputType: 'URL',
+      outputFormat: 'JPEG',
+    };
 
     const response = await fetch(RUNWARE_API_URL, {
       method: 'POST',
@@ -108,7 +108,7 @@ export async function generateImageRunware(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${RUNWARE_API_KEY}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify([task]),
     });
 
     if (!response.ok) {
@@ -121,7 +121,7 @@ export async function generateImageRunware(
 
     const item = items.find((i) => i.taskUUID === taskUUID && i.imageURL);
     if (!item?.imageURL) {
-      console.error('Runware: no imageURL in response', items);
+      console.error('Runware: no imageURL in response', JSON.stringify(items).slice(0, 300));
       return null;
     }
 
