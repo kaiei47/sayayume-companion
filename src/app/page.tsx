@@ -221,7 +221,7 @@ function LandingPage() {
               className="object-cover object-top"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/60" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/30" />
           </div>
           <div className="relative flex-1">
             <Image
@@ -231,11 +231,11 @@ function LandingPage() {
               className="object-cover object-top"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-l from-transparent to-background/60" />
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent to-background/30" />
           </div>
         </div>
         {/* Bottom gradient for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
 
         {/* Hero text */}
         <div className="relative z-10 text-center px-6 space-y-4 max-w-md mx-auto">
