@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getCharacter } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
 import { extractImageTags, buildImagePrompt, generateImage, buildDuoImagePrompt, generateDuoImage } from '@/lib/gemini-image';
+import { isNSFWDescription, generateImageRunware } from '@/lib/runware-image';
 import { CHARACTERS } from '@/lib/characters';
 import { uploadChatImage } from '@/lib/supabase/storage';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
@@ -605,18 +606,31 @@ export async function POST(req: NextRequest) {
               )
             );
 
-            // 画像生成（最初の1つだけ）— 参照画像付きで顔の一貫性を保つ
+            // 画像生成（最初の1つだけ）
+            // NSFWキーワード検出 → Runware FLUX.1、それ以外 → Gemini（参照画像で顔一貫性）
             let result;
-            if (character_id === 'duo') {
+            const imgDescription = imageDescriptions[0];
+            const useRunware = character_id !== 'duo' && isNSFWDescription(imgDescription);
+
+            if (useRunware) {
+              console.log('[Image] NSFW detected → Runware FLUX.1:', imgDescription);
+              result = await generateImageRunware(imgDescription, character_id);
+              // Runware失敗時はGeminiにフォールバック
+              if (!result) {
+                console.log('[Image] Runware failed, falling back to Gemini');
+                const imgPrompt = buildImagePrompt(character.imagePromptBase, imgDescription, !!character.referenceImagePath);
+                result = await generateImage(imgPrompt, character.referenceImagePath);
+              }
+            } else if (character_id === 'duo') {
               // Duo: 2人の参照画像を使って2ショット写真を生成
               const sayaRef = CHARACTERS.saya.referenceImagePath;
               const yumeRef = CHARACTERS.yume.referenceImagePath;
-              const imgPrompt = buildDuoImagePrompt(imageDescriptions[0]);
+              const imgPrompt = buildDuoImagePrompt(imgDescription);
               result = await generateDuoImage(imgPrompt, sayaRef, yumeRef);
             } else {
               const imgPrompt = buildImagePrompt(
                 character.imagePromptBase,
-                imageDescriptions[0],
+                imgDescription,
                 !!character.referenceImagePath
               );
               result = await generateImage(imgPrompt, character.referenceImagePath);
