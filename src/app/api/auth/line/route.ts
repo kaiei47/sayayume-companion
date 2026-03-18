@@ -18,8 +18,8 @@ export async function GET() {
 
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: process.env.LINE_LOGIN_CHANNEL_ID!,
-    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/line/callback`,
+    client_id: process.env.LINE_LOGIN_CHANNEL_ID!.trim(),
+    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL!.trim()}/api/auth/line/callback`,
     state,
     scope: 'profile openid email',
     nonce,

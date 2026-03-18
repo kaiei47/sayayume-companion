@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state');
   const error = searchParams.get('error');
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!.trim();
 
   if (error) {
     return NextResponse.redirect(`${appUrl}/login?error=line_auth_failed`);
@@ -39,8 +39,8 @@ export async function GET(request: NextRequest) {
       grant_type: 'authorization_code',
       code,
       redirect_uri: `${appUrl}/api/auth/line/callback`,
-      client_id: process.env.LINE_LOGIN_CHANNEL_ID!,
-      client_secret: process.env.LINE_LOGIN_CHANNEL_SECRET!,
+      client_id: process.env.LINE_LOGIN_CHANNEL_ID!.trim(),
+      client_secret: process.env.LINE_LOGIN_CHANNEL_SECRET!.trim(),
     }),
   });
 
