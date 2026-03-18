@@ -47,7 +47,7 @@ export default function Home() {
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [imageFilter, setImageFilter] = useState<'all' | 'favorite'>('all');
   const [userPlan, setUserPlan] = useState<string>('free');
-  const [dailyPhotos, setDailyPhotos] = useState<DailyPhoto[]>([]);
+  const [dailyPhotos, setDailyPhotos] = useState<DailyPhoto[] | null>(null);
 
   const pendingToggles = useRef<Set<string>>(new Set());
 
@@ -120,8 +120,8 @@ export default function Home() {
         // 今日のデイリー写真を取得
         fetch('/api/daily-photos/today', { cache: 'no-store' })
           .then(res => res.json())
-          .then(data => { if (data.photos?.length) setDailyPhotos(data.photos); })
-          .catch(() => {});
+          .then(data => { setDailyPhotos(data.photos ?? []); })
+          .catch(() => { setDailyPhotos([]); });
 
         // 現在のプランを取得
         supabase
@@ -703,7 +703,7 @@ function Dashboard({
   setImageFilter: (v: 'all' | 'favorite') => void;
   toggleFavorite: (id: string, current: boolean) => void;
   userPlan: string;
-  dailyPhotos: DailyPhoto[];
+  dailyPhotos: DailyPhoto[] | null;
 }) {
   const [lightboxImg, setLightboxImg] = useState<ReceivedImage | null>(null);
 
@@ -805,7 +805,8 @@ function Dashboard({
   const SLOT_ORDER: ('morning' | 'noon' | 'evening')[] = ['morning', 'noon', 'evening'];
   const slotIndex = SLOT_ORDER.indexOf(slot as 'morning' | 'noon' | 'evening');
   // 現在のスロット以前で最新のデイリー写真を選択
-  const latestDailyPhoto = dailyPhotos
+  const isDailyPhotoLoading = dailyPhotos === null;
+  const latestDailyPhoto = (dailyPhotos ?? [])
     .filter(p => SLOT_ORDER.indexOf(p.slot) <= (slotIndex >= 0 ? slotIndex : 2))
     .at(-1);
 
@@ -1003,6 +1004,22 @@ function Dashboard({
             </Link>
 
             {/* Today's photo card */}
+            {isDailyPhotoLoading ? (
+              <div className="rounded-2xl border border-border/20 bg-card/30 overflow-hidden animate-pulse">
+                <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2">
+                  <div className="h-8 w-8 rounded-full bg-muted/50 flex-shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <div className="h-3 w-16 rounded bg-muted/50" />
+                    <div className="h-2.5 w-24 rounded bg-muted/40" />
+                  </div>
+                </div>
+                <div className="w-full aspect-[4/3] bg-muted/40" />
+                <div className="px-4 py-3 space-y-2">
+                  <div className="h-3 w-3/4 rounded bg-muted/50" />
+                  <div className="h-3 w-1/2 rounded bg-muted/40" />
+                </div>
+              </div>
+            ) : (
             <Link
               href={`/chat/${photoCharId}?greeting=${encodeURIComponent(todayPhoto.caption)}${todayPhoto.src ? `&image_url=${encodeURIComponent(todayPhoto.src)}` : ''}`}
               className="group block"
@@ -1051,6 +1068,7 @@ function Dashboard({
                 </div>
               </div>
             </Link>
+            )}
 
             {/* 思い出フォト */}
             {(isLoadingImages || receivedImages.length > 0) && (
