@@ -18,40 +18,27 @@ interface GenerateImageResult {
   mimeType: string;
 }
 
-// NSFWキーワード（水着・セクシー止まり。Stripe安全圏）
-const NSFW_KEYWORDS = [
-  // 水着・ビキニ
-  'bikini', 'swimsuit', 'swimwear', 'bathing suit', '水着', 'ビキニ',
-  // 下着系（Stripe安全圏内）
+// Replicateに流すキーワード（ランジェリー以上。水着はGeminiで試みる）
+// BLOCK_ONLY_HIGH safetySettingsにより水着程度はGeminiが通るはず
+const REPLICATE_KEYWORDS = [
   'lingerie', 'underwear', 'bra', 'panties', 'ランジェリー', '下着',
-  // セクシー系
-  'see-through', 'sheer', 'cleavage', 'bare midriff', 'crop top',
-  'off-shoulder', 'low-cut', 'revealing', 'tight dress',
-  'naked shoulder', 'bare shoulder', 'bare skin',
-  // 日本語
-  '胸', '谷間', '肌', '素肌', 'セクシー', '際どい', 'ランジェリー',
-  'ノースリーブ', '水着姿', 'ビキニ姿', '半裸',
+  'see-through', 'sheer', 'topless', 'nude', 'naked', '半裸', '裸',
+  'nipple', 'nsfw',
 ];
 
 /**
- * プロンプトがNSFWキーワードを含むか判定
- * 2つ以上ヒット、または強いキーワード1つでtrue
+ * Replicateに振り分けるべきコンテンツか判定
+ * 水着・ビキニ程度はGemini(BLOCK_ONLY_HIGH)で通るので除外
+ * ランジェリー・シースルー以上のみReplicateへ
  */
 export function isNSFWDescription(description: string): boolean {
   const lower = description.toLowerCase();
-  let score = 0;
-
-  for (const kw of NSFW_KEYWORDS) {
+  for (const kw of REPLICATE_KEYWORDS) {
     if (lower.includes(kw.toLowerCase())) {
-      // bikini/swimsuit/lingerie/水着は1つでアウト（明確なNSFW）
-      if (['bikini', 'swimsuit', 'swimwear', '水着', 'ビキニ', 'lingerie', 'ランジェリー'].includes(kw.toLowerCase())) {
-        return true;
-      }
-      score++;
+      return true;
     }
   }
-
-  return score >= 2;
+  return false;
 }
 
 /**
