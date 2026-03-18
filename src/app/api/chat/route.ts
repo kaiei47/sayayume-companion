@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getCharacter } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
 import { extractImageTags, buildImagePrompt, generateImage, buildDuoImagePrompt, generateDuoImage } from '@/lib/gemini-image';
-import { isNSFWDescription, generateImageRunware } from '@/lib/runware-image';
+import { isNSFWDescription } from '@/lib/runware-image';
 import { generateImageReplicate } from '@/lib/replicate-image';
 import { CHARACTERS } from '@/lib/characters';
 import { uploadChatImage } from '@/lib/supabase/storage';
@@ -608,28 +608,18 @@ export async function POST(req: NextRequest) {
             );
 
             // 画像生成（最初の1つだけ）
-            // NSFWキーワード検出 → Runware FLUX.1、それ以外 → Gemini（参照画像で顔一貫性）
+            // さや NSFW → Replicate LoRA（顔一致◎）
+            // ゆめ NSFW / 通常 / duo → Gemini（参照画像で顔一貫性）
             let result;
             const imgDescription = imageDescriptions[0];
-            const useRunware = character_id !== 'duo' && isNSFWDescription(imgDescription);
+            const useSayaReplicate = character_id === 'saya' && isNSFWDescription(imgDescription);
 
-            if (useRunware) {
-              // さや: Replicate（さやLoRA）→ 顔一致◎
-              // ゆめ: Runware FLUX.1（text2img）→ LoRA未アップのため
-              if (character_id === 'saya') {
-                console.log('[Image] NSFW saya → Replicate LoRA:', imgDescription);
-                result = await generateImageReplicate(imgDescription);
-                if (!result) {
-                  console.log('[Image] Replicate failed, falling back to Runware');
-                  result = await generateImageRunware(imgDescription, character_id);
-                }
-              } else {
-                console.log('[Image] NSFW yume → Runware FLUX.1:', imgDescription);
-                result = await generateImageRunware(imgDescription, character_id);
-              }
-              // 最終フォールバック: Gemini
+            if (useSayaReplicate) {
+              console.log('[Image] NSFW saya → Replicate LoRA:', imgDescription);
+              result = await generateImageReplicate(imgDescription);
+              // Replicate失敗時はGeminiにフォールバック
               if (!result) {
-                console.log('[Image] All NSFW generators failed, falling back to Gemini');
+                console.log('[Image] Replicate failed, falling back to Gemini');
                 const imgPrompt = buildImagePrompt(character.imagePromptBase, imgDescription, !!character.referenceImagePath);
                 result = await generateImage(imgPrompt, character.referenceImagePath);
               }
