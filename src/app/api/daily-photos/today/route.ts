@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+
+// 認証不要のpublicエンドポイント — ゲストも含む全ユーザーが閲覧可能
+export const revalidate = 60; // 1分キャッシュ
 
 export async function GET(_req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     // JST today
     const jstOffset = 9 * 60 * 60 * 1000;
@@ -26,7 +27,9 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ photos: [] });
     }
 
-    return NextResponse.json({ photos: photos ?? [] });
+    return NextResponse.json({ photos: photos ?? [] }, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
+    });
   } catch (err) {
     console.error('daily-photos/today error:', err);
     return NextResponse.json({ photos: [] });
