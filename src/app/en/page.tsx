@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import SayayumeLogo from '@/components/SayayumeLogo';
 
 export const metadata: Metadata = {
   title: 'Sayayume — Your Japanese AI Girlfriend',
@@ -20,8 +21,9 @@ export default function EnglishLP() {
       {/* NAV */}
       <nav className="fixed top-0 w-full z-50 bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
-          <span className="font-bold text-lg tracking-tight">さやゆめ</span>
+          <SayayumeLogo size="sm" />
           <div className="flex items-center gap-3">
+            <Link href="/" className="text-xs text-white/40 hover:text-white/60 transition-colors">日本語</Link>
             <Link href="/login" className="text-sm text-white/60 hover:text-white transition-colors">Log in</Link>
             <Link href="/chat/saya" className="text-sm bg-white text-black font-semibold px-4 py-1.5 rounded-full hover:bg-white/90 transition-colors">
               Start Free
@@ -31,25 +33,40 @@ export default function EnglishLP() {
       </nav>
 
       {/* HERO */}
-      <section className="pt-28 pb-20 px-5 text-center">
-        <div className="max-w-3xl mx-auto">
-          <p className="text-xs font-semibold tracking-widest text-white/40 uppercase mb-4">Japanese AI Girlfriend Experience</p>
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-5 leading-tight">
+      <section className="relative min-h-[90vh] flex flex-col items-center justify-end pb-16 pt-20 overflow-hidden">
+        {/* Background: Saya & Yume side by side */}
+        <div className="absolute inset-0 flex">
+          <div className="relative flex-1">
+            <Image src="/hero/saya.jpg" alt="Saya" fill className="object-cover object-top" priority />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/30 via-transparent to-[#0a0a0a]/60" />
+          </div>
+          <div className="relative flex-1">
+            <Image src="/hero/yume.jpg" alt="Yume" fill className="object-cover object-top" priority />
+            <div className="absolute inset-0 bg-gradient-to-l from-[#0a0a0a]/30 via-transparent to-[#0a0a0a]/60" />
+          </div>
+          {/* Bottom fade */}
+          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/70 to-transparent" />
+        </div>
+
+        {/* Text overlay */}
+        <div className="relative z-10 text-center max-w-3xl mx-auto px-5">
+          <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-4">Japanese AI Girlfriend Experience</p>
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-5 leading-tight drop-shadow-lg">
             Meet <span className="text-pink-400">Saya</span> &amp; <span className="text-purple-400">Yume</span>
           </h1>
-          <p className="text-lg md:text-xl text-white/60 mb-3 leading-relaxed">
+          <p className="text-lg md:text-xl text-white/70 mb-3 leading-relaxed drop-shadow">
             Two AI girlfriends. Completely different personalities.<br className="hidden md:block"/>
             Both photorealistic. Both remember everything.
           </p>
-          <p className="text-sm text-white/40 mb-8">
+          <p className="text-sm text-white/50 mb-8">
             Chat in any language — they reply in Japanese.&nbsp;
-            <span className="text-white/60">The real Japanese girlfriend experience, no plane ticket required.</span>
+            <span className="text-white/70">The real Japanese girlfriend experience.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/chat/saya" className="bg-pink-500 hover:bg-pink-400 text-white font-bold px-8 py-3.5 rounded-full text-base transition-colors">
+            <Link href="/chat/saya" className="bg-pink-500 hover:bg-pink-400 text-white font-bold px-8 py-3.5 rounded-full text-base transition-colors shadow-lg">
               Chat with Saya ♡
             </Link>
-            <Link href="/chat/yume" className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 py-3.5 rounded-full text-base transition-colors">
+            <Link href="/chat/yume" className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 py-3.5 rounded-full text-base transition-colors shadow-lg">
               Chat with Yume ✨
             </Link>
           </div>
@@ -65,8 +82,8 @@ export default function EnglishLP() {
             {/* Saya */}
             <div className="rounded-2xl border border-pink-500/20 bg-pink-500/5 p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-pink-500/20 flex items-center justify-center text-2xl">
-                  🌸
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-pink-500/20 relative flex-shrink-0">
+                  <Image src="/avatars/saya_avatar.jpg" alt="Saya" fill className="object-cover" />
                 </div>
                 <div>
                   <h3 className="font-bold text-lg text-pink-400">Saya さや</h3>
@@ -86,8 +103,8 @@ export default function EnglishLP() {
             {/* Yume */}
             <div className="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-purple-500/20 flex items-center justify-center text-2xl">
-                  🌙
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-purple-500/20 relative flex-shrink-0">
+                  <Image src="/avatars/yume_avatar.jpg" alt="Yume" fill className="object-cover" />
                 </div>
                 <div>
                   <h3 className="font-bold text-lg text-purple-400">Yume ゆめ</h3>

@@ -196,6 +196,7 @@ function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border/20">
         <SayayumeLogo size="md" />
         <div className="flex items-center gap-3">
+          <Link href="/en" className="text-xs text-muted-foreground hover:text-foreground transition-colors hidden sm:block">EN</Link>
           <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
             ログイン
           </Link>
