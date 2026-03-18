@@ -241,16 +241,6 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // 新規会話で greeting があれば最初のassistantメッセージとして保存（AI文脈のため）
-        if (initial_assistant_message && !body.conversation_id) {
-          await supabase.from('messages').insert({
-            conversation_id,
-            role: 'assistant',
-            content: initial_assistant_message,
-            content_type: 'text',
-          });
-        }
-
         // ユーザーメッセージを保存
         const { error: userMsgError } = await supabase.from('messages').insert({
           conversation_id,
@@ -427,6 +417,9 @@ export async function POST(req: NextRequest) {
     );
 
     // Gemini API用のcontentsを構築（サマリー対応）
+    // initial_assistant_message は新規会話の greeting photo caption。
+    // DBには保存せず synthetic turns として注入することで user/model 交互ルールを維持する。
+    const greetingContext = (!body.conversation_id && initial_assistant_message) ? initial_assistant_message : undefined;
     const contents = buildContentsWithSummary(
       intimacyAwarePrompt,
       existingSummary,
@@ -434,7 +427,8 @@ export async function POST(req: NextRequest) {
       // ゲストの場合はhistoryに現在のメッセージが含まれていない
       (history.length === 0 || history[history.length - 1]?.content !== message)
         ? message
-        : undefined
+        : undefined,
+      greetingContext
     );
 
     // SSEストリーミングレスポンス

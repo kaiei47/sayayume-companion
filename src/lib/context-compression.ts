@@ -107,7 +107,8 @@ export function buildContentsWithSummary(
   systemPrompt: string,
   summary: string | null,
   recentMessages: MessageForSummary[],
-  currentMessage?: string
+  currentMessage?: string,
+  initialAssistantMessage?: string
 ): Array<{ role: string; parts: Array<{ text: string }> }> {
   const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [
     {
@@ -131,6 +132,18 @@ export function buildContentsWithSummary(
     contents.push({
       role: 'model',
       parts: [{ text: 'はい、これまでの会話の内容を覚えました♡ 続きからお話しましょう！' }],
+    });
+  }
+
+  // greeting photo context: inject as synthetic user→model turns to preserve alternation
+  if (initialAssistantMessage) {
+    contents.push({
+      role: 'user',
+      parts: [{ text: '今日の写真、届いたよ。' }],
+    });
+    contents.push({
+      role: 'model',
+      parts: [{ text: initialAssistantMessage }],
     });
   }
 
