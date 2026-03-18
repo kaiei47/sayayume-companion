@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -51,6 +52,23 @@ export default function LoginPage() {
       }
     }
 
+    setLoading(false);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+    });
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage('パスワードリセット用のメールを送信しました。受信トレイをご確認ください。');
+    }
     setLoading(false);
   };
 
@@ -270,6 +288,46 @@ export default function LoginPage() {
           </div>
 
           {/* Email form */}
+          {isForgotPassword ? (
+            <form onSubmit={handleForgotPassword} className="space-y-3.5">
+              <p className="text-sm text-muted-foreground">登録済みのメールアドレスを入力してください。パスワードリセット用のリンクを送ります。</p>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="メールアドレス"
+                required
+                className="w-full rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/40 transition-all placeholder:text-muted-foreground/50"
+              />
+
+              {error && (
+                <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+                  {error}
+                </div>
+              )}
+              {message && (
+                <div className="rounded-xl bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-400">
+                  {message}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-50 transition-all bg-gradient-to-r from-pink-600 to-blue-600 text-white hover:opacity-90 shadow-lg shadow-pink-500/10"
+              >
+                {loading ? '送信中...' : 'リセットメールを送信'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setIsForgotPassword(false); setError(''); setMessage(''); }}
+                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ← ログインに戻る
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <input
               type="email"
@@ -311,9 +369,21 @@ export default function LoginPage() {
             >
               {loading ? '処理中...' : isSignUp ? 'メールアドレスで登録' : 'ログイン'}
             </button>
+
+            {!isSignUp && (
+              <button
+                type="button"
+                onClick={() => { setIsForgotPassword(true); setError(''); setMessage(''); }}
+                className="w-full text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors text-center"
+              >
+                パスワードをお忘れの方はこちら
+              </button>
+            )}
           </form>
+          )}
 
           {/* Toggle */}
+          {!isForgotPassword && (
           <div className="text-center space-y-3 pt-1">
             <button
               onClick={() => {
@@ -344,6 +414,7 @@ export default function LoginPage() {
               ゲストとして試す
             </button>
           </div>
+          )}
 
           <p className="text-center text-xs text-muted-foreground/40 pt-1">
             18歳以上限定 · AI生成コンテンツ
