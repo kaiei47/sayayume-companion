@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const [nickname, setNickname] = useState('');
   const [nicknameSaving, setNicknameSaving] = useState(false);
   const [nicknameSaved, setNicknameSaved] = useState(false);
+  const [nicknameError, setNicknameError] = useState('');
   const [dbUserId, setDbUserId] = useState<string | null>(null);
 
   // 解約フロー
@@ -74,11 +75,16 @@ export default function SettingsPage() {
   const handleSaveNickname = async () => {
     if (!dbUserId) return;
     setNicknameSaving(true);
+    setNicknameError('');
     const supabase = createClient();
-    await supabase.from('users').update({ display_name: nickname.trim() || null }).eq('id', dbUserId);
+    const { error } = await supabase.from('users').update({ display_name: nickname.trim() || null }).eq('id', dbUserId);
     setNicknameSaving(false);
-    setNicknameSaved(true);
-    setTimeout(() => setNicknameSaved(false), 2000);
+    if (error) {
+      setNicknameError('保存に失敗しました。もう一度試してください。');
+    } else {
+      setNicknameSaved(true);
+      setTimeout(() => setNicknameSaved(false), 3000);
+    }
   };
 
   const handleManageSubscription = async () => {
@@ -201,7 +207,15 @@ export default function SettingsPage() {
                 {nicknameSaved ? '✓' : nicknameSaving ? '...' : '保存'}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">さや & ゆめがこの名前で呼んでくれます ♡</p>
+            {nicknameSaved && (
+              <p className="text-xs text-green-400">✓ 保存しました！次のメッセージから呼んでくれるよ♡</p>
+            )}
+            {nicknameError && (
+              <p className="text-xs text-red-400">{nicknameError}</p>
+            )}
+            {!nicknameSaved && !nicknameError && (
+              <p className="text-xs text-muted-foreground">さや & ゆめがこの名前で呼んでくれます ♡</p>
+            )}
           </div>
         </div>
 
