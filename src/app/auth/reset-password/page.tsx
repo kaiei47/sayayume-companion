@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 
+function translateError(msg: string): string {
+  if (/new password should be different/i.test(msg)) return '新しいパスワードは現在と異なるものを入力してください。';
+  if (/password should be at least/i.test(msg)) return 'パスワードは6文字以上で入力してください。';
+  if (/same password/i.test(msg)) return '現在と同じパスワードは使用できません。';
+  return msg;
+}
+
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
@@ -39,7 +46,7 @@ export default function ResetPasswordPage() {
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      setError(error.message);
+      setError(translateError(error.message));
     } else {
       setMessage('パスワードを更新しました！');
       setTimeout(() => router.push('/'), 2000);

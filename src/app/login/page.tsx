@@ -5,6 +5,23 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 
+function translateError(msg: string): string {
+  if (/invalid.*email|email.*invalid/i.test(msg)) return 'メールアドレスの形式が正しくありません。';
+  if (/invalid login credentials/i.test(msg)) return 'メールアドレスまたはパスワードが正しくありません。';
+  if (/email not confirmed/i.test(msg)) return 'メールアドレスが確認されていません。確認メールのリンクをクリックしてください。';
+  if (/user already registered/i.test(msg)) return 'このメールアドレスはすでに登録されています。';
+  if (/password should be at least/i.test(msg)) return 'パスワードは6文字以上で入力してください。';
+  if (/for security purposes.*only request this after (\d+)/i.test(msg)) {
+    const m = msg.match(/after (\d+) second/i);
+    return `しばらく経ってから再度お試しください（${m ? m[1] + '秒後' : '少し後'}）。`;
+  }
+  if (/email link is invalid or has expired/i.test(msg)) return 'リンクが無効か期限切れです。もう一度お試しください。';
+  if (/new password should be different/i.test(msg)) return '新しいパスワードは現在と異なるものを入力してください。';
+  if (/signup.*valid password|password.*required/i.test(msg)) return 'パスワードを入力してください。';
+  if (/rate limit/i.test(msg)) return 'リクエストが多すぎます。しばらく待ってから再度お試しください。';
+  return msg; // 未知のエラーはそのまま
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -32,7 +49,7 @@ export default function LoginPage() {
         },
       });
       if (error) {
-        setError(error.message);
+        setError(translateError(error.message));
       } else if (data.session) {
         router.push('/');
         router.refresh();
@@ -45,7 +62,7 @@ export default function LoginPage() {
         password,
       });
       if (error) {
-        setError(error.message);
+        setError(translateError(error.message));
       } else {
         router.push('/');
         router.refresh();
@@ -65,7 +82,7 @@ export default function LoginPage() {
       redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
     });
     if (error) {
-      setError(error.message);
+      setError(translateError(error.message));
     } else {
       setMessage('パスワードリセット用のメールを送信しました。受信トレイをご確認ください。');
     }
@@ -83,7 +100,7 @@ export default function LoginPage() {
       },
     });
     if (error) {
-      setError(error.message);
+      setError(translateError(error.message));
       setLoading(false);
     }
   };
