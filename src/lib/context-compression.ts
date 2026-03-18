@@ -101,6 +101,27 @@ ${conversationText}
 }
 
 /**
+ * Gemini APIはuser/modelの交互制約がある。
+ * level_upメッセージ等で連続する同ロールのメッセージをマージして
+ * 交互制約を保証する。
+ */
+function mergeConsecutiveTurns(messages: MessageForSummary[]): MessageForSummary[] {
+  const merged: MessageForSummary[] = [];
+  for (const msg of messages) {
+    const last = merged[merged.length - 1];
+    if (last && last.role === msg.role) {
+      merged[merged.length - 1] = {
+        role: last.role,
+        content: last.content + '\n\n' + msg.content,
+      };
+    } else {
+      merged.push({ ...msg });
+    }
+  }
+  return merged;
+}
+
+/**
  * Gemini API用のcontentsを構築する（サマリー付き）
  */
 export function buildContentsWithSummary(
@@ -135,9 +156,10 @@ export function buildContentsWithSummary(
     });
   }
 
-  // 最近のメッセージを追加
+  // 連続する同ロールのメッセージをマージ（level_up等で生じる consecutive model turns を解消）
+  const msgs = mergeConsecutiveTurns([...recentMessages]);
+
   // greeting photo context は user's current reply の直前に注入する（正しい文脈順序のため）
-  const msgs = [...recentMessages];
   if (initialAssistantMessage && msgs.length > 0 && msgs[msgs.length - 1].role === 'user') {
     // 最後のメッセージ（ユーザーの今回の返信）の直前に greeting を挿入
     for (const msg of msgs.slice(0, -1)) {
@@ -159,7 +181,7 @@ export function buildContentsWithSummary(
 
   // 現在のメッセージ（ゲスト等でhistoryに含まれていない場合）
   if (currentMessage) {
-    const lastMsg = recentMessages[recentMessages.length - 1];
+    const lastMsg = msgs[msgs.length - 1];
     if (!lastMsg || lastMsg.content !== currentMessage || lastMsg.role !== 'user') {
       contents.push({
         role: 'user',

@@ -69,12 +69,16 @@ export async function GET(req: NextRequest) {
     }
 
     // メッセージ履歴を取得（最新50件）
-    const { data: messages } = await admin
+    const { data: messages, error: messagesError } = await admin
       .from('messages')
       .select('id, role, content, content_type, image_url, is_favorite, created_at')
       .eq('conversation_id', conversation.id)
       .order('created_at', { ascending: true })
       .limit(50);
+
+    if (messagesError) {
+      console.error('Failed to fetch messages:', messagesError.message);
+    }
 
     return Response.json({
       conversation,

@@ -2,11 +2,6 @@ import { NextRequest } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
 
 // Time-based messages from さや or ゆめ
 const REENGAGEMENT_MESSAGES: Record<number, { title: string; body: string; char: 'saya' | 'yume'; url: string }> = {
@@ -42,6 +37,12 @@ export async function GET(req: NextRequest) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

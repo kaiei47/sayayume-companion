@@ -608,15 +608,15 @@ export async function POST(req: NextRequest) {
             );
 
             // 画像生成（最初の1つだけ）
-            // さや NSFW → Replicate LoRA（顔一致◎）
-            // ゆめ NSFW / 通常 / duo → Gemini（参照画像で顔一貫性）
+            // さや/ゆめ NSFW → Replicate LoRA（顔一致◎）
+            // duo / 通常 → Gemini（参照画像で顔一貫性）
             let result;
             const imgDescription = imageDescriptions[0];
-            const useSayaReplicate = character_id === 'saya' && isNSFWDescription(imgDescription);
+            const useReplicate = (character_id === 'saya' || character_id === 'yume') && isNSFWDescription(imgDescription);
 
-            if (useSayaReplicate) {
-              console.log('[Image] NSFW saya → Replicate LoRA:', imgDescription);
-              result = await generateImageReplicate(imgDescription);
+            if (useReplicate) {
+              console.log(`[Image] NSFW ${character_id} → Replicate LoRA:`, imgDescription);
+              result = await generateImageReplicate(imgDescription, character_id);
               // Replicate失敗時はGeminiにフォールバック
               if (!result) {
                 console.log('[Image] Replicate failed, falling back to Gemini');
@@ -715,6 +715,23 @@ export async function POST(req: NextRequest) {
                 updated_at: new Date().toISOString(),
               })
               .eq('id', conversation_id);
+          }
+
+          // ゲストの場合: guest_events に保存（管理者分析用・fire-and-forget）
+          if (!dbUserId && fullResponse) {
+            const { createHash } = await import('crypto');
+            const ipHash = clientIp
+              ? createHash('sha256').update(clientIp).digest('hex').slice(0, 16)
+              : 'unknown';
+            supabase.from('guest_events').insert({
+              session_id: conversation_id,
+              character_id,
+              user_message: message,
+              assistant_response: savedContent,
+              ip_hash: ipHash,
+            }).then(({ error }) => {
+              if (error) console.error('Guest event save failed:', error.message);
+            });
           }
 
           // image_urlがStorage URL（短い）なら直接含める。base64は大きすぎるのでフラグのみ

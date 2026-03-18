@@ -41,6 +41,21 @@ interface AdminStats {
   recentUsers: RecentUser[];
 }
 
+interface GuestMessage {
+  user_message: string;
+  assistant_response: string | null;
+  created_at: string;
+}
+
+interface GuestSession {
+  session_id: string;
+  character_id: string;
+  ip_hash: string | null;
+  messages: GuestMessage[];
+  first_at: string;
+  last_at: string;
+}
+
 export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +66,8 @@ export default function AdminPage() {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [replySending, setReplySending] = useState<string | null>(null);
   const threadBottomRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [guestSessions, setGuestSessions] = useState<GuestSession[]>([]);
+  const [openGuestSession, setOpenGuestSession] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchThreads = useCallback(async () => {
@@ -59,6 +76,15 @@ export default function AdminPage() {
       if (!res.ok) return;
       const data = await res.json();
       setThreads(data.threads ?? []);
+    } catch { /* ignore */ }
+  }, []);
+
+  const fetchGuestSessions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/guest-sessions?limit=50');
+      if (!res.ok) return;
+      const data = await res.json();
+      setGuestSessions(data.sessions ?? []);
     } catch { /* ignore */ }
   }, []);
 
@@ -117,8 +143,9 @@ export default function AdminPage() {
       }
       fetchStats();
       fetchThreads();
+      fetchGuestSessions();
     });
-  }, [fetchStats, fetchThreads, router]);
+  }, [fetchStats, fetchThreads, fetchGuestSessions, router]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -243,6 +270,92 @@ export default function AdminPage() {
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {formatRelativeTime(user.created_at)}
                   </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Guest Sessions */}
+        <div className="rounded-2xl border border-border/50 bg-card/50 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Guest Sessions 👤
+            </h2>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground/60">{guestSessions.length} sessions</span>
+              <button onClick={fetchGuestSessions} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                更新
+              </button>
+            </div>
+          </div>
+          {guestSessions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ゲストセッションなし</p>
+          ) : (
+            <div className="space-y-2">
+              {guestSessions.map(session => (
+                <div key={session.session_id} className="rounded-xl border border-border/40 overflow-hidden">
+                  <button
+                    onClick={() => setOpenGuestSession(v => v === session.session_id ? null : session.session_id)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                          session.character_id === 'saya' ? 'bg-pink-500/15 text-pink-400' :
+                          session.character_id === 'yume' ? 'bg-blue-500/15 text-blue-400' :
+                          'bg-purple-500/15 text-purple-400'
+                        }`}>
+                          {session.character_id}
+                        </span>
+                        <span className="text-xs text-muted-foreground/60 font-mono">
+                          {session.ip_hash ?? '—'}
+                        </span>
+                        <span className="text-xs text-muted-foreground/40">
+                          {session.messages.length}msg
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground/60 mt-0.5 truncate">
+                        {session.messages[0]?.user_message.slice(0, 60)}
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground ml-3 whitespace-nowrap">
+                      {formatRelativeTime(session.last_at)}
+                    </span>
+                  </button>
+
+                  {openGuestSession === session.session_id && (
+                    <div className="border-t border-border/30 max-h-80 overflow-y-auto">
+                      <div className="px-4 py-3 space-y-3">
+                        {session.messages.map((msg, i) => (
+                          <div key={i} className="space-y-1.5">
+                            {/* User message */}
+                            <div className="flex justify-start">
+                              <div className="max-w-[85%] rounded-2xl rounded-bl-sm px-3 py-2 bg-card border border-border/40">
+                                <p className="text-[10px] text-muted-foreground/50 mb-0.5">
+                                  Guest · {new Date(msg.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                                <p className="text-xs leading-relaxed">{msg.user_message}</p>
+                              </div>
+                            </div>
+                            {/* Assistant response */}
+                            {msg.assistant_response && (
+                              <div className="flex justify-end">
+                                <div className="max-w-[85%] rounded-2xl rounded-br-sm px-3 py-2 bg-pink-500/10 border border-pink-500/20">
+                                  <p className="text-[10px] text-pink-400/60 mb-0.5">
+                                    {session.character_id}
+                                  </p>
+                                  <p className="text-xs leading-relaxed text-foreground/80">
+                                    {msg.assistant_response.slice(0, 300)}{msg.assistant_response.length > 300 ? '…' : ''}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

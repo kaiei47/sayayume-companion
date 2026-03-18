@@ -1,13 +1,26 @@
 /**
  * Replicate Image Generation
  * さやLoRA: kaiei47/saya-lora — 顔一貫性◎ + NSFW OK
+ * ゆめLoRA: kaiei47/yume-lora — 同構成
  * 実績設定: nsfw_replicate_test.py より
  */
 
 const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN!;
 
-// さやLoRA（Replicateにアップ済み）
+// LoRAバージョン（Replicateにアップ済み）
 const SAYA_LORA_VERSION = '28aa2197ea0010930f969aa105461544ba75bd073c297a439f30bf7204935e03';
+const YUME_LORA_VERSION = '75fe27fb243eb505c95cdf5e108e042adc5e82dfb5229c68193d53441308aeb2';
+
+const LORA_CONFIGS: Record<string, { version: string; promptPrefix: string }> = {
+  saya: {
+    version: SAYA_LORA_VERSION,
+    promptPrefix: 'saya, beautiful young japanese woman, light brown straight hair with bangs',
+  },
+  yume: {
+    version: YUME_LORA_VERSION,
+    promptPrefix: 'yume, beautiful young slim japanese woman, dark hair with bangs in a low bun',
+  },
+};
 
 interface GenerateImageResult {
   base64: string;
@@ -15,15 +28,18 @@ interface GenerateImageResult {
 }
 
 /**
- * さやLoRAでフォトリアル画像生成（Replicate）
+ * キャラLoRAでフォトリアル画像生成（Replicate）
  * Prefer: wait で同期的に結果を受け取る
+ * characterId: 'saya' | 'yume'
  */
 export async function generateImageReplicate(
   description: string,
+  characterId: string = 'saya',
 ): Promise<GenerateImageResult | null> {
+  const config = LORA_CONFIGS[characterId] ?? LORA_CONFIGS.saya;
   try {
     const prompt =
-      `saya, beautiful young japanese woman, light brown straight hair with bangs, ` +
+      `${config.promptPrefix}, ` +
       `${description}, ` +
       `masterpiece, best quality, raw photo, photorealistic, 8k uhd, soft frontal beauty lighting`;
 
@@ -35,7 +51,7 @@ export async function generateImageReplicate(
         'Prefer': 'wait',  // 同期モード（最大60秒）
       },
       body: JSON.stringify({
-        version: SAYA_LORA_VERSION,
+        version: config.version,
         input: {
           prompt,
           negative_prompt: 'bad anatomy, deformed, extra limbs, blurry, watermark, cartoon, anime, lowres, ugly, worst quality, text',
