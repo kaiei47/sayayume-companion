@@ -1,0 +1,22 @@
+name: LINE Push Notification (Hourly)
+
+on:
+  schedule:
+    # 毎時00分実行（UTC） = 毎時JST
+    - cron: '0 * * * *'
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  line-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger LINE Push API
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://www.sayayume.com/api/cron/line-push")
+          echo "Response status: $response"
+          if [ "$response" != "200" ]; then
+            echo "ERROR: API returned $response"
+            exit 1
+          fi
