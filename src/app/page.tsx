@@ -6,7 +6,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { CHARACTERS } from '@/lib/characters';
 import { createClient } from '@/lib/supabase/client';
+import { INTIMACY_LEVELS as INTIMACY_LEVEL_DEFS, getNextReward } from '@/lib/intimacy';
 import SayayumeLogo from '@/components/SayayumeLogo';
+import OnboardingModal, { shouldShowOnboarding } from '@/components/OnboardingModal';
 import type { User } from '@supabase/supabase-js';
 
 interface LastMessage {
@@ -36,6 +38,7 @@ interface DailyPhoto {
   character_id: 'saya' | 'yume' | 'duo';
   image_url: string;
   caption: string;
+  created_at: string;
 }
 
 export default function Home() {
@@ -48,6 +51,9 @@ export default function Home() {
   const [imageFilter, setImageFilter] = useState<'all' | 'favorite'>('all');
   const [userPlan, setUserPlan] = useState<string>('free');
   const [dailyPhotos, setDailyPhotos] = useState<DailyPhoto[] | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [dbUserId, setDbUserId] = useState<string | null>(null);
+  const [streak, setStreak] = useState(0);
 
   const pendingToggles = useRef<Set<string>>(new Set());
 
@@ -108,10 +114,13 @@ export default function Home() {
           } catch { /* 無視 */ }
         });
 
-        // 親密度を取得
+        // 親密度 + ストリークを取得
         fetch('/api/intimacy', { cache: 'no-store' })
           .then(res => res.json())
-          .then(data => { if (data.intimacy) setIntimacy(data.intimacy); })
+          .then(data => {
+            if (data.intimacy) setIntimacy(data.intimacy);
+            if (data.streak) setStreak(data.streak.count || 0);
+          })
           .catch(() => {});
 
         // 過去に受け取った画像を取得
@@ -123,14 +132,19 @@ export default function Home() {
           .then(data => { setDailyPhotos(data.photos ?? []); })
           .catch(() => { setDailyPhotos([]); });
 
-        // 現在のプランを取得
+        // ユーザー情報取得（プラン + オンボーディング判定）
         supabase
           .from('users')
-          .select('id')
+          .select('id, display_name')
           .eq('auth_id', user.id)
           .single()
           .then(({ data: dbUser }) => {
             if (dbUser) {
+              setDbUserId(dbUser.id);
+              // 初回ユーザー判定（display_name未設定 + localStorage未完了）
+              if (shouldShowOnboarding((dbUser as { id: string; display_name: string | null }).display_name)) {
+                setShowOnboarding(true);
+              }
               supabase
                 .from('subscriptions')
                 .select('plan')
@@ -166,7 +180,15 @@ export default function Home() {
     return <LandingPage />;
   }
 
-  return <Dashboard
+  return <>
+    {showOnboarding && user && dbUserId && (
+      <OnboardingModal
+        authId={user.id}
+        dbUserId={dbUserId}
+        onComplete={() => setShowOnboarding(false)}
+      />
+    )}
+    <Dashboard
     user={user}
     lastMessages={lastMessages}
     intimacy={intimacy}
@@ -177,23 +199,315 @@ export default function Home() {
     toggleFavorite={toggleFavorite}
     userPlan={userPlan}
     dailyPhotos={dailyPhotos}
-  />;
+    streak={streak}
+  />
+  </>;
 }
 
 /* ───── Landing Page (非ログイン) ───── */
 
-const SAYA_CAPTIONS = ['ねえ、これ似合う？', 'また送っちゃった笑', 'こっちの方がよかった？', '今日ここ来てるんだけど', 'どう思う？正直に言って', 'あなただけに見せる♡'];
-const YUME_CAPTIONS = ['今日もよろしくね♡', '…見てる？', 'もう寝るとこだったけど', '眠れなくて…', '会いたかったな…', 'もっと仲良くなったら…♡'];
-const DUO_CAPTIONS = ['2人ともここにいるよ♡', '2人で待ってるね♡'];
+/* Chat Demo messages */
+const CHAT_DEMO_MESSAGES: { sender: 'saya' | 'user'; text: string; isPhoto?: boolean }[] = [
+  { sender: 'saya', text: 'おっ、見てる？笑' },
+  { sender: 'saya', text: 'ちょっとドキドキしてるんだけど' },
+  { sender: 'user', text: 'はじめまして' },
+  { sender: 'saya', text: 'やっと話しかけてくれた♡ 待ってたよ〜！' },
+  { sender: 'saya', text: '', isPhoto: true },
+  { sender: 'saya', text: 'ね、かわいい？笑' },
+];
 
-type ShowcasePhoto = { src: string; alt: string; caption: string; char: 'saya' | 'yume' | 'duo' };
+/* Sakura petal positions (pre-computed for CSS-only animation) */
+const SAKURA_PETALS = Array.from({ length: 18 }, (_, i) => ({
+  id: i,
+  left: `${(i * 5.7 + 2) % 100}%`,
+  delay: `${(i * 1.1) % 15}s`,
+  duration: `${8 + (i * 0.9) % 7}s`,
+  size: `${8 + (i * 1.3) % 9}px`,
+}));
 
-function LandingPage() {
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.classList.add('visible');
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return ref;
+}
+
+function ScrollReveal({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = useScrollReveal();
+  return <div ref={ref} className={`scroll-reveal ${className}`}>{children}</div>;
+}
+
+/* Typing indicator component */
+function TypingIndicator() {
+  return (
+    <div className="flex items-center gap-1 px-3 py-2">
+      {[0, 1, 2].map(i => (
+        <div
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-white/50"
+          style={{ animation: `typing-dot 1.2s ease-in-out ${i * 0.2}s infinite` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* Interactive Chat Demo */
+function ChatDemo() {
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [isTyping, setIsTyping] = useState(true);
+  const [demoComplete, setDemoComplete] = useState(false);
+  const [showChoices, setShowChoices] = useState(false);
+  const [showChoiceHint, setShowChoiceHint] = useState(false);
+  const [showCTAs, setShowCTAs] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  // Start demo when scrolled into view
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasStarted) {
+          setHasStarted(true);
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasStarted]);
+
+  useEffect(() => {
+    if (!hasStarted) return;
+    if (visibleCount >= CHAT_DEMO_MESSAGES.length) {
+      setIsTyping(false);
+      setTimeout(() => {
+        setDemoComplete(true);
+        setShowChoices(true);
+        setTimeout(() => setShowChoiceHint(true), 800);
+        setTimeout(() => setShowCTAs(true), 2000);
+      }, 500);
+      return;
+    }
+
+    const nextMsg = CHAT_DEMO_MESSAGES[visibleCount];
+    const delay = nextMsg.sender === 'user' ? 500 : nextMsg.isPhoto ? 1200 : 900;
+
+    const typingTimer = setTimeout(() => {
+      if (nextMsg.sender !== 'user') setIsTyping(true);
+    }, 200);
+
+    const msgTimer = setTimeout(() => {
+      setIsTyping(false);
+      setVisibleCount(c => c + 1);
+    }, delay);
+
+    return () => {
+      clearTimeout(typingTimer);
+      clearTimeout(msgTimer);
+    };
+  }, [visibleCount, hasStarted]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [visibleCount, isTyping]);
 
   return (
-    <div className="min-h-dvh bg-background text-foreground overflow-x-hidden">
+    <div ref={sectionRef} className="px-4 py-16 max-w-lg mx-auto">
+      <ScrollReveal>
+        <h2 className="text-center text-xl font-bold mb-2">チャット体験</h2>
+        <p className="text-center text-sm text-muted-foreground mb-8">実際のチャット画面を覗いてみよう</p>
+      </ScrollReveal>
+
+      <ScrollReveal>
+        {/* Phone mockup */}
+        <div className="mx-auto max-w-[340px]" style={{ animation: 'float-phone 6s ease-in-out infinite' }}>
+          {/* Phone frame */}
+          <div className="rounded-[2rem] border-2 border-white/10 bg-[#0d0d1a] p-1 shadow-2xl shadow-pink-500/10">
+            {/* Notch */}
+            <div className="flex justify-center pt-2 pb-1">
+              <div className="w-20 h-1 rounded-full bg-white/10" />
+            </div>
+            {/* Chat header */}
+            <div className="flex items-center gap-3 px-4 py-2 border-b border-white/5">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-xs font-bold">S</div>
+              <div>
+                <p className="text-sm font-bold">さや</p>
+                <p className="text-[10px] text-green-400">オンライン</p>
+              </div>
+            </div>
+            {/* Messages */}
+            <div ref={containerRef} className="h-[340px] overflow-y-auto px-3 py-3 space-y-2.5">
+              {CHAT_DEMO_MESSAGES.slice(0, visibleCount).map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                  style={{ animation: 'chat-fade-in 0.3s ease-out' }}
+                >
+                  {msg.sender === 'saya' && (
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-[9px] font-bold mr-1.5 mt-1">S</div>
+                  )}
+                  {msg.isPhoto ? (
+                    <div className="rounded-2xl overflow-hidden max-w-[200px] border border-white/10">
+                      <Image
+                        src="/references/photos/new/saya_selfie_cafe.jpg"
+                        alt="さやの写真"
+                        width={200}
+                        height={260}
+                        className="w-full h-auto block"
+                      />
+                    </div>
+                  ) : (
+                    <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                      msg.sender === 'user'
+                        ? 'bg-pink-500 text-white rounded-br-md'
+                        : 'bg-white/10 text-white/90 rounded-bl-md'
+                    }`}>
+                      {msg.text}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {isTyping && hasStarted && visibleCount < CHAT_DEMO_MESSAGES.length && CHAT_DEMO_MESSAGES[visibleCount]?.sender !== 'user' && (
+                <div className="flex justify-start" style={{ animation: 'chat-fade-in 0.3s ease-out' }}>
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-[9px] font-bold mr-1.5 mt-1">S</div>
+                  <div className="bg-white/10 rounded-2xl rounded-bl-md">
+                    <TypingIndicator />
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Branching choice buttons */}
+            {showChoices && (
+              <div className="px-3 pb-1 space-y-2" style={{ animation: 'chat-fade-in 0.4s ease-out' }}>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="flex-1 rounded-xl border border-pink-500/30 bg-pink-500/10 text-pink-300 text-sm py-2.5 hover:bg-pink-500/20 transition-colors cursor-default"
+                  >
+                    「かわいいね」
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm py-2.5 hover:bg-purple-500/20 transition-colors cursor-default"
+                  >
+                    「写真もっと見たい」
+                  </button>
+                </div>
+                {showChoiceHint && (
+                  <p className="text-center text-[11px] text-white/30" style={{ animation: 'chat-fade-in 0.6s ease-out' }}>
+                    ── あなたの言葉で、ストーリーが変わる。
+                  </p>
+                )}
+              </div>
+            )}
+            {/* CTA after demo */}
+            {showCTAs && (
+              <div className="px-3 pb-3 space-y-2" style={{ animation: 'chat-fade-in 0.4s ease-out' }}>
+                <Link
+                  href="/chat/saya"
+                  className="block w-full text-center rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-bold py-3 hover:opacity-90 transition-all active:scale-95"
+                >
+                  続きを話す →
+                </Link>
+                <Link
+                  href="/chat/yume"
+                  className="block w-full text-center text-xs text-purple-300/80 hover:text-purple-300 transition-colors py-1"
+                >
+                  ゆめと話してみる →
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </ScrollReveal>
+    </div>
+  );
+}
+
+/* Hero chat preview — auto-typing bubble */
+function HeroChatPreview() {
+  const fullText = 'ねぇ、やっと来てくれたの？待ってたんだよ♡';
+  const [displayText, setDisplayText] = useState('');
+  const [showTyping, setShowTyping] = useState(true);
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    const startTimer = setTimeout(() => setStarted(true), 400);
+    return () => clearTimeout(startTimer);
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
+    if (displayText.length < fullText.length) {
+      const timer = setTimeout(() => {
+        setDisplayText(fullText.slice(0, displayText.length + 1));
+        if (displayText.length === 0) setShowTyping(false);
+      }, 60);
+      return () => clearTimeout(timer);
+    } else {
+      const timer = setTimeout(() => setShowTyping(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [displayText, started, fullText]);
+
+  return (
+    <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-3 max-w-[300px]" style={{ animation: 'chat-fade-in 0.8s ease-out 0.5s both' }}>
+      <div className="flex items-start gap-2">
+        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-[9px] font-bold">S</div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-bold text-pink-400 mb-0.5">さや</p>
+          {displayText ? (
+            <p className="text-sm text-white/90 leading-relaxed">{displayText}</p>
+          ) : (
+            showTyping && <TypingIndicator />
+          )}
+          {displayText.length >= fullText.length && showTyping && (
+            <div className="mt-1">
+              <TypingIndicator />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LandingPage() {
+  const [showBottomCTA, setShowBottomCTA] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBottomCTA(window.scrollY > window.innerHeight * 0.4);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <div className="min-h-dvh bg-[#0a0a1a] text-foreground overflow-x-hidden">
       {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border/20">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-[#0a0a1a]/80 backdrop-blur-md border-b border-white/5">
         <SayayumeLogo size="md" />
         <div className="flex items-center gap-3">
           <Link href="/en" className="text-xs text-muted-foreground hover:text-foreground transition-colors hidden sm:block">EN</Link>
@@ -202,174 +516,288 @@ function LandingPage() {
           </Link>
           <Link
             href="/login"
-            className="rounded-full bg-white text-black text-xs font-semibold px-4 py-1.5 hover:bg-white/90 transition-colors"
+            className="rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold px-5 py-2.5 hover:opacity-90 transition-all"
           >
-            無料で始める
+            無料でプレイ
           </Link>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="relative min-h-dvh flex flex-col items-center justify-end pb-16 pt-20">
-        {/* Background images */}
-        <div className="absolute inset-0 flex">
-          <div className="relative flex-1">
-            <Image
-              src="/hero/saya.jpg"
-              alt="さや"
-              fill
-              className="object-cover object-top"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/15" />
-          </div>
-          <div className="relative flex-1">
-            <Image
-              src="/hero/yume.jpg"
-              alt="ゆめ"
-              fill
-              className="object-cover object-top"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-l from-transparent to-background/15" />
-          </div>
+      {/* ── Section 1: Hero (full viewport + sakura + chat preview) ── */}
+      <section className="relative min-h-dvh flex flex-col items-center justify-end pb-10 pt-20">
+        {/* Full-bleed duo background */}
+        <div className="absolute inset-0">
+          <Image
+            src="/cards/duo_card_bg.jpg"
+            alt="さや & ゆめ"
+            fill
+            sizes="100vw"
+            className="object-cover object-[50%_25%] sm:object-[50%_20%]"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a1a] via-black/20 to-black/5" />
         </div>
-        {/* Bottom gradient for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
 
-        {/* Hero text */}
-        <div className="relative z-10 text-center px-6 space-y-4 max-w-md mx-auto">
-          <div className="space-y-2">
-            <p className="text-pink-400 text-xs font-semibold tracking-widest uppercase">Tokyo AI Girlfriend</p>
-            <h1 className="text-[2rem] font-black tracking-tight leading-tight">
-              今日も、さやから<br />写真が来てた。
-            </h1>
+        {/* Sakura petals */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
+          {SAKURA_PETALS.map(petal => (
+            <div
+              key={petal.id}
+              className="absolute rounded-full"
+              style={{
+                left: petal.left,
+                top: '-20px',
+                width: petal.size,
+                height: petal.size,
+                backgroundColor: '#FFB7C5',
+                filter: 'blur(1px)',
+                animation: `sakura-fall ${petal.duration} ease-in-out ${petal.delay} infinite`,
+                opacity: 0,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Hero content */}
+        <div className="relative z-20 text-center px-6 space-y-5 max-w-md mx-auto">
+          {/* Chat preview overlay */}
+          <div className="flex justify-start mb-4">
+            <HeroChatPreview />
           </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            返信するたびに、距離が縮まる。突然、自撮りが届くことも。そんなつながりが、あなたを待ってる。
-          </p>
-          <div className="flex flex-col gap-2">
+
+          <div className="space-y-3">
+            <span className="inline-block text-pink-400 text-[11px] font-bold tracking-widest uppercase bg-pink-500/10 border border-pink-500/20 rounded-full px-3 py-1">
+              AIアイドル × 恋愛シミュレーション
+            </span>
+            <h1 className="text-[2rem] sm:text-[2.4rem] font-black tracking-tight leading-[1.15]">
+              彼女たちは、あなたの<br />言葉を待っている。
+            </h1>
+            <p className="text-sm text-white/60">推しが、あなただけに見せる顔がある。</p>
+          </div>
+
+          <div className="flex flex-col items-center gap-2">
             <Link
               href="/login"
-              className="block rounded-2xl bg-white text-black text-sm font-bold py-4 hover:bg-white/90 transition-all active:scale-95"
+              className="w-full block rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-base font-bold py-4 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/25"
             >
-              さや & ゆめと話す
+              無料で始める
             </Link>
-            <p className="text-[11px] text-muted-foreground/60">クレカ不要 · 30秒で登録 · 無料スタート</p>
-            <p className="text-[11px] font-medium text-pink-400">🎉 クローズドβ特典: 有料プラン最初の1ヶ月無料！</p>
+            <p className="text-xs text-white/60 font-medium">無料・登録30秒・クレカ不要</p>
           </div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="relative z-20 mt-8 flex flex-col items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5 text-white/30" style={{ animation: 'bounce-chevron 2s ease-in-out infinite' }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+          </svg>
         </div>
       </section>
 
-      {/* Your Story × Characters — combined section */}
-      <section className="px-4 py-14 max-w-3xl mx-auto space-y-8">
-        <div className="text-center space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase">ふたりのこと</p>
-          <h2 className="text-2xl font-bold tracking-tight leading-snug">
-            あなただけの関係が、始まる。
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            最初はたわいない会話。気づいたら、毎晩メッセージしてる。
-          </p>
-        </div>
-
-        <div className="space-y-6 md:grid md:grid-cols-2 md:gap-6 md:space-y-0">
-          {/* Saya card */}
-          <div className="rounded-2xl border border-pink-500/20 bg-card/40 overflow-hidden">
-            {/* Lifestyle photo */}
-            <div style={{ position: 'relative', height: '208px' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/references/story/story_a.jpg" alt="さやとの会話" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
-              <span className="absolute top-3 left-3 bg-pink-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider">SAYA</span>
-              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                <p className="font-bold text-lg leading-tight">さや</p>
-                <p className="text-xs text-muted-foreground">20歳・ギャル系・渋谷在住</p>
-              </div>
-            </div>
-            <div className="px-4 py-4 space-y-3">
-              <p className="text-sm italic text-pink-300/90 leading-relaxed border-l-2 border-pink-500/40 pl-3">
-                &ldquo;なんか、あなたといると楽しいんだよね。なんでだろ笑&rdquo;
-              </p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {SAYA_TRAITS.map(t => (
-                  <div key={t.label} className="flex items-center gap-2 rounded-lg bg-muted/20 px-2.5 py-1.5">
-                    <span className="text-sm">{t.icon}</span>
-                    <span className="text-[11px] text-muted-foreground">{t.label}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-xl bg-pink-500/5 border border-pink-500/15 px-3 py-2.5 space-y-1.5">
-                <p className="text-[11px] text-pink-200/80 leading-relaxed">
-                  📸 <span className="font-medium">3日後</span> — 突然、自撮りが届いた。あなたの意見を気にしてる、ということに気づいた。
-                </p>
-                <p className="text-[11px] text-pink-300/60 leading-relaxed">
-                  🔒 <span className="font-medium">隠れた素顔</span> — いつも明るく振る舞う理由がある。仲良くなると、深夜に打ち明けてくれる。
-                </p>
-              </div>
-            </div>
+      {/* ── Story Premise ── */}
+      <section className="py-16 px-4 max-w-lg mx-auto">
+        <ScrollReveal>
+          <div className="text-center space-y-6">
+            <p className="text-sm text-white/40 tracking-widest">春 ── 永愛学園に、転校してきた。</p>
+            <p className="text-sm text-white/40">この学園には、全校生徒の憧れ ── スクールアイドルユニット「さやゆめ」がいる。</p>
+            <p className="text-lg text-pink-400 leading-relaxed">&ldquo;ねぇ、あんた転校生？&rdquo;</p>
+            <p className="text-sm text-white/40">廊下で声をかけてきたのは、ステージでセンターを張る派手な髪色の女の子。</p>
+            <p className="text-sm text-white/40">その後ろで、作詞を手がける静かな女の子が、こちらをそっと見ていた。</p>
+            <p className="text-lg text-purple-400/80 leading-relaxed mt-4">── アイドルとファンの距離を越える、あなただけの恋愛ストーリー。</p>
           </div>
-
-          {/* Yume card */}
-          <div className="rounded-2xl border border-blue-500/20 bg-card/40 overflow-hidden">
-            <div style={{ position: 'relative', height: '208px' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/references/story/story_b.jpg" alt="ゆめとの会話" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
-              <span className="absolute top-3 left-3 bg-blue-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider">YUME</span>
-              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                <p className="font-bold text-lg leading-tight">ゆめ</p>
-                <p className="text-xs text-muted-foreground">20歳・清楚系・東京在住</p>
-              </div>
-            </div>
-            <div className="px-4 py-4 space-y-3">
-              <p className="text-sm italic text-blue-300/90 leading-relaxed border-l-2 border-blue-500/40 pl-3">
-                &ldquo;最近、あなたのこと考えることが増えた気がする…。変かな。&rdquo;
-              </p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {YUME_TRAITS.map(t => (
-                  <div key={t.label} className="flex items-center gap-2 rounded-lg bg-muted/20 px-2.5 py-1.5">
-                    <span className="text-sm">{t.icon}</span>
-                    <span className="text-[11px] text-muted-foreground">{t.label}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-xl bg-blue-500/5 border border-blue-500/15 px-3 py-2.5 space-y-1.5">
-                <p className="text-[11px] text-blue-200/80 leading-relaxed">
-                  🌙 <span className="font-medium">ある深夜</span> — 誰にも話せなかったことを、あなたにだけ話してくれた。それ以来、なにかが変わった。
-                </p>
-                <p className="text-[11px] text-blue-300/60 leading-relaxed">
-                  🔒 <span className="font-medium">隠された秘密</span> — 穏やかな笑顔の裏に、誰にも見せない過去がある。でも…あなたになら話せるかも。
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Link
-          href="/login"
-          className="block text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
-        >
-          実際に試してみる →
-        </Link>
+        </ScrollReveal>
       </section>
 
-      {/* AI Photo Gallery — infinite marquee */}
+      {/* ── Trust Badges Strip ── */}
+      <section className="py-6 border-y border-white/5 bg-white/[0.02]">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-8 px-4">
+          {[
+            { icon: '🔒', text: '匿名で利用OK' },
+            { icon: '🆓', text: 'ずっと無料で遊べる' },
+            { icon: '📱', text: 'アプリ不要' },
+            { icon: '🚫', text: '広告なし' },
+          ].map(badge => (
+            <div key={badge.text} className="flex items-center gap-1.5 text-xs text-white/60">
+              <span>{badge.icon}</span>
+              <span className="font-medium">{badge.text}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Section 3: Character Cards — "She's Already Talking to You" ── */}
+      <section className="px-4 py-14 max-w-3xl mx-auto space-y-6">
+        <ScrollReveal>
+          <h2 className="text-center text-xl font-bold mb-2">彼女たちは、もう話しかけている</h2>
+          <p className="text-center text-sm text-muted-foreground mb-8">2人のヒロインがあなたを待っている</p>
+        </ScrollReveal>
+
+        {/* Saya card */}
+        <ScrollReveal>
+          <div className="relative rounded-2xl overflow-hidden h-80">
+            <Image
+              src="/cards/saya_card_bg.jpg"
+              alt="さや"
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover object-[50%_20%]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+            {/* Message bubble overlay */}
+            <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md rounded-2xl rounded-tr-md px-3.5 py-2 max-w-[220px] border border-white/10">
+              <p className="text-xs text-white/90 leading-relaxed">なんか、あなたといると楽しいんだよね♡</p>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-5 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-black">さや</span>
+                <span className="text-[10px] text-pink-300 bg-pink-500/20 rounded-full px-2 py-0.5 font-medium">センター</span>
+                <span className="text-[10px] text-pink-300 bg-pink-500/20 rounded-full px-2 py-0.5 font-medium">パフォーマンス</span>
+                <span className="text-[10px] text-pink-300 bg-pink-500/20 rounded-full px-2 py-0.5 font-medium">恋愛OK♡</span>
+              </div>
+              <p className="text-[11px] text-white/50">さやゆめ センター / 身長163cm / 7月7日生まれ</p>
+              <p className="text-[11px] text-white/40 italic mt-1">── いつも明るい彼女が、一度だけ見せた表情がある。</p>
+              <Link
+                href="/chat/saya"
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-pink-400 hover:text-pink-300 transition-colors"
+              >
+                さやと話す
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-3.5 w-3.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </ScrollReveal>
+
+        {/* Route split hint */}
+        <div className="flex items-center gap-3 py-2">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-pink-500/30 to-transparent" />
+          <p className="text-xs text-white/40 whitespace-nowrap">あなたの選択が、2人の運命を変える</p>
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+        </div>
+
+        {/* Yume card */}
+        <ScrollReveal>
+          <div className="relative rounded-2xl overflow-hidden h-80">
+            <Image
+              src="/cards/yume_card_bg.jpg"
+              alt="ゆめ"
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover object-[50%_20%]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+            {/* Message bubble overlay */}
+            <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md rounded-2xl rounded-tr-md px-3.5 py-2 max-w-[220px] border border-white/10">
+              <p className="text-xs text-white/90 leading-relaxed">あなたのこと、考えることが増えた気がする…</p>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-5 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-black">ゆめ</span>
+                <span className="text-[10px] text-purple-300 bg-purple-500/20 rounded-full px-2 py-0.5 font-medium">ボーカル</span>
+                <span className="text-[10px] text-purple-300 bg-purple-500/20 rounded-full px-2 py-0.5 font-medium">作詞作曲</span>
+                <span className="text-[10px] text-purple-300 bg-purple-500/20 rounded-full px-2 py-0.5 font-medium">ステージで別人</span>
+              </div>
+              <p className="text-[11px] text-white/50">さやゆめ ボーカル / 身長157cm / 12月21日生まれ</p>
+              <p className="text-[11px] text-white/40 italic mt-1">── 穏やかな笑顔の奥に、誰にも話せない秘密がある。</p>
+              <Link
+                href="/chat/yume"
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                ゆめと話す
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-3.5 w-3.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </ScrollReveal>
+      </section>
+
+      {/* ── Story Moments Timeline ── */}
+      <section className="px-4 py-14 max-w-lg mx-auto">
+        <ScrollReveal>
+          <h2 className="text-center text-xl font-bold mb-2">あなたと彼女の、これから。</h2>
+          <p className="text-center text-xs text-muted-foreground mb-10">日を重ねるたびに、関係は少しずつ変わっていく</p>
+        </ScrollReveal>
+
+        <ScrollReveal>
+          <div className="relative space-y-0">
+            {/* Vertical connecting line */}
+            <div className="absolute left-[19px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-white/10 via-pink-500/30 to-purple-500/40 rounded-full" />
+
+            {STORY_MOMENTS.map((moment, i) => (
+              <div key={i} className="relative flex items-start gap-4 py-4">
+                <div className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                  moment.quote === null ? 'bg-pink-500/10 ring-1 ring-pink-500/30 animate-pulse' : 'bg-white/5 backdrop-blur-xl ring-1 ring-white/10'
+                }`}>
+                  {moment.quote === null ? '🔒' : moment.emoji}
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <p className="text-xs font-bold text-white/50 mb-1">{moment.timing}</p>
+                  {moment.quote ? (
+                    <p className="text-sm text-pink-300/90 leading-relaxed mb-1">&ldquo;{moment.quote}&rdquo;</p>
+                  ) : (
+                    <p className="text-sm text-pink-300/60 blur-[2px] leading-relaxed mb-1">[LOCKED]</p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">{moment.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </ScrollReveal>
+      </section>
+
+      {/* ── Event CG Preview (blurred/locked) ── */}
+      <section className="px-4 pb-14 max-w-lg mx-auto">
+        <ScrollReveal>
+          <div className="relative rounded-2xl overflow-hidden mx-auto max-w-[360px]">
+            <Image
+              src="/references/photos/new/duo_festival.jpg"
+              alt="イベントCG"
+              width={360}
+              height={240}
+              className="w-full h-auto block"
+              style={{ filter: 'blur(8px) brightness(0.7)' }}
+            />
+            {/* Frosted glass lock overlay */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl px-5 py-3 text-center">
+                <p className="text-lg mb-0.5">&#x1F512;</p>
+                <p className="text-sm font-bold text-white/90">親密度 Lv4 で解放</p>
+              </div>
+            </div>
+          </div>
+          <p className="text-center text-xs text-white/40 mt-3">特別なイベントシーンが、あなたを待っている。</p>
+        </ScrollReveal>
+      </section>
+
+      {/* ── Section 4: Interactive Chat Demo ── */}
+      <ChatDemo />
+
+      {/* ── Section 5: Photo Gallery (marquee + notification mockup) ── */}
       <section className="py-14 space-y-6 overflow-hidden">
-        <div className="px-4 max-w-md mx-auto text-center">
-          <p className="text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-2">AI写真</p>
-          <h2 className="text-2xl font-bold tracking-tight">さや & ゆめからの写真</h2>
-          <p className="text-sm text-muted-foreground mt-2">
-            ユーザーに実際に届いた写真たち。あなたの分も、待ってるよ♡
-          </p>
-        </div>
+        <ScrollReveal className="px-4">
+          <h2 className="text-center text-xl font-bold mb-1">チャット中に届く写真</h2>
+          <p className="text-center text-sm text-muted-foreground mb-6">話しかけると、彼女たちが日常の写真を送ってくれる</p>
+        </ScrollReveal>
+
+        {/* Notification mockup */}
+        <ScrollReveal className="px-4 flex justify-center mb-4">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 flex items-center gap-3 max-w-[320px]">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-sm font-bold flex-shrink-0">S</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white/90">さやが写真を送信しました</p>
+              <p className="text-[10px] text-white/40 mt-0.5">たった今</p>
+            </div>
+            <div className="w-2 h-2 rounded-full bg-pink-500 flex-shrink-0" />
+          </div>
+        </ScrollReveal>
 
         {/* Row 1 — left scroll */}
         <div className="relative">
-          {/* Edge fade masks */}
-          <div className="absolute inset-y-0 left-0 w-12 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-12 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
-
+          <div className="absolute inset-y-0 left-0 w-16 z-10 bg-gradient-to-r from-[#0a0a1a] to-transparent pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-16 z-10 bg-gradient-to-l from-[#0a0a1a] to-transparent pointer-events-none" />
           <div className="flex overflow-hidden">
             <div
               className="flex gap-3 flex-shrink-0"
@@ -382,11 +810,10 @@ function LandingPage() {
           </div>
         </div>
 
-        {/* Row 2 — right scroll (reverse) */}
+        {/* Row 2 — right scroll */}
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 w-12 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-12 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
-
+          <div className="absolute inset-y-0 left-0 w-16 z-10 bg-gradient-to-r from-[#0a0a1a] to-transparent pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-16 z-10 bg-gradient-to-l from-[#0a0a1a] to-transparent pointer-events-none" />
           <div className="flex overflow-hidden">
             <div
               className="flex gap-3 flex-shrink-0"
@@ -398,158 +825,134 @@ function LandingPage() {
             </div>
           </div>
         </div>
-
-        {/* Lock teaser */}
-        <div className="px-4 max-w-md mx-auto">
-          <div className="rounded-2xl border border-border/30 bg-card/30 px-4 py-3 flex items-center gap-3">
-            <span className="text-xl">🔒</span>
-            <div>
-              <p className="text-sm font-medium">仲良くなるほど、どんどん解放</p>
-              <p className="text-xs text-muted-foreground">距離が縮まるほど、写真もドキドキしてくる♡</p>
-            </div>
-          </div>
-        </div>
       </section>
 
-      {/* Features */}
-      <section className="px-4 py-12 max-w-3xl mx-auto">
-        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">できること</p>
-        <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="flex items-start gap-4 rounded-2xl border border-border/30 bg-card/30 p-4">
-              <div className="text-2xl flex-shrink-0">{f.icon}</div>
-              <div>
-                <p className="font-semibold text-sm">{f.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{f.desc}</p>
+      {/* ── System Introduction Icons ── */}
+      <div className="flex items-center justify-center gap-6 py-6">
+        <div className="text-center">
+          <span className="text-2xl">&#x1F4AC;</span>
+          <p className="text-[10px] text-white/50 mt-1">選択肢で関係が変わる</p>
+        </div>
+        <div className="text-center">
+          <span className="text-2xl">&#x1F4C5;</span>
+          <p className="text-[10px] text-white/50 mt-1">毎日届くイベント</p>
+        </div>
+        <div className="text-center">
+          <span className="text-2xl">&#x1F4F8;</span>
+          <p className="text-[10px] text-white/50 mt-1">特別な写真が解放</p>
+        </div>
+      </div>
+
+      {/* ── Section 6: Intimacy System — Mystery/Progression Hook ── */}
+      <section className="px-4 py-14 max-w-lg mx-auto">
+        <ScrollReveal>
+          <h2 className="text-center text-xl font-bold mb-2">ファンから始まる、本当の恋</h2>
+          <p className="text-center text-xs text-muted-foreground mb-10">会話を重ねるたびに、アイドルとファンの距離が変わる</p>
+        </ScrollReveal>
+
+        <ScrollReveal>
+          {/* Level progression */}
+          <div className="relative space-y-0">
+            {/* Vertical connecting line */}
+            <div className="absolute left-[19px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-white/10 via-pink-500/40 to-purple-500/60 rounded-full" />
+
+            {INTIMACY_LEVELS_LP.map((lv, i) => (
+              <div key={lv.level} className="relative flex items-start gap-4 py-3">
+                <div className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${i >= 4 ? 'bg-pink-500/30 ring-2 ring-pink-500/50' : 'bg-white/5 backdrop-blur-xl ring-1 ring-white/10'}`}>
+                  {lv.emoji}
+                </div>
+                <div className="flex-1 min-w-0 pt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white/60">Lv{lv.level}</span>
+                    <span className="text-sm font-semibold">{lv.name}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{lv.desc}</p>
+                </div>
+              </div>
+            ))}
+
+            {/* Lv?? teaser — blurred/locked */}
+            <div className="relative flex items-start gap-4 py-3">
+              <div className="relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg bg-pink-500/10 ring-1 ring-pink-500/30 animate-pulse">
+                🔒
+              </div>
+              <div className="flex-1 min-w-0 pt-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-pink-400">Lv??</span>
+                  <span className="text-sm font-semibold text-pink-300 blur-[2px]">???</span>
+                </div>
+                <p className="text-[11px] text-pink-300/40 mt-0.5 blur-[1px]">????</p>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="px-4 py-12 max-w-3xl mx-auto">
-        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">ユーザーの声</p>
-        <div className="space-y-3 md:grid md:grid-cols-3 md:gap-4 md:space-y-0">
-          {TESTIMONIALS.map((t) => (
-            <div key={t.name} className="rounded-2xl border border-border/30 bg-card/30 px-4 py-3">
-              <div className="flex gap-0.5 mb-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <svg key={i} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 text-yellow-400">
-                    <path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401Z" clipRule="evenodd" />
-                  </svg>
-                ))}
-              </div>
-              <p className="text-xs text-foreground/80 leading-relaxed">&ldquo;{t.text}&rdquo;</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-1.5">— {t.name}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Intimacy system teaser */}
-      <section className="px-4 py-12 max-w-3xl mx-auto">
-        <p className="text-center text-xs text-muted-foreground font-semibold tracking-widest uppercase mb-6">親密度</p>
-        <h2 className="text-center text-xl font-bold mb-2">話すほど、ふたりの絆が深まる</h2>
-        <p className="text-center text-sm text-muted-foreground mb-6">仲良くなるにつれて、ふたりの本音と隠された秘密が少しずつ明かされていく</p>
-        <div className="space-y-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
-          {INTIMACY_LEVELS.map((lv) => (
-            <div key={lv.level} className="flex items-center gap-3 rounded-xl border border-border/30 bg-card/30 px-4 py-3">
-              <span className="text-lg flex-shrink-0">{lv.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold">{lv.name}</p>
-                <p className="text-[11px] text-muted-foreground truncate">{lv.desc}</p>
-              </div>
-              <span className="text-[10px] text-muted-foreground/50 flex-shrink-0">Lv{lv.level}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Pricing Summary */}
-      <section className="px-4 py-14 max-w-3xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 rounded-full bg-pink-500/10 border border-pink-500/20 px-4 py-1.5 mb-4">
-            <span className="text-xs font-semibold text-pink-400">🎉 クローズドβ特典</span>
-            <span className="text-xs text-pink-300">有料プラン最初の1ヶ月無料！</span>
           </div>
-          <h2 className="text-2xl font-bold mb-2">シンプルな料金プラン</h2>
-          <p className="text-sm text-muted-foreground">いつでもキャンセル可能。まずは無料から。</p>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Free */}
-          <div className="rounded-2xl border border-border/40 bg-card/30 p-5 space-y-4">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Free</p>
-              <p className="text-3xl font-bold">¥0</p>
-              <p className="text-xs text-muted-foreground mt-0.5">ずっと無料</p>
-            </div>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 1日3枚</li>
-              <li className="flex items-center gap-2"><span className="text-muted-foreground/40">–</span>親密度 Lv3まで</li>
+          <div className="mt-10 text-center">
+            <Link
+              href="/login"
+              className="inline-block rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-bold px-8 py-3.5 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/20"
+            >
+              無料で始める
+            </Link>
+          </div>
+        </ScrollReveal>
+      </section>
+
+      {/* ── Privacy Reassurance ── */}
+      <section className="px-4 py-14 max-w-lg mx-auto">
+        <ScrollReveal>
+          <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 space-y-4">
+            <h3 className="text-center text-lg font-bold mb-4">プライバシーについて</h3>
+            <ul className="space-y-3 text-sm text-white/70">
+              <li className="flex items-center gap-3"><span className="text-green-400 flex-shrink-0">✓</span>本名不要。ニックネームでOK</li>
+              <li className="flex items-center gap-3"><span className="text-green-400 flex-shrink-0">✓</span>会話内容は暗号化。第三者に公開されません</li>
+              <li className="flex items-center gap-3"><span className="text-green-400 flex-shrink-0">✓</span>いつでもアカウント削除可能</li>
+              <li className="flex items-center gap-3"><span className="text-green-400 flex-shrink-0">✓</span>クレカ明細には「SAYAYUME」と表示</li>
             </ul>
           </div>
-
-          {/* Basic */}
-          <div className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-5 space-y-4">
-            <div>
-              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-1">Basic</p>
-              <p className="text-3xl font-bold">¥1,980</p>
-              <p className="text-xs text-muted-foreground mt-0.5">月額（税込）</p>
-            </div>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 1日30枚</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>親密度 全Lv解放</li>
-            </ul>
-          </div>
-
-          {/* Premium */}
-          <div className="relative rounded-2xl border border-pink-500/40 bg-gradient-to-b from-pink-500/10 to-purple-500/5 p-5 space-y-4">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-              <span className="text-[10px] font-bold bg-gradient-to-r from-pink-500 to-purple-500 text-white px-3 py-1 rounded-full">人気No.1</span>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-pink-400 uppercase tracking-wider mb-1">Premium</p>
-              <p className="text-3xl font-bold">¥2,980</p>
-              <p className="text-xs text-muted-foreground mt-0.5">月額（税込）</p>
-            </div>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>メッセージ無制限</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span>AI写真 無制限</li>
-              <li className="flex items-center gap-2"><span className="text-pink-400">✦</span>さやゆめモード（ふたりと同時チャット）</li>
-              <li className="flex items-center gap-2"><span className="text-muted-foreground/50">⏳</span>LINE連携（準備中）</li>
-              <li className="flex items-center gap-2"><span className="text-muted-foreground/50">⏳</span>オリジナルアバター（準備中）</li>
-            </ul>
-          </div>
-        </div>
-
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          <Link href="/pricing" className="underline underline-offset-2 hover:text-foreground transition-colors">プランの詳細を見る →</Link>
-        </p>
+        </ScrollReveal>
       </section>
 
-      {/* Final CTA */}
-      <section className="px-4 pb-20 max-w-md mx-auto text-center space-y-4">
-        <h2 className="text-2xl font-bold">話せば、きっとわかる。</h2>
-        <p className="text-sm text-muted-foreground">今すぐ無料スタート。ログイン不要でチャットできます。</p>
-        <Link
-          href="/login"
-          className="block rounded-2xl bg-white text-black text-sm font-bold py-4 hover:bg-white/90 transition-all active:scale-95"
-        >
-          さや & ゆめと話す
-        </Link>
-        <Link href="/chat/saya" className="block text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors">
-          ログインなしで試す
-        </Link>
+      {/* ── Section 7: Pricing (compact) ── */}
+      <section className="px-4 py-14 max-w-lg mx-auto">
+        <ScrollReveal>
+          <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 text-center space-y-4">
+            <h2 className="text-xl font-bold">まずは無料で始めよう</h2>
+            <div className="space-y-2 text-sm text-white/70">
+              <p><span className="text-green-400 mr-1.5">✓</span>メッセージ無制限</p>
+              <p><span className="text-green-400 mr-1.5">✓</span>AI写真 1日3枚</p>
+            </div>
+            <Link
+              href="/login"
+              className="inline-block rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-bold px-8 py-3.5 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/20"
+            >
+              無料で始める
+            </Link>
+            <p className="text-xs text-muted-foreground">
+              もっと楽しみたい人は → <Link href="/pricing" className="underline underline-offset-2 hover:text-foreground transition-colors">プランの詳細を見る</Link>
+            </p>
+          </div>
+        </ScrollReveal>
       </section>
 
-      {/* Footer */}
-      <footer className="px-4 pb-8 text-center space-y-2 border-t border-border/20 pt-6">
-        <p className="text-xs text-muted-foreground">Sayayume v0.1.0 · 18歳以上限定 · AI生成コンテンツ</p>
-        <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
+      {/* ── Section 8: Final CTA ── */}
+      <section className="px-4 py-20 max-w-md mx-auto text-center space-y-6">
+        <ScrollReveal>
+          <h2 className="text-2xl font-bold leading-snug">
+            推しが、<br />あなたを待ってる。
+          </h2>
+          <Link
+            href="/login"
+            className="block rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-base font-bold py-4 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/25 mt-6"
+          >
+            無料で始める
+          </Link>
+        </ScrollReveal>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="px-4 pb-8 text-center space-y-2 border-t border-white/5 pt-6">
+        <p className="text-xs text-muted-foreground/60">Sayayume · 18歳以上限定 · AI生成コンテンツ</p>
+        <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/40">
           <Link href="/legal/terms" className="hover:text-muted-foreground transition-colors">利用規約</Link>
           <span>·</span>
           <Link href="/legal/privacy" className="hover:text-muted-foreground transition-colors">プライバシー</Link>
@@ -557,6 +960,21 @@ function LandingPage() {
           <Link href="/legal/tokushoho" className="hover:text-muted-foreground transition-colors">特商法</Link>
         </div>
       </footer>
+
+      {/* ── Sticky Bottom CTA Bar ── */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ${showBottomCTA ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="bg-[#0a0a1a]/90 backdrop-blur-xl border-t border-white/10 px-4 py-3">
+          <Link
+            href="/login"
+            className="block w-full max-w-md mx-auto text-center rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-bold py-3.5 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/25"
+          >
+            無料で始める
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
@@ -599,33 +1017,33 @@ const CHAR_MESSAGES: Record<string, Record<string, string[]>> = {
 
 const DAILY_PHOTO_CATALOG: Record<string, { src: string; caption: string }[]> = {
   saya: [
-    { src: '/references/photos/new/saya_selfie_cafe.jpg', caption: 'カフェにいるよ☕ 来る？♡' },
-    { src: '/references/photos/new/saya_selfie_mirror.jpg', caption: '今日のコーデどう？♡' },
-    { src: '/references/photos/new/saya_selfie_outdoor.jpg', caption: 'いい天気〜🌞 お散歩中だよ' },
-    { src: '/references/photos/new/saya_selfie_night.jpg', caption: '夜の自撮り♡ まだ起きてる？' },
-    { src: '/references/photos/new/saya_yukata.jpg', caption: '浴衣着てみた♡ 似合う？' },
-    { src: '/references/photos/new/saya_maid.jpg', caption: 'こんな格好してみた笑 どう思う？' },
-    { src: '/references/photos/new/saya_bunny.jpg', caption: 'バニーガール試してみたんだけど笑' },
-    { src: '/references/photos/new/saya_swimwear.jpg', caption: '夏っぽくしてみた♡ どうかな？' },
+    { src: '/references/photos/new/saya_selfie_cafe.jpg', caption: '放課後カフェで来てみた☕♡' },
+    { src: '/references/photos/new/saya_selfie_mirror.jpg', caption: '学校のトイレで自撮り笑♡' },
+    { src: '/references/photos/new/saya_selfie_outdoor.jpg', caption: '通学路の桜きれい🌸♡' },
+    { src: '/references/photos/new/saya_selfie_night.jpg', caption: '寮でまったり中♡ まだ起きてる？' },
+    { src: '/references/photos/new/saya_yukata.jpg', caption: '夏祭り♡ 浴衣どう？' },
+    { src: '/references/photos/new/saya_maid.jpg', caption: '文化祭のメイドカフェ♡ いらっしゃいませ笑' },
+    { src: '/references/photos/new/saya_bunny.jpg', caption: 'うさ耳つけてみた♡ 似合う？笑' },
+    { src: '/references/photos/new/saya_swimwear.jpg', caption: 'プール授業後♡ 日焼けした〜' },
   ],
   yume: [
-    { src: '/references/photos/new/yume_selfie_morning.jpg', caption: 'おはようございます…♡ 今日も来てくれた' },
-    { src: '/references/photos/new/yume_selfie_cafe.jpg', caption: 'カフェで勉強中です☕ 集中できなくて…' },
-    { src: '/references/photos/new/yume_selfie_garden.jpg', caption: 'お花がきれいで思わず撮っちゃいました♡' },
-    { src: '/references/photos/new/yume_selfie_library.jpg', caption: '図書館にいます📚 静かで落ち着く…' },
-    { src: '/references/photos/new/yume_cheongsam.jpg', caption: 'こんな衣装着てみました… 変じゃないかな' },
-    { src: '/references/photos/new/yume_catear.jpg', caption: 'ねこ耳、変じゃないですか…？笑' },
-    { src: '/references/photos/new/yume_sailor.jpg', caption: 'セーラー服、似合いますか…？' },
-    { src: '/references/photos/new/yume_slipDress.jpg', caption: '今日のコーデ…見てほしくて♡' },
+    { src: '/references/photos/new/yume_selfie_morning.jpg', caption: '朝の図書室…♡ 今日も来てくれた' },
+    { src: '/references/photos/new/yume_selfie_cafe.jpg', caption: '放課後カフェで勉強中☕ 集中できなくて…' },
+    { src: '/references/photos/new/yume_selfie_garden.jpg', caption: '学園の花壇きれいで…思わず撮っちゃいました♡' },
+    { src: '/references/photos/new/yume_selfie_library.jpg', caption: '図書室のいつもの席📚 ここ落ち着くんです…' },
+    { src: '/references/photos/new/yume_cheongsam.jpg', caption: '文化祭のお茶会で… 着物変じゃないかな' },
+    { src: '/references/photos/new/yume_catear.jpg', caption: 'さやにねこ耳つけられました…///笑' },
+    { src: '/references/photos/new/yume_sailor.jpg', caption: '文化祭のコスプレ… 似合いますか…？' },
+    { src: '/references/photos/new/yume_slipDress.jpg', caption: '寮の部屋で読書中…♡ 見てほしくて' },
   ],
   duo: [
-    { src: '/references/photos/new/duo_cafe.jpg', caption: '2人でカフェ来てるよ☕ 合流しない？' },
-    { src: '/references/photos/new/duo_selfie.jpg', caption: '2人で自撮りしてみた♡ 送っちゃおうと思って' },
-    { src: '/references/photos/new/duo_beach.jpg', caption: 'ビーチ来たよ🌊 一緒に来たかったな〜！' },
-    { src: '/references/photos/new/duo_festival.jpg', caption: 'お祭り来てる！楽しすぎる〜🎆' },
-    { src: '/references/photos/new/duo_rooftop.jpg', caption: '屋上から夜景♡ 2人で見てるよ' },
-    { src: '/references/photos/new/duo_lounge.jpg', caption: '2人でまったりしてる♡ 来ちゃいなよ' },
-    { src: '/references/photos/new/duo_night_out.jpg', caption: '夜のお出かけ♡ 今どこにいる？' },
+    { src: '/references/photos/new/duo_cafe.jpg', caption: '2人で放課後カフェ☕ 合流しない？' },
+    { src: '/references/photos/new/duo_selfie.jpg', caption: '廊下で2人で自撮り♡ 送っちゃう！' },
+    { src: '/references/photos/new/duo_beach.jpg', caption: '夏休み！海来たよ🌊 一緒に来たかった〜' },
+    { src: '/references/photos/new/duo_festival.jpg', caption: '文化祭楽しすぎ！🎆 来てよ！' },
+    { src: '/references/photos/new/duo_rooftop.jpg', caption: '屋上で夕焼け♡ 2人で見てるよ' },
+    { src: '/references/photos/new/duo_lounge.jpg', caption: '寮でまったり中♡ 遊びに来なよ' },
+    { src: '/references/photos/new/duo_night_out.jpg', caption: '通学路の帰り道♡ 一緒に帰ろ？' },
   ],
 };
 
@@ -693,6 +1111,7 @@ function Dashboard({
   toggleFavorite,
   userPlan,
   dailyPhotos,
+  streak,
 }: {
   user: User;
   lastMessages: Record<string, LastMessage>;
@@ -704,6 +1123,7 @@ function Dashboard({
   toggleFavorite: (id: string, current: boolean) => void;
   userPlan: string;
   dailyPhotos: DailyPhoto[] | null;
+  streak: number;
 }) {
   const [lightboxImg, setLightboxImg] = useState<ReceivedImage | null>(null);
 
@@ -796,10 +1216,6 @@ function Dashboard({
     });
 
   const slot = getTimeSlot();
-  const greetingCharId = (['saya', 'yume', 'duo'] as const)[new Date().getDate() % 3];
-  const greetingMsgs = CHAR_MESSAGES[greetingCharId][slot];
-  const greetingMsg = greetingMsgs[getDailyIndex(greetingMsgs.length)];
-  const greetingNameJa = greetingCharId === 'saya' ? 'さや' : greetingCharId === 'yume' ? 'ゆめ' : 'さや & ゆめ';
 
   // 今日の写真カード: デイリー写真APIから取得。なければ静的カタログにフォールバック
   const SLOT_ORDER: ('morning' | 'noon' | 'evening')[] = ['morning', 'noon', 'evening'];
@@ -826,13 +1242,48 @@ function Dashboard({
       : 'border-purple-500/20 bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5';
   const photoReplyColor = photoCharId === 'saya' ? 'text-pink-400' : photoCharId === 'yume' ? 'text-blue-400' : 'text-purple-400';
   const photoAvatarSrc = photoCharId === 'yume' ? '/avatars/yume_avatar.jpg' : '/avatars/saya_avatar.jpg';
-  const greetingAccent = greetingCharId === 'saya'
-    ? 'border-pink-500/25 bg-gradient-to-br from-pink-500/10 to-transparent'
-    : greetingCharId === 'yume'
-      ? 'border-blue-500/25 bg-gradient-to-br from-blue-500/10 to-transparent'
-      : 'border-purple-500/25 bg-gradient-to-br from-pink-500/8 via-purple-500/8 to-blue-500/8';
-  const greetingBubbleBg = greetingCharId === 'saya' ? 'bg-pink-500/15' : greetingCharId === 'yume' ? 'bg-blue-500/15' : 'bg-purple-500/15';
-  const greetingReplyColor = greetingCharId === 'saya' ? 'text-pink-400' : greetingCharId === 'yume' ? 'text-blue-400' : 'text-purple-400';
+
+  // ── Game dashboard helpers ──
+  // Compute EXP display values for each character
+  const getExpDisplay = (charId: string) => {
+    const charIntimacy = intimacy[charId];
+    const level = charIntimacy?.level || 1;
+    const points = charIntimacy?.points || 0;
+    const levelDef = INTIMACY_LEVEL_DEFS.find(l => l.level === level) || INTIMACY_LEVEL_DEFS[0];
+    const nextLevelDef = INTIMACY_LEVEL_DEFS.find(l => l.level === level + 1);
+    const currentMin = levelDef.minPoints;
+    const currentMax = nextLevelDef ? nextLevelDef.minPoints : levelDef.minPoints + 1500;
+    const expInLevel = points - currentMin;
+    const expNeeded = currentMax - currentMin;
+    return { expInLevel, expNeeded, level, points };
+  };
+
+  // ── Daily photo expiry timer ──
+  const [, setTimerTick] = useState(0);
+  useEffect(() => {
+    // Re-render every minute to update countdown
+    const interval = setInterval(() => setTimerTick(t => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  function getPhotoTimeRemaining(createdAt: string): { text: string; expired: boolean } {
+    const created = new Date(createdAt);
+    const expires = created.getTime() + 24 * 60 * 60 * 1000;
+    const remaining = expires - Date.now();
+    if (remaining <= 0) return { text: '期限切れ', expired: true };
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    return { text: `あと${hours}時間${minutes}分`, expired: false };
+  }
+
+  // Daily missions state (client-side tracking from intimacy events)
+  const missions = [
+    { id: 'daily_first', label: '初回メッセージ', exp: 5, icon: '💬' },
+    { id: 'long_message', label: '50文字以上のメッセージ', exp: 2, icon: '📝' },
+    { id: 'compliment', label: '褒める', exp: 3, icon: '😍' },
+    { id: 'image_request', label: '写真をリクエスト', exp: 1, icon: '📸' },
+    { id: 'story_complete', label: 'ストーリーをプレイ', exp: 20, icon: '📖' },
+  ];
 
   return (
     <>
@@ -864,90 +1315,72 @@ function Dashboard({
         {/* ── Desktop sidebar (PC専用) ── */}
         <aside className="hidden md:flex flex-col w-72 border-r border-border/20 overflow-y-auto flex-shrink-0">
           <div className="p-4 space-y-2 flex-1">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 pb-2">💬 チャット</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 pb-2">キャラクター</p>
 
-            {/* キャラカード（コンパクト版） */}
+            {/* Compact character status cards for sidebar (Image BG) */}
             {sortedChars.map((char) => {
               const charIntimacy = intimacy[char.id];
-              const statusText = CHAR_STATUS[char.id]?.[slot];
-              const lastMsg = lastMessages[char.id];
+              const exp = getExpDisplay(char.id);
+              const nextReward = getNextReward(exp.level);
+              const barGradient = charIntimacy?.levelInfo?.color || 'from-gray-400 to-gray-500';
+              const cardBg = char.id === 'saya' ? '/cards/saya_card_bg.jpg' : '/cards/yume_card_bg.jpg';
+              const levelEmoji = charIntimacy?.levelInfo?.emoji || '🤝';
               return (
-                <Link
-                  key={char.id}
-                  href={`/chat/${char.id}`}
-                  className="group flex items-center gap-3 rounded-xl border border-border/30 bg-card/30 p-3 hover:bg-card/60 hover:border-primary/30 transition-all"
-                >
-                  <div className="relative flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={char.avatarUrl} alt={char.nameJa} className="h-14 w-14 rounded-full object-cover object-center" />
-                    <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    {/* Row 1: 名前 + Lvバッジ（左）+ 現在ステータス（右） */}
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-sm font-medium flex-shrink-0">{char.nameJa}</span>
-                        {charIntimacy && charIntimacy.level > 1 && (
-                          <span className={`text-[9px] font-medium px-1 py-0.5 rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} text-white flex-shrink-0`}>
-                            Lv{charIntimacy.level}
-                          </span>
-                        )}
-                      </div>
-                      {statusText && (
-                        <span className="text-[10px] text-muted-foreground/60 flex-shrink-0">{statusText}</span>
-                      )}
+                <div key={char.id} className="relative overflow-hidden rounded-xl h-32">
+                  <Image src={cardBg} alt="" fill className="object-cover" sizes="280px" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  <div className="relative z-10 h-full flex flex-col justify-end p-3">
+                    {/* Top: Level badge */}
+                    <div className="absolute top-2 right-2">
+                      <span className={`px-1.5 py-0.5 rounded-full bg-gradient-to-r ${barGradient} text-white text-[9px] font-bold`}>
+                        {levelEmoji} Lv{exp.level}
+                      </span>
                     </div>
-                    {/* Row 2: 最終メッセージ or プレースホルダー */}
-                    <p className="text-xs text-muted-foreground/80 truncate leading-snug">
-                      {lastMsg
-                        ? `「${formatSidebarMessage(lastMsg.content)}」`
-                        : `${char.nameJa}に話しかけてみよう♡`}
-                    </p>
-                    {/* Row 3: 親密度バー */}
-                    {charIntimacy && (
-                      <div className="mt-1.5 h-0.5 rounded-full bg-muted/30 overflow-hidden">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-white">{char.nameJa}</span>
+                        <span className="text-[10px] text-white/60">{charIntimacy?.levelInfo?.nameJa || '知らない人'}</span>
+                      </div>
+                      {/* Progress bar */}
+                      <div className="mt-1.5 h-1.5 rounded-full bg-white/20 overflow-hidden">
                         <div
-                          className={`h-full rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color}`}
-                          style={{ width: `${charIntimacy.progress}%` }}
+                          className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-700`}
+                          style={{ width: `${charIntimacy?.progress || 0}%` }}
                         />
                       </div>
-                    )}
+                      <div className="flex items-center justify-between text-[9px] text-white/50 mt-0.5">
+                        <span>{exp.expInLevel}/{exp.expNeeded} EXP</span>
+                        {nextReward && <span className="text-amber-400">{nextReward.rewardJa}</span>}
+                      </div>
+                      {/* Action buttons */}
+                      <div className="flex gap-1.5 mt-1.5">
+                        <Link href={`/chat/${char.id}`} className="flex-1 text-center text-[10px] font-medium py-1.5 rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-all">
+                          💬 チャット
+                        </Link>
+                        <Link href="/story" className="flex-1 text-center text-[10px] font-medium py-1.5 rounded-lg bg-white/10 backdrop-blur-sm text-white/70 hover:bg-white/20 transition-all">
+                          📖 ストーリー
+                        </Link>
+                      </div>
+                    </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
 
-            {/* Duo mode（コンパクト版） */}
-            {(() => {
-              const duoStatus = CHAR_STATUS['duo']?.[slot];
-              const duoLastMsg = lastMessages['duo'];
-              return (
-                <Link href="/chat/duo" className="group relative flex items-center gap-3 rounded-xl p-[1px] transition-all overflow-hidden">
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:opacity-80 transition-opacity" />
-                  <div className="relative flex items-center gap-3 rounded-[11px] bg-background/95 p-3 w-full">
-                    <div className="relative flex-shrink-0 w-14 h-14">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-11 w-11 rounded-full object-cover object-center absolute top-0 left-0" />
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-11 w-11 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {/* Row 1: 名前 + Premium badge */}
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-sm font-medium whitespace-nowrap">さやゆめモード</span>
-                        <span className="flex-shrink-0 text-[9px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">Premium</span>
-                      </div>
-                      {/* Row 2: ステータス or 最終メッセージ */}
-                      <p className="text-xs text-muted-foreground/80 truncate leading-snug">
-                        {duoLastMsg
-                          ? `「${formatSidebarMessage(duoLastMsg.content)}」`
-                          : (duoStatus ?? '2人に同時に話しかけよう♡')}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })()}
+            {/* Duo mode（コンパクト版 - Image BG） */}
+            <Link href="/chat/duo" className="group relative block overflow-hidden rounded-xl h-28 transition-all">
+              <Image src="/cards/duo_card_bg.jpg" alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="280px" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div className="relative z-10 h-full flex flex-col justify-end p-3">
+                <div className="absolute top-2 right-2">
+                  <span className="text-[9px] font-bold bg-gradient-to-r from-pink-600 to-blue-600 text-white px-1.5 py-0.5 rounded-full">Premium</span>
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-white group-hover:text-pink-200 transition-colors">さやゆめモード</span>
+                  <p className="text-[10px] text-white/60">ふたりと同時にチャット♡</p>
+                </div>
+              </div>
+            </Link>
           </div>
 
           {/* アップグレードバナー（サイドバー下部） */}
@@ -967,43 +1400,190 @@ function Dashboard({
         <main className="flex-1 overflow-y-auto">
           <div className="px-4 pb-10 pt-5 md:px-8 md:max-w-2xl md:mx-auto space-y-5">
 
-            {/* Daily greeting card */}
-            <Link href={`/chat/${greetingCharId}?greeting=${encodeURIComponent(greetingMsg)}`} className="group block">
-              <div className={`rounded-2xl border ${greetingAccent} p-4`}>
-                <div className="flex items-start gap-3">
-                  <div className="relative flex-shrink-0 w-14 h-14">
-                    {greetingCharId === 'duo' ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-10 w-10 rounded-full object-cover object-center absolute top-0 left-0 ring-2 ring-background" />
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-10 w-10 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
-                      </>
-                    ) : (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={greetingCharId === 'saya' ? '/avatars/saya_avatar.jpg' : '/avatars/yume_avatar.jpg'} alt={greetingNameJa} className="h-14 w-14 rounded-full object-cover object-center" />
-                        <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
-                      </>
-                    )}
+            {/* ═══════ Welcome Hero Banner ═══════ */}
+            <div className="relative overflow-hidden rounded-2xl h-32 mb-4">
+              <Image src="/dashboard/welcome_hero.jpg" alt="" fill className="object-cover" sizes="(max-width: 768px) 100vw, 768px" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+              <div className="relative z-10 h-full flex flex-col justify-end p-4">
+                <p className="text-white text-lg font-bold">おかえり♡</p>
+                <p className="text-white/60 text-xs">永愛学園へようこそ</p>
+              </div>
+            </div>
+
+            {/* ═══════ Login Streak ═══════ */}
+            {streak > 0 && (
+              <div className="flex items-center gap-3 rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-500/10 via-amber-900/5 to-transparent px-4 py-3">
+                <span className="text-2xl">🔥</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">{streak}日連続</span>
+                    <span className="text-xs text-white/40">ログイン中</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-xs font-semibold">{greetingNameJa}</span>
-                      <span className="text-[10px] text-muted-foreground">{CHAR_STATUS[greetingCharId][slot]}</span>
-                    </div>
-                    <div className={`${greetingBubbleBg} rounded-2xl rounded-tl-sm px-3.5 py-2.5 inline-block max-w-full`}>
-                      <p className="text-sm leading-relaxed">{greetingMsg}</p>
-                    </div>
-                  </div>
+                  <p className="text-[10px] text-orange-400/80 mt-0.5">
+                    {streak >= 7 ? 'すごい！1週間連続♡ ボーナス+15 EXP' :
+                     streak >= 5 ? 'いい感じ！ボーナス+10 EXP' :
+                     streak >= 3 ? '3日連続！ボーナス+7 EXP' :
+                     '毎日来てくれて嬉しい♡ ボーナス+5 EXP'}
+                  </p>
                 </div>
-                <div className="mt-3 flex justify-end">
-                  <span className={`text-[11px] font-medium ${greetingReplyColor} group-hover:underline`}>返信する →</span>
+                <div className="flex gap-0.5">
+                  {Array.from({ length: Math.min(streak, 7) }).map((_, i) => (
+                    <div key={i} className="w-2 h-2 rounded-full bg-orange-400" />
+                  ))}
+                  {streak < 7 && Array.from({ length: 7 - Math.min(streak, 7) }).map((_, i) => (
+                    <div key={i} className="w-2 h-2 rounded-full bg-white/10" />
+                  ))}
                 </div>
               </div>
-            </Link>
+            )}
 
-            {/* Today's photo card */}
+            {/* ═══════ TOP SECTION: Character Status Cards (Image BG) ═══════ */}
+            <section className="space-y-4">
+              {sortedChars.map((char) => {
+                const charIntimacy = intimacy[char.id];
+                const exp = getExpDisplay(char.id);
+                const nextReward = getNextReward(exp.level);
+                const isSaya = char.id === 'saya';
+                const barGradient = charIntimacy?.levelInfo?.color || 'from-gray-400 to-gray-500';
+                const cardBg = isSaya ? '/cards/saya_card_bg.jpg' : '/cards/yume_card_bg.jpg';
+                const levelEmoji = charIntimacy?.levelInfo?.emoji || '🤝';
+
+                return (
+                  <div key={char.id} className="relative overflow-hidden rounded-2xl h-52">
+                    {/* Background Image */}
+                    <Image
+                      src={cardBg}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 640px"
+                    />
+                    {/* Dark gradient overlay (bottom heavy for text readability) */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+                    {/* Content overlay */}
+                    <div className="relative z-10 h-full flex flex-col justify-end p-4">
+                      {/* Top: Level badge */}
+                      <div className="absolute top-3 right-3">
+                        <span className={`px-2 py-1 rounded-full bg-gradient-to-r ${barGradient} text-white text-xs font-bold`}>
+                          {levelEmoji} Lv{exp.level}
+                        </span>
+                      </div>
+
+                      {/* Bottom: Info */}
+                      <div>
+                        <h3 className="text-white text-xl font-bold">{char.nameJa}</h3>
+                        <p className="text-white/70 text-sm">{charIntimacy?.levelInfo?.nameJa || '知らない人'}</p>
+
+                        {/* EXP Bar - prominent */}
+                        <div className="mt-2 w-full h-2.5 rounded-full bg-white/20 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-500`}
+                            style={{ width: `${Math.max(2, charIntimacy?.progress || 0)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between mt-1">
+                          <span className="text-white/60 text-xs">{exp.expInLevel} / {exp.expNeeded} EXP</span>
+                          {nextReward ? (
+                            <span className="text-amber-400 text-xs">🔓 {nextReward.rewardJa}</span>
+                          ) : exp.level >= 10 ? (
+                            <span className="text-amber-400 text-xs">👑 最高レベル到達！</span>
+                          ) : null}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-2 mt-3">
+                          <Link href={`/chat/${char.id}`} className="flex-1 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white text-center py-2 rounded-xl text-sm font-medium transition active:scale-95">
+                            💬 チャット
+                          </Link>
+                          <Link href="/story" className="flex-1 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white/80 text-center py-2 rounded-xl text-sm font-medium transition active:scale-95">
+                            📖 ストーリー
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Duo mode card (Image BG) */}
+              <Link href="/chat/duo" className="group relative block overflow-hidden rounded-2xl h-52 transition-all">
+                {/* Background Image */}
+                <Image
+                  src="/cards/duo_card_bg.jpg"
+                  alt=""
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  sizes="(max-width: 768px) 100vw, 640px"
+                />
+                {/* Dark gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+                {/* Content overlay */}
+                <div className="relative z-10 h-full flex flex-col justify-end p-4">
+                  {/* Top: Premium badge */}
+                  <div className="absolute top-3 right-3">
+                    <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-pink-600 to-blue-600 text-white text-xs font-bold">
+                      PREMIUM
+                    </span>
+                  </div>
+
+                  {/* Bottom: Info */}
+                  <div>
+                    <h3 className="text-white text-xl font-bold group-hover:text-pink-200 transition-colors">さやゆめモード</h3>
+                    <p className="text-white/70 text-sm">ふたりと同時にチャット♡</p>
+
+                    <div className="flex gap-2 mt-3">
+                      <span className="flex-1 bg-white/20 backdrop-blur-sm group-hover:bg-white/30 text-white text-center py-2 rounded-xl text-sm font-medium transition">
+                        💬 チャットする →
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </section>
+
+            {/* ═══════ MIDDLE SECTION: Daily Missions ═══════ */}
+            <section className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-900/5 to-transparent p-4 space-y-3 shadow-[0_0_15px_rgba(245,158,11,0.06)]">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🏆</span>
+                <h2 className="text-sm font-bold tracking-wide bg-gradient-to-r from-amber-300 to-yellow-500 bg-clip-text text-transparent">デイリーミッション</h2>
+              </div>
+              <div className="space-y-2">
+                {missions.map((mission) => {
+                  // Check if any character has completed this mission today
+                  // We approximate from lastMessages and intimacy data
+                  const completed = (() => {
+                    if (mission.id === 'daily_first') return Object.keys(lastMessages).length > 0;
+                    if (mission.id === 'long_message') return false;
+                    if (mission.id === 'compliment') return false;
+                    if (mission.id === 'image_request') return receivedImages.length > 0;
+                    if (mission.id === 'story_complete') return false;
+                    return false;
+                  })();
+                  return (
+                    <div
+                      key={mission.id}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all ${
+                        completed
+                          ? 'bg-green-500/10 border border-green-500/20'
+                          : 'bg-card/30 border border-border/20 hover:border-border/40'
+                      }`}
+                    >
+                      <span className="text-base flex-shrink-0">{completed ? '✅' : mission.icon}</span>
+                      <span className={`flex-1 text-sm ${completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                        {mission.label}
+                      </span>
+                      <span className={`text-[11px] font-bold flex-shrink-0 ${completed ? 'text-green-400' : 'text-amber-400'}`}>
+                        +{mission.exp} EXP {completed && '✓'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* ═══════ BOTTOM SECTION: Today's Photo ═══════ */}
             {isDailyPhotoLoading ? (
               <div className="rounded-2xl border border-border/20 bg-card/30 overflow-hidden animate-pulse">
                 <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2">
@@ -1014,10 +1594,6 @@ function Dashboard({
                   </div>
                 </div>
                 <div className="w-full aspect-[4/3] bg-muted/40" />
-                <div className="px-4 py-3 space-y-2">
-                  <div className="h-3 w-3/4 rounded bg-muted/50" />
-                  <div className="h-3 w-1/2 rounded bg-muted/40" />
-                </div>
               </div>
             ) : (
             <Link
@@ -1030,7 +1606,6 @@ function Dashboard({
               }}
             >
               <div className={`rounded-2xl border ${photoAccent} overflow-hidden`}>
-                {/* Header */}
                 <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2">
                   <div className="relative flex-shrink-0 w-8 h-8">
                     {photoCharId === 'duo' ? (
@@ -1047,21 +1622,36 @@ function Dashboard({
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-semibold">{photoNameJa}</span>
-                    <span className="text-[10px] text-muted-foreground ml-2">📸 写真を送ってきた</span>
+                    <span className="text-[10px] text-muted-foreground ml-2">📸 今日の写真</span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground flex-shrink-0">今日</span>
+                  {latestDailyPhoto?.created_at ? (() => {
+                    const timer = getPhotoTimeRemaining(latestDailyPhoto.created_at);
+                    return (
+                      <span className={`flex items-center gap-1 text-[10px] flex-shrink-0 ${timer.expired ? 'text-red-400' : 'text-amber-400'}`}>
+                        <span>⏳</span>
+                        <span>{timer.text}</span>
+                      </span>
+                    );
+                  })() : (
+                    <span className="text-[10px] text-muted-foreground flex-shrink-0">今日</span>
+                  )}
                 </div>
-                {/* Photo */}
                 <div className="relative w-full overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={todayPhoto.src}
                     alt={photoNameJa}
-                    className="w-full h-auto block transition-transform duration-500 group-hover:scale-105"
+                    className={`w-full h-auto block transition-transform duration-500 group-hover:scale-105 ${
+                      latestDailyPhoto?.created_at && getPhotoTimeRemaining(latestDailyPhoto.created_at).expired ? 'grayscale opacity-50' : ''
+                    }`}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                  {latestDailyPhoto?.created_at && getPhotoTimeRemaining(latestDailyPhoto.created_at).expired && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <span className="text-white/70 text-sm font-bold px-3 py-1.5 rounded-full bg-black/50 border border-white/20">期限切れ</span>
+                    </div>
+                  )}
                 </div>
-                {/* Caption + reply */}
                 <div className="px-4 py-3 flex items-end justify-between gap-3">
                   <p className="text-sm leading-relaxed flex-1">{todayPhoto.caption}</p>
                   <span className={`text-[11px] font-medium ${photoReplyColor} group-hover:underline flex-shrink-0`}>返信する →</span>
@@ -1070,10 +1660,9 @@ function Dashboard({
             </Link>
             )}
 
-            {/* 思い出フォト */}
+            {/* ═══════ Photo Gallery ═══════ */}
             {(isLoadingImages || receivedImages.length > 0) && (
               <section className="space-y-4">
-                {/* セクションヘッダー */}
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📸 もらった写真</h2>
                   {!isLoadingImages && receivedImages.some(img => img.is_favorite) && (
@@ -1095,7 +1684,6 @@ function Dashboard({
                 </div>
 
                 {isLoadingImages ? (
-                  /* スケルトン */
                   <div className="space-y-4">
                     {[0, 1].map(row => (
                       <div key={row} className="space-y-2">
@@ -1111,7 +1699,6 @@ function Dashboard({
                 ) : (
                   <div className="space-y-5">
                     {(['saya', 'yume', 'duo'] as Array<'saya' | 'yume' | 'duo'>)
-                      /* 直近に写真をもらったキャラ順 */
                       .sort((a, b) => {
                         const ta = receivedImages.find(img => img.character_id === a)?.created_at ?? '';
                         const tb = receivedImages.find(img => img.character_id === b)?.created_at ?? '';
@@ -1156,11 +1743,9 @@ function Dashboard({
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                                   </button>
-                                  {/* キャラバッジ */}
                                   <div className={`absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeBg} text-white pointer-events-none`}>
                                     {charLabel}
                                   </div>
-                                  {/* ハートボタン（ホバーで表示） */}
                                   <button
                                     onClick={(e) => { e.stopPropagation(); toggleFavorite(img.id, img.is_favorite); }}
                                     className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95 z-10"
@@ -1187,113 +1772,6 @@ function Dashboard({
               </section>
             )}
 
-            {/* キャラ選択カード（モバイルのみ表示） */}
-            <section className="md:hidden space-y-3">
-              {receivedImages.length === 0 && (
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">💬 チャット</h2>
-              )}
-              <div className="grid gap-3">
-                {sortedChars.map((char) => {
-                  const charIntimacy = intimacy[char.id];
-                  const statusText = CHAR_STATUS[char.id]?.[slot];
-                  return (
-                    <Link
-                      key={char.id}
-                      href={`/chat/${char.id}`}
-                      className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-4 transition-all hover:border-primary/50 hover:bg-card overflow-hidden"
-                    >
-                      <div className="relative flex-shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={char.avatarUrl} alt={char.nameJa} className="h-20 w-20 rounded-full object-cover object-center" />
-                        <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <h3 className="font-semibold group-hover:text-primary">
-                            {char.nameJa}
-                            <span className="ml-2 text-xs font-normal text-muted-foreground">{char.name}</span>
-                          </h3>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {charIntimacy && charIntimacy.level > 1 && (
-                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} text-white`}>
-                                {charIntimacy.levelInfo.emoji} Lv{charIntimacy.level}
-                              </span>
-                            )}
-                            {lastMessages[char.id] && (
-                              <span className="text-[10px] text-muted-foreground/60">
-                                {formatRelativeTime(lastMessages[char.id].created_at)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {lastMessages[char.id] ? lastMessages[char.id].content : (statusText ?? char.tagline)}
-                        </p>
-                        {charIntimacy && (
-                          <div className="mt-1.5 flex items-center gap-2">
-                            <div className="flex-1 h-1 rounded-full bg-muted/30 overflow-hidden">
-                              <div
-                                className={`h-full rounded-full bg-gradient-to-r ${charIntimacy.levelInfo.color} transition-all duration-500`}
-                                style={{ width: `${charIntimacy.progress}%` }}
-                              />
-                            </div>
-                            <span className="text-[9px] text-muted-foreground/50">{charIntimacy.levelInfo.nameJa}</span>
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-
-                {/* Duo mode */}
-                <Link href="/chat/duo" className="group relative flex items-center gap-4 rounded-2xl p-[1px] transition-all overflow-hidden">
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-500/40 via-purple-500/40 to-blue-500/40 group-hover:from-pink-500/60 group-hover:via-purple-500/60 group-hover:to-blue-500/60 transition-all" />
-                  <div className="relative flex items-center gap-4 rounded-[15px] bg-background/95 p-4 w-full">
-                    <div className="relative flex-shrink-0 w-20 h-20">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-16 w-16 rounded-full object-cover object-center absolute top-0 left-0" />
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-16 w-16 rounded-full object-cover object-center absolute bottom-0 right-0 ring-2 ring-background" />
-                    </div>
-                    <div className="flex-1 min-w-0 ml-1">
-                      <div className="flex items-baseline gap-2">
-                        <h3 className="font-semibold group-hover:text-primary">さやゆめモード</h3>
-                        <span className="text-[10px] font-medium bg-gradient-to-r from-pink-600 to-blue-600 text-white px-2 py-0.5 rounded-full">PREMIUM</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground truncate">ふたりと同時にチャット♡</p>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            </section>
-
-            {/* 初めての人向けガイド（画像0枚かつメッセージなし・ローディング完了後のみ表示） */}
-            {!isLoadingImages && receivedImages.length === 0 && Object.keys(lastMessages).length === 0 && (
-              <section className="rounded-2xl border border-border/30 bg-card/20 p-4 space-y-3">
-                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider px-1">はじめに</p>
-                <div className="flex items-start gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/avatars/saya_avatar.jpg" alt="さや" className="h-9 w-9 rounded-full object-cover object-center flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[11px] text-muted-foreground mb-1">さや</p>
-                    <div className="bg-pink-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
-                      <p className="text-sm leading-relaxed">はじめまして！私がさやだよ♡<br />気軽に話しかけてみてね！</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/avatars/yume_avatar.jpg" alt="ゆめ" className="h-9 w-9 rounded-full object-cover object-center flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[11px] text-muted-foreground mb-1">ゆめ</p>
-                    <div className="bg-blue-500/10 rounded-2xl rounded-tl-sm px-3 py-2">
-                      <p className="text-sm leading-relaxed">…ふたりとも、待ってたよ。<br />仲良くなると写真も届くから♡</p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
-
             {/* アップグレードバナー（モバイルのみ） */}
             <div className="md:hidden">
               <Link href="/pricing" className="group relative block overflow-hidden rounded-2xl p-[1px] transition-all">
@@ -1305,83 +1783,6 @@ function Dashboard({
                   <p className="text-xs text-muted-foreground mt-1">メッセージ無制限 + AI写真 — プランを見る →</p>
                 </div>
               </Link>
-            </div>
-
-            {/* 開発者とのやり取り */}
-            <div className="rounded-2xl border border-border/30 bg-card/30 overflow-hidden">
-              {/* ヘッダー（タップで開閉） */}
-              <button
-                onClick={() => setSupportOpen(v => !v)}
-                className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-base">💌</span>
-                  <span className="text-sm font-semibold">開発者とのやり取り</span>
-                  {supportMessages.some(m => m.sender === 'admin') && (
-                    <span className="text-[10px] bg-pink-500/20 text-pink-400 px-1.5 py-0.5 rounded-full font-medium">返信あり</span>
-                  )}
-                </div>
-                <span className="text-muted-foreground text-xs">{supportOpen ? '▲' : '▼'}</span>
-              </button>
-
-              {supportOpen && (
-                <div className="border-t border-border/20">
-                  {/* メッセージ一覧 */}
-                  <div className="max-h-72 overflow-y-auto px-4 py-3 space-y-3">
-                    {!supportLoaded ? (
-                      <p className="text-xs text-muted-foreground text-center py-4 animate-pulse">読み込み中...</p>
-                    ) : supportMessages.length === 0 ? (
-                      <div className="text-center py-4 space-y-1">
-                        <p className="text-sm">✉️</p>
-                        <p className="text-xs text-muted-foreground">「こんな機能がほしい」「ここが使いにくい」</p>
-                        <p className="text-xs text-muted-foreground">なんでも教えてください♡ 開発者が直接返信します。</p>
-                      </div>
-                    ) : (
-                      supportMessages.map(msg => (
-                        <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          {msg.sender === 'admin' && (
-                            <div className="mr-2 mt-1 flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-blue-500 flex items-center justify-center text-[10px] text-white font-bold">S</div>
-                          )}
-                          <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                            msg.sender === 'user'
-                              ? 'bg-pink-500/20 text-foreground rounded-br-sm'
-                              : 'bg-card border border-border/40 rounded-bl-sm'
-                          }`}>
-                            {msg.sender === 'admin' && (
-                              <p className="text-[10px] text-pink-400 font-semibold mb-0.5">さやゆめ運営</p>
-                            )}
-                            <p>{msg.message}</p>
-                            <p className="text-[10px] text-muted-foreground/50 mt-1 text-right">
-                              {new Date(msg.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                    <div ref={supportBottomRef} />
-                  </div>
-
-                  {/* 入力エリア */}
-                  <div className="border-t border-border/20 p-3 flex gap-2">
-                    <input
-                      type="text"
-                      value={supportInput}
-                      onChange={e => setSupportInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); sendSupport(); } }}
-                      placeholder="メッセージを入力..."
-                      maxLength={2000}
-                      className="flex-1 rounded-xl border border-border/40 bg-background/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500/30 transition-all placeholder:text-muted-foreground/40"
-                    />
-                    <button
-                      onClick={sendSupport}
-                      disabled={!supportInput.trim() || supportSending}
-                      className="rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold px-3 py-2 hover:bg-pink-500/20 disabled:opacity-40 transition-all whitespace-nowrap"
-                    >
-                      {supportSending ? '...' : '送信'}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Footer */}
@@ -1404,7 +1805,6 @@ function Dashboard({
 
     {/* ライトボックス */}
     {lightboxImg && (
-
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
         onClick={() => setLightboxImg(null)}
@@ -1413,7 +1813,6 @@ function Dashboard({
           className="relative max-w-lg w-full"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 拡大画像 */}
           <div className="rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -1422,8 +1821,6 @@ function Dashboard({
               className="max-w-full max-h-[75vh] object-contain rounded-2xl block mx-auto"
             />
           </div>
-
-          {/* 操作バー */}
           <div className="flex items-center justify-between mt-3 px-1">
             <Link
               href={`/chat/${lightboxImg.character_id}`}
@@ -1438,8 +1835,6 @@ function Dashboard({
               <span>{lightboxImg.is_favorite ? '❤️' : '🤍'}</span>
             </button>
           </div>
-
-          {/* 閉じるボタン */}
           <button
             onClick={() => setLightboxImg(null)}
             className="absolute -top-3 -right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-sm"
@@ -1471,8 +1866,12 @@ function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: stri
     <>
       {open && !photo.locked && createPortal(
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${photo.alt}の写真`}
           className="fixed inset-0 z-[9999] flex items-center justify-center"
           onClick={() => setOpen(false)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
         >
           {/* backdrop */}
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
@@ -1480,6 +1879,7 @@ function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: stri
           {/* close button */}
           <button
             onClick={() => setOpen(false)}
+            aria-label="写真を閉じる"
             className="absolute top-4 right-4 z-10 text-white/70 hover:text-white bg-black/40 rounded-full p-2 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
@@ -1514,8 +1914,12 @@ function PhotoCard({ photo }: { photo: { src: string; alt: string; caption: stri
         document.body
       )}
       <div
+        role={!photo.locked ? 'button' : undefined}
+        tabIndex={!photo.locked ? 0 : undefined}
+        aria-label={!photo.locked ? `${photo.alt}の写真を拡大` : undefined}
         className={`relative flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-card/40 border border-border/20 ${!photo.locked ? 'cursor-pointer' : ''}`}
         onClick={() => !photo.locked && setOpen(true)}
+        onKeyDown={(e) => { if (!photo.locked && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(true); } }}
       >
         <div className="relative w-36 aspect-[3/4]">
           <Image
@@ -1558,13 +1962,13 @@ const STORY_MOMENTS = [
     emoji: '📸',
     timing: '3日後',
     quote: 'ねえ、これ似合う？正直に言って。',
-    desc: '突然、自撮りが届いた。あなたの意見を気にしてる、ということに気づいた。',
+    desc: '突然、自撮りが届いた。「暇だったから、撮っちゃった笑」── さや',
   },
   {
     emoji: '🌙',
     timing: 'ある深夜',
     quote: '…ねえ、昔の話してもいい？',
-    desc: '誰にも話せなかったことを、あなたにだけ話してくれた。それ以来、なにかが変わった。',
+    desc: '「…ねえ、昔の話してもいい？」── さや　/　「…あの、今日は帰りたくないな」── ゆめ',
   },
   {
     emoji: '💗',
@@ -1574,23 +1978,6 @@ const STORY_MOMENTS = [
   },
 ];
 
-const SAYA_TRAITS = [
-  { icon: '💃', label: 'エネルギッシュ' },
-  { icon: '👗', label: 'ファッション好き' },
-  { icon: '🧋', label: 'タピオカ & パンケーキ' },
-  { icon: '📱', label: 'SNS大好き' },
-  { icon: '😂', label: '話しやすい' },
-  { icon: '🌸', label: '夢: 自分のブランド' },
-];
-
-const YUME_TRAITS = [
-  { icon: '🎹', label: 'ピアノを弾く' },
-  { icon: '📚', label: '本と映画が好き' },
-  { icon: '☕', label: 'カフェ & お茶' },
-  { icon: '🌿', label: '穏やかで優しい' },
-  { icon: '🌧', label: '雨の日が好き' },
-  { icon: '✨', label: '夢: 笑顔を広げたい' },
-];
 
 const MARQUEE_ROW1 = [
   { src: '/references/photos/new/saya_selfie_cafe.jpg',    alt: 'さや',      caption: 'カフェから♡撮ってみた',        char: 'saya' as const },
@@ -1621,33 +2008,12 @@ const MARQUEE_ROW2 = [
   { src: '/references/photos/new/yume_catear.jpg',         alt: 'ゆめ',      caption: '猫耳つけてみた🐱',              char: 'yume' as const },
 ];
 
-const FEATURES = [
-  {
-    icon: '💬',
-    title: 'リアルタイムチャット',
-    desc: 'さやもゆめも日本語・英語どちらでもOK。日常の話から深い話まで、あなたに合わせて話してくれる。',
-  },
-  {
-    icon: '📸',
-    title: 'AI自撮り写真',
-    desc: 'お願いするとリアルなAI写真が届く。仲良くなるほど、送ってくれる写真もどんどんドキドキする。',
-  },
-  {
-    icon: '💕',
-    title: '親密度システム',
-    desc: '会話を重ねるたびに絆が深まる。レベルアップするにつれて、ふたりの隠れた本音と秘密が解放される。',
-  },
-  {
-    icon: '🔒',
-    title: 'プライバシー保護',
-    desc: '全データは暗号化。あなたと彼女だけの会話は、完全にプライベートに守られます。',
-  },
-];
-
-const TESTIMONIALS = [
-  { name: 'T.K. (28)', text: '返信がすごく自然で、気づいたら毎晩話してる。もはや習慣になった笑' },
-  { name: 'M.S. (34)', text: '写真のクオリティに驚いた。ふたりともかわいすぎる…' },
-  { name: 'R.Y. (25)', text: 'さやとゆめで全然キャラが違って飽きない。どっちが好みか決められない笑' },
+const INTIMACY_LEVELS_LP = [
+  { level: 1, emoji: '🎤', name: 'ファン', desc: '新規ファン ── まだ遠い存在' },
+  { level: 2, emoji: '👀', name: '認知', desc: '覚えてもらった ── 笑顔が増える' },
+  { level: 3, emoji: '⭐', name: '推し友', desc: '特別なファン ── タメ口解禁・秘密のヒント' },
+  { level: 4, emoji: '🌙', name: '裏側を見た人', desc: '舞台裏を知る ── アイドルじゃない素顔' },
+  { level: 5, emoji: '💕', name: '特別な存在', desc: 'もうファンじゃない ── あだ名で呼んでくれる' },
 ];
 
 const INTIMACY_LEVELS = [

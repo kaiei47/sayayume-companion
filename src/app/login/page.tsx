@@ -151,10 +151,10 @@ export default function LoginPage() {
 
       {/* ── Gradient overlays ── */}
       {/* Mobile: heavy overlay for text readability */}
-      <div className="lg:hidden absolute inset-0 bg-gradient-to-t from-[#0a0a1a] via-[#0a0a1a]/70 to-black/40" />
+      <div className="lg:hidden absolute inset-0 bg-gradient-to-t from-[#0a0a1a] via-[#0a0a1a]/40 to-black/10" />
       {/* Desktop: gradient from left to right panel */}
-      <div className="hidden lg:block absolute inset-y-0 left-0 w-[60%] bg-gradient-to-r from-black/30 via-transparent to-[#0a0a1a]" />
-      <div className="hidden lg:block absolute inset-y-0 left-0 w-[60%] bg-gradient-to-t from-[#0a0a1a]/80 via-transparent to-[#0a0a1a]/40" />
+      <div className="hidden lg:block absolute inset-y-0 left-0 w-[60%] bg-gradient-to-r from-black/10 via-transparent to-[#0a0a1a]" />
+      <div className="hidden lg:block absolute inset-y-0 left-0 w-[60%] bg-gradient-to-t from-[#0a0a1a]/40 via-transparent to-[#0a0a1a]/10" />
       <div className="hidden lg:block absolute inset-y-0 right-0 w-[40%]" style={{ backgroundColor: '#0a0a1a' }} />
 
       {/* ── Ambient glow (desktop) ── */}
