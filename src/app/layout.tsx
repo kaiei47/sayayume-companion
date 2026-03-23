@@ -18,11 +18,11 @@ const APP_URL = process.env.APP_URL || "https://www.sayayume.com";
 
 export const metadata: Metadata = {
   title: {
-    default: "さやゆめ - AI彼女",
+    default: "さやゆめ - AIアイドル恋愛シミュレーション",
     template: "%s | さやゆめ",
   },
-  description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真。日本語AI彼女アプリ。",
-  keywords: ["AI", "コンパニオン", "AIガールフレンド", "チャットボット", "AI美女", "さやゆめ", "日本語AI"],
+  description: "AIアイドル恋愛シミュレーション。永愛学園のスクールアイドル「さやゆめ」と推し活＆恋愛が楽しめるフォトリアルAIチャットゲーム。親密度・ストーリーモード搭載。ブラウザで無料プレイ。",
+  keywords: ["AI恋愛ゲーム", "恋愛シミュレーション", "AI彼女", "フォトリアル", "恋愛ゲーム AI", "AI恋愛シミュレーション", "さやゆめ", "永愛学園", "日本語AI", "ギャルゲー", "恋愛ゲーム 無料", "AIチャット 恋愛", "AIアイドル", "推し活", "スクールアイドル", "アイドル恋愛"],
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -39,8 +39,8 @@ export const metadata: Metadata = {
     title: "さやゆめ",
   },
   openGraph: {
-    title: "さやゆめ - AI彼女",
-    description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真",
+    title: "さやゆめ | AIアイドル恋愛シミュレーション - 永愛学園",
+    description: "AIアイドル恋愛シミュレーション。スクールアイドル「さやゆめ」と推し活＆恋愛が楽しめるフォトリアルAIチャットゲーム。親密度・ストーリーモード搭載。無料プレイ。",
     type: "website",
     url: APP_URL,
     siteName: "さやゆめ",
@@ -49,13 +49,13 @@ export const metadata: Metadata = {
       url: `${APP_URL}/og-image.png`,
       width: 1200,
       height: 630,
-      alt: "さやゆめ - AI彼女",
+      alt: "さやゆめ - AIアイドル恋愛シミュレーション | 永愛学園",
     }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "さやゆめ - AI彼女",
-    description: "東京の双子AIガールフレンド♡ さやとゆめとチャット＆AI自撮り写真",
+    title: "さやゆめ | AIアイドル恋愛シミュレーション - 永愛学園",
+    description: "AIアイドル恋愛シミュレーション。スクールアイドル「さやゆめ」と推し活＆恋愛が楽しめるフォトリアルAIチャットゲーム。親密度・ストーリーモード搭載。無料プレイ。",
     images: [`${APP_URL}/og-image.png`],
   },
   robots: {

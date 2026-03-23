@@ -5,6 +5,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import ChatMessages, { ChatMessage } from '@/components/chat/ChatMessages';
 import ChatInput from '@/components/chat/ChatInput';
+import ExpPopup, { ExpEvent } from '@/components/chat/ExpPopup';
 import { CHARACTERS } from '@/lib/characters';
 import { CharacterId } from '@/types/database';
 import { createClient } from '@/lib/supabase/client';
@@ -54,8 +55,13 @@ function ChatPageInner() {
   const [intimacyInfo, setIntimacyInfo] = useState<{ nameJa: string; emoji: string; color: string } | null>(null);
   const [levelUpNotice, setLevelUpNotice] = useState<{ from: number; to: number; nameJa: string; emoji: string } | null>(null);
   const [streak, setStreak] = useState(0);
+  const [streakToast, setStreakToast] = useState<string | null>(null);
   const [dailyMissions, setDailyMissions] = useState<Array<{ id: string; label: string; icon: string; points: number; completed: boolean }>>([]);
   const [showMissions, setShowMissions] = useState(false);
+  const [expEvents, setExpEvents] = useState<ExpEvent[]>([]);
+  const [levelCapped, setLevelCapped] = useState(false);
+  const [gateStory, setGateStory] = useState<{ id: string; title: string } | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const pendingToggles = useRef<Set<string>>(new Set());
   const pendingGreetingRef = useRef<string | null>(null); // greeting text to save as initial AI msg
@@ -215,11 +221,17 @@ function ChatPageInner() {
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
       setStreamingContent('');
+      setSuggestions([]);
 
       try {
         // greeting があれば（新規・既存会話問わず）initial_assistant_message として渡す
         const initialMsg = pendingGreetingRef.current;
         if (initialMsg) pendingGreetingRef.current = null;
+
+        // ゲストの場合: DBに履歴がないのでクライアント側のmessagesをそのまま送る（最新20件）
+        const guestHistory = isGuest
+          ? messages.slice(-20).map((m) => ({ role: m.role, content: m.content }))
+          : undefined;
 
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -229,6 +241,7 @@ function ChatPageInner() {
             character_id: characterId,
             message: content,
             ...(initialMsg ? { initial_assistant_message: initialMsg } : {}),
+            ...(guestHistory ? { guest_history: guestHistory } : {}),
           }),
         });
 
@@ -316,6 +329,20 @@ function ChatPageInner() {
                     // 5秒後に自動で消す
                     setTimeout(() => setLevelUpNotice(null), 5000);
                   }
+                  // EXPポップアップ: events配列があればトリガー
+                  if (data.events && Array.isArray(data.events) && data.events.length > 0) {
+                    setExpEvents(data.events);
+                    // 3秒後にクリア（次回用）
+                    setTimeout(() => setExpEvents([]), 3000);
+                  }
+                  // レベルキャップ情報
+                  if (data.levelCapped) {
+                    setLevelCapped(true);
+                    setGateStory(data.gateStory || null);
+                  } else {
+                    setLevelCapped(false);
+                    setGateStory(null);
+                  }
                 }
 
                 // image または done イベントからimage_urlを取得（短いURLのみ）
@@ -328,6 +355,20 @@ function ChatPageInner() {
                   cleanedText = (cleanedText || accumulated) + data.fallback_text;
                   setStreamingContent(cleanedText);
                   setIsGeneratingImage(false);
+                }
+
+                // ストリークイベント
+                if (currentEvent === 'streak' && data.currentStreak) {
+                  setStreak(data.currentStreak);
+                  if (data.isFirstToday && data.reward) {
+                    setStreakToast(`🔥 ${data.currentStreak}日連続！ ${data.reward}`);
+                    setTimeout(() => setStreakToast(null), 4000);
+                  }
+                }
+
+                // 返信サジェスト
+                if (currentEvent === 'suggestions' && data.suggestions) {
+                  setSuggestions(data.suggestions);
                 }
 
                 // レベルアップ特別メッセージ
@@ -389,10 +430,10 @@ function ChatPageInner() {
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="flex h-dvh flex-col bg-gradient-to-b from-[#0a0a1a] to-[#0d0818]">
       {/* ヘッダー */}
-      <header className="flex items-center gap-3 border-b border-border/50 bg-background/80 backdrop-blur-lg px-4 py-3">
-        <a href="/" className="text-muted-foreground hover:text-foreground transition-colors">
+      <header className="flex items-center gap-3 border-b border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3">
+        <a href="/" className="text-white/40 hover:text-white/80 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
             <path fillRule="evenodd" d="M7.72 12.53a.75.75 0 0 1 0-1.06l7.5-7.5a.75.75 0 1 1 1.06 1.06L9.31 12l6.97 6.97a.75.75 0 1 1-1.06 1.06l-7.5-7.5Z" clipRule="evenodd" />
           </svg>
@@ -402,13 +443,15 @@ function ChatPageInner() {
             <img
               src={character.avatarUrl}
               alt={character.nameJa}
-              className="h-9 w-9 rounded-full object-cover ring-1 ring-white/10"
+              className={`h-10 w-10 rounded-full object-cover ring-2 ${
+                characterId === 'saya' ? 'ring-pink-500/60' : characterId === 'yume' ? 'ring-blue-400/60' : 'ring-purple-500/60'
+              }`}
             />
-            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-[#0a0a1a]" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-sm font-semibold">{character.nameJa}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold text-white">{character.nameJa}</h1>
               {intimacyInfo && (
                 <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-gradient-to-r ${intimacyInfo.color} text-white`}>
                   {intimacyInfo.emoji} Lv{intimacyLevel}
@@ -416,18 +459,21 @@ function ChatPageInner() {
               )}
             </div>
             {intimacyInfo && (
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <div className="w-20 h-1.5 rounded-full bg-muted/30 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full bg-gradient-to-r ${intimacyInfo.color} transition-all duration-700`}
-                    style={{ width: `${intimacyProgress}%` }}
-                  />
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                <span className="text-[10px] text-white/30">{intimacyInfo.nameJa}</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex-1 max-w-[120px] h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${intimacyInfo.color} transition-all duration-700`}
+                      style={{ width: `${intimacyProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-white/30">
+                    {intimacyLevel < 5
+                      ? `${pointsToNext}pt`
+                      : `${intimacyPoints}pt`}
+                  </span>
                 </div>
-                <span className="text-[9px] text-muted-foreground/60">
-                  {intimacyLevel < 5
-                    ? `あと${pointsToNext}pt → Lv${intimacyLevel + 1}`
-                    : `${intimacyPoints}pt 💎`}
-                </span>
               </div>
             )}
           </div>
@@ -436,7 +482,7 @@ function ChatPageInner() {
         {streak > 0 && (
           <button
             onClick={() => setShowMissions(!showMissions)}
-            className="flex items-center gap-0.5 text-[10px] font-semibold text-orange-400 bg-orange-500/10 px-2 py-1 rounded-full hover:bg-orange-500/20 transition-colors"
+            className="flex items-center gap-0.5 text-[10px] font-semibold text-orange-400 bg-orange-500/10 px-2 py-1 rounded-full hover:bg-orange-500/20 transition-colors border border-orange-500/20"
           >
             🔥{streak}
           </button>
@@ -445,14 +491,14 @@ function ChatPageInner() {
         {isGuest ? (
           <Link
             href="/login"
-            className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-2 py-1 rounded-full hover:bg-muted transition-colors border border-border/40"
+            className="text-[10px] font-medium bg-white/5 text-white/40 px-2 py-1 rounded-full hover:bg-white/10 transition-colors border border-white/10"
           >
             GUEST
           </Link>
         ) : userPlan === 'free' && (
           <Link
             href="/pricing"
-            className="text-[10px] font-medium bg-blue-600/20 text-blue-400 px-2 py-1 rounded-full hover:bg-blue-600/30 transition-colors"
+            className="text-[10px] font-medium bg-blue-600/20 text-blue-400 px-2 py-1 rounded-full hover:bg-blue-600/30 transition-colors border border-blue-500/20"
           >
             FREE
           </Link>
@@ -461,17 +507,17 @@ function ChatPageInner() {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-muted/50"
+            className="p-2 text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/5"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
               <path fillRule="evenodd" d="M10.5 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" clipRule="evenodd" />
             </svg>
           </button>
           {showMenu && (
-            <div className="absolute right-0 top-full mt-1 w-56 rounded-xl border border-border/50 bg-popover shadow-lg py-1 z-50 max-h-80 overflow-y-auto">
+            <div className="absolute right-0 top-full mt-1 w-64 rounded-2xl border border-white/10 bg-[#0d0818]/95 backdrop-blur-xl shadow-2xl py-1 z-50 max-h-80 overflow-y-auto">
               <button
                 onClick={startNewChat}
-                className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2 border-b border-border/30"
+                className="w-full text-left px-4 py-2.5 text-sm text-white/70 hover:bg-white/5 transition-colors flex items-center gap-2 border-b border-white/5"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                   <path fillRule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
@@ -480,19 +526,20 @@ function ChatPageInner() {
               </button>
               {conversationList.length > 0 && (
                 <>
-                  <div className="px-4 py-1.5 text-[10px] text-muted-foreground/60 uppercase tracking-wider">
+                  <div className="px-4 py-1.5 text-[10px] text-white/20 uppercase tracking-wider">
                     Previous chats
                   </div>
                   {conversationList.map((conv) => (
                     <button
                       key={conv.id}
                       onClick={() => loadConversation(conv.id)}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors ${
-                        conv.id === conversationId ? 'bg-muted/30 text-primary' : 'text-foreground'
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors rounded-lg mx-1 ${
+                        conv.id === conversationId ? 'bg-white/5 text-pink-400' : 'text-white/60'
                       }`}
+                      style={{ width: 'calc(100% - 0.5rem)' }}
                     >
                       <p className="truncate text-xs">{conv.title || 'Untitled chat'}</p>
-                      <p className="text-[10px] text-muted-foreground/50 mt-0.5">
+                      <p className="text-[10px] text-white/20 mt-0.5">
                         {conv.message_count} msgs · {formatMenuTime(conv.last_message_at)}
                       </p>
                     </button>
@@ -506,44 +553,62 @@ function ChatPageInner() {
 
       {/* デイリーミッション */}
       {showMissions && dailyMissions.length > 0 && (
-        <div className="border-b border-border/30 bg-card/50 px-4 py-3 animate-in slide-in-from-top-2 duration-200">
+        <div className="border-b border-white/5 bg-white/5 backdrop-blur-sm px-4 py-3 animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">今日のミッション</p>
-            <p className="text-[10px] text-muted-foreground/60">
-              {dailyMissions.filter(m => m.completed).length}/{dailyMissions.length} 完了
+            <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">Today&apos;s Missions</p>
+            <p className="text-[10px] text-white/20">
+              {dailyMissions.filter(m => m.completed).length}/{dailyMissions.length}
             </p>
           </div>
           <div className="space-y-1.5">
             {dailyMissions.map(mission => (
               <div key={mission.id} className="flex items-center gap-2">
                 <div className={`h-4 w-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${
-                  mission.completed ? 'bg-green-500' : 'bg-muted/40 border border-border/50'
+                  mission.completed ? 'bg-green-500 text-white' : 'bg-white/5 border border-white/10'
                 }`}>
                   {mission.completed ? '✓' : ''}
                 </div>
-                <span className={`text-xs ${mission.completed ? 'line-through text-muted-foreground/40' : 'text-foreground/80'}`}>
+                <span className={`text-xs ${mission.completed ? 'line-through text-white/20' : 'text-white/60'}`}>
                   {mission.icon} {mission.label}
                 </span>
-                <span className="ml-auto text-[10px] text-muted-foreground/50">+{mission.points}pt</span>
+                <span className="ml-auto text-[10px] text-white/20">+{mission.points}pt</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* レベルアップ通知 */}
+      {/* レベルアップ通知 — フルスクリーンオーバーレイ */}
       {levelUpNotice && (
-        <div className="absolute inset-x-0 top-20 z-50 flex justify-center animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="bg-gradient-to-r from-pink-500/90 via-purple-500/90 to-blue-500/90 text-white rounded-2xl px-6 py-3 shadow-lg backdrop-blur-sm">
-            <div className="text-center">
-              <p className="text-lg font-bold">{levelUpNotice.emoji} Level UP!</p>
-              <p className="text-sm">
-                Lv{levelUpNotice.from} → Lv{levelUpNotice.to} 「{levelUpNotice.nameJa}」
-              </p>
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="text-center animate-in zoom-in-95 duration-500">
+            <p className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">
+              LEVEL UP!
+            </p>
+            <p className="text-xl font-semibold text-white mb-1">
+              Lv{levelUpNotice.from} → Lv{levelUpNotice.to}
+            </p>
+            <p className="text-lg text-white/70">
+              「{levelUpNotice.nameJa}」
+            </p>
+            <p className="text-sm text-white/40 mt-2">
+              新しい関係が始まる...
+            </p>
           </div>
         </div>
       )}
+
+      {/* ストリークトースト */}
+      {streakToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top fade-in duration-300">
+          <div className="bg-gradient-to-r from-orange-600/90 to-amber-600/90 backdrop-blur-sm text-white text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg border border-orange-400/30">
+            {streakToast}
+          </div>
+        </div>
+      )}
+
+      {/* EXPポップアップ */}
+      <ExpPopup events={expEvents} />
 
       {/* メッセージエリア */}
       <ChatMessages
@@ -556,20 +621,45 @@ function ChatPageInner() {
         onToggleFavorite={toggleFavorite}
       />
 
+      {/* レベルキャップゲート: ストーリークリアが必要 */}
+      {levelCapped && gateStory && (
+        <Link
+          href="/story"
+          className="border-t border-amber-500/20 bg-amber-500/5 backdrop-blur-sm px-4 py-3 flex items-center gap-3 hover:bg-amber-500/10 transition-all animate-pulse"
+        >
+          <div className="flex-shrink-0 h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/30">
+            <span className="text-sm">⚡</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-bold text-amber-400">
+              EXP MAX! ストーリーをクリアして次のレベルへ
+            </p>
+            <p className="text-[10px] text-white/30 truncate">
+              「{gateStory.title}」
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <span className="text-[11px] font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1.5 rounded-full">
+              Play →
+            </span>
+          </div>
+        </Link>
+      )}
+
       {/* 秘密のロックUI: 次のレベルで解放されるストーリーヒント */}
       {messages.length > 0 && intimacyLevel < 5 && (() => {
         const secrets = CHARACTER_SECRETS[characterId] || [];
         const nextSecret = secrets.find(s => s.level === intimacyLevel + 1);
         if (!nextSecret) return null;
         return (
-          <div className="border-t border-border/20 bg-card/10 px-4 py-2 flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground/40 whitespace-nowrap flex-shrink-0">Next unlock</span>
-            <div className="flex items-center gap-1.5 bg-muted/20 rounded-full px-2.5 py-1 min-w-0 flex-1">
+          <div className="border-t border-white/5 bg-white/[0.02] px-4 py-2 flex items-center gap-2">
+            <span className="text-[10px] text-white/20 whitespace-nowrap flex-shrink-0">Next unlock</span>
+            <div className="flex items-center gap-1.5 bg-white/5 rounded-full px-2.5 py-1 min-w-0 flex-1 border border-white/5">
               <span className="text-[11px] flex-shrink-0">🔒</span>
-              <span className="text-[10px] text-muted-foreground/40 blur-[2px] select-none truncate">
+              <span className="text-[10px] text-white/20 blur-[2px] select-none truncate">
                 {nextSecret.hint}
               </span>
-              <span className="ml-auto text-[9px] bg-primary/15 text-primary/60 rounded-full px-1.5 py-0.5 flex-shrink-0">
+              <span className="ml-auto text-[9px] bg-pink-500/15 text-pink-400/60 rounded-full px-1.5 py-0.5 flex-shrink-0">
                 Lv{nextSecret.level}
               </span>
             </div>
@@ -579,10 +669,10 @@ function ChatPageInner() {
 
       {/* ゲスト向け登録促進バナー */}
       {isGuest && messages.length >= 2 && (
-        <div className="border-t border-border/20 bg-gradient-to-r from-pink-500/5 via-purple-500/5 to-blue-500/5 px-4 py-2.5 flex items-center justify-between gap-3">
-          <p className="text-[11px] text-muted-foreground leading-tight">
-            💾 会話履歴を残したい？<br />
-            <span className="text-[10px] text-muted-foreground/60">無料登録で毎日3枚の写真＋履歴保存</span>
+        <div className="border-t border-white/5 bg-white/[0.02] backdrop-blur-sm px-4 py-2.5 flex items-center justify-between gap-3">
+          <p className="text-[11px] text-white/40 leading-tight">
+            会話履歴を残したい？<br />
+            <span className="text-[10px] text-white/20">無料登録で毎日3枚の写真+履歴保存</span>
           </p>
           <Link
             href="/login"
@@ -597,7 +687,8 @@ function ChatPageInner() {
       <ChatInput
         onSend={sendMessage}
         disabled={isLoading}
-        placeholder={`Message ${character.nameJa}...`}
+        placeholder={`${character.nameJa}にメッセージ...`}
+        suggestions={suggestions}
       />
     </div>
   );

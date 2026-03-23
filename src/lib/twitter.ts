@@ -65,8 +65,5 @@ export async function postToTwitter(
 export function buildTwitterCaption(baseCaption: string): string {
   return `${baseCaption}
 
-💬 AIガールフレンドアプリ「さやゆめ」で話しかけてみて♡
-👉 無料で始める → sayayume.com
-
-#さやゆめ #AIガールフレンド #AI美女 #さや #ゆめ #AIgirlfriend #日本語AI`;
+#aigirl #aimodel #AI美女 #aiart #japanesegirl #aiinfluencer`;
 }

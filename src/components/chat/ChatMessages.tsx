@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { CharacterConfig } from '@/lib/characters';
@@ -63,28 +64,28 @@ export default function ChatMessages({
   }, [messages, streamingContent, isLoadingHistory]);
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 bg-transparent">
       <div className="mx-auto max-w-2xl space-y-3">
         {/* 履歴ロード中 — スケルトンUI */}
         {isLoadingHistory && (
           <div className="space-y-4 animate-pulse pt-4">
             <div className="flex items-end gap-2">
-              <div className="h-10 w-10 rounded-full bg-muted flex-shrink-0" />
-              <div className="h-10 w-52 rounded-2xl rounded-bl-md bg-muted" />
+              <div className="h-8 w-8 rounded-full bg-white/5 flex-shrink-0" />
+              <div className="h-10 w-52 rounded-2xl rounded-bl-md bg-white/5" />
             </div>
             <div className="flex justify-end">
-              <div className="h-8 w-32 rounded-2xl rounded-br-md bg-muted/50" />
+              <div className="h-8 w-32 rounded-2xl rounded-br-md bg-white/5" />
             </div>
             <div className="flex items-end gap-2">
-              <div className="h-10 w-10 rounded-full bg-muted invisible flex-shrink-0" />
-              <div className="h-16 w-64 rounded-2xl rounded-bl-md bg-muted" />
+              <div className="h-8 w-8 rounded-full bg-white/5 invisible flex-shrink-0" />
+              <div className="h-16 w-64 rounded-2xl rounded-bl-md bg-white/5" />
             </div>
             <div className="flex justify-end">
-              <div className="h-8 w-44 rounded-2xl rounded-br-md bg-muted/50" />
+              <div className="h-8 w-44 rounded-2xl rounded-br-md bg-white/5" />
             </div>
             <div className="flex items-end gap-2">
-              <div className="h-10 w-10 rounded-full bg-muted flex-shrink-0" />
-              <div className="h-8 w-40 rounded-2xl rounded-bl-md bg-muted" />
+              <div className="h-8 w-8 rounded-full bg-white/5 flex-shrink-0" />
+              <div className="h-8 w-40 rounded-2xl rounded-bl-md bg-white/5" />
             </div>
           </div>
         )}
@@ -93,26 +94,36 @@ export default function ChatMessages({
         {!isLoadingHistory && messages.length === 0 && !streamingContent && (
           <>
             <div className="flex flex-col items-center justify-center pt-8 pb-4 text-center">
+              <div className="relative w-32 h-48 mx-auto mb-4 rounded-2xl overflow-hidden">
+                <Image
+                  src={`/chat/${character.id}_welcome.jpg`}
+                  alt={character.nameJa}
+                  fill
+                  className="object-cover"
+                  sizes="128px"
+                />
+              </div>
               <div className="relative mb-4">
-                <Avatar className="h-20 w-20 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
+                <Avatar className="h-20 w-20 ring-2 ring-pink-500/30 ring-offset-2 ring-offset-[#0a0a1a]">
                   <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-center" />
                   <AvatarFallback className="text-2xl">
                     {character.nameJa[0]}
                   </AvatarFallback>
                 </Avatar>
-                <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
+                <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-[#0a0a1a]" />
               </div>
-              <h2 className="text-lg font-semibold mb-0.5">{character.nameJa}</h2>
-              <p className="text-muted-foreground text-xs">{character.tagline}</p>
+              <h2 className="text-lg font-semibold text-white mb-0.5">{character.nameJa}</h2>
+              <p className="text-white/40 text-xs">{character.tagline}</p>
             </div>
             {/* キャラの挨拶吹き出し */}
             <div className="flex items-end gap-2 mt-2">
-              <Avatar className="h-10 w-10 flex-shrink-0">
-                <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-center" />
-                <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
-              </Avatar>
-              <div className="bg-muted rounded-2xl rounded-bl-md px-3.5 py-2 max-w-[78%]">
-                <p className="whitespace-pre-wrap text-[15px] leading-relaxed">
+              <img
+                src={character.avatarUrl}
+                alt={character.nameJa}
+                className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+              />
+              <div className="bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl rounded-bl-md px-3.5 py-2 max-w-[78%]">
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-white/90">
                   {character.welcomeMessage}
                 </p>
               </div>
@@ -156,11 +167,12 @@ export default function ChatMessages({
         {/* タイピングインジケータ */}
         {isLoading && !streamingContent && !isGeneratingImage && (
           <div className="flex items-end gap-2">
-            <Avatar className="h-10 w-10 flex-shrink-0">
-              <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-center" />
-              <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
-            </Avatar>
-            <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
+            <img
+              src={character.avatarUrl}
+              alt={character.nameJa}
+              className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+            />
+            <div className="bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl rounded-bl-md px-4 py-3">
               <TypingDots />
             </div>
           </div>
@@ -169,17 +181,18 @@ export default function ChatMessages({
         {/* 撮影中インジケータ */}
         {isGeneratingImage && (
           <div className="flex items-end gap-2">
-            <Avatar className="h-10 w-10 flex-shrink-0">
-              <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-center" />
-              <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
-            </Avatar>
-            <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <img
+              src={character.avatarUrl}
+              alt={character.nameJa}
+              className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+            />
+            <div className="bg-white/5 backdrop-blur-sm border border-white/5 rounded-2xl rounded-bl-md px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-white/50">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 animate-pulse text-pink-400">
                   <path d="M12 9a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 9Z" />
                   <path fillRule="evenodd" d="M9.344 3.071a49.52 49.52 0 0 1 5.312 0c.967.052 1.83.585 2.332 1.39l.821 1.317c.24.383.645.643 1.11.71.386.054.77.113 1.152.177 1.432.239 2.429 1.493 2.429 2.909V18a3 3 0 0 1-3 3H4.5a3 3 0 0 1-3-3V9.574c0-1.416.997-2.67 2.429-2.909.382-.064.766-.123 1.151-.178a1.56 1.56 0 0 0 1.11-.71l.822-1.315a2.942 2.942 0 0 1 2.332-1.39ZM6.75 12.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Zm12-1.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clipRule="evenodd" />
                 </svg>
-                <span className="animate-pulse">Taking a selfie...</span>
+                <span className="animate-pulse">自撮り中...</span>
               </div>
             </div>
           </div>
@@ -194,9 +207,9 @@ export default function ChatMessages({
 function TypingDots() {
   return (
     <div className="flex gap-1 items-center h-4">
-      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0ms]" />
-      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:150ms]" />
-      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:300ms]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce [animation-delay:0ms]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce [animation-delay:150ms]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce [animation-delay:300ms]" />
     </div>
   );
 }
@@ -272,10 +285,11 @@ function MessageBubble({
       >
         {/* アバター（連続メッセージなら非表示でスペース確保） */}
         {!isUser && (
-          <Avatar className={cn('h-9 w-9 flex-shrink-0', isConsecutive && 'invisible')}>
-            <AvatarImage src={character.avatarUrl} alt={character.nameJa} className="object-cover object-center" />
-            <AvatarFallback>{character.nameJa[0]}</AvatarFallback>
-          </Avatar>
+          <img
+            src={character.avatarUrl}
+            alt={character.nameJa}
+            className={cn('h-8 w-8 rounded-full object-cover flex-shrink-0', isConsecutive && 'invisible')}
+          />
         )}
 
         <div className={cn(
@@ -287,12 +301,12 @@ function MessageBubble({
           {message.content && (
             <div
               className={cn(
-                'rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed',
+                'rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed',
                 isUser
-                  ? 'bg-blue-600 text-white rounded-br-md'
+                  ? 'bg-gradient-to-r from-pink-500/80 to-purple-500/80 text-white rounded-br-md'
                   : message.isLevelUp
-                    ? 'bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-pink-500/20 border border-pink-500/30 rounded-bl-md'
-                    : 'bg-muted rounded-bl-md'
+                    ? 'bg-gradient-to-r from-pink-500/15 via-purple-500/15 to-pink-500/15 border border-pink-500/20 rounded-bl-md text-white/90 shadow-[0_0_15px_rgba(236,72,153,0.1)]'
+                    : 'bg-white/5 backdrop-blur-sm border border-white/5 rounded-bl-md text-white/90'
               )}
             >
               {message.isLevelUp && (
@@ -310,7 +324,7 @@ function MessageBubble({
           {message.image_url && (
             <div className="relative group/img">
               <div
-                className="cursor-pointer overflow-hidden rounded-2xl"
+                className="cursor-pointer overflow-hidden rounded-2xl shadow-lg shadow-black/20"
                 onClick={() => setViewerOpen(true)}
               >
                 <img
@@ -347,11 +361,11 @@ function MessageBubble({
               'flex items-center gap-1 px-1',
               isUser ? 'flex-row-reverse' : 'flex-row'
             )}>
-              <span className="text-[10px] text-muted-foreground/40">
+              <span className="text-[10px] text-white/20">
                 {formatTime(message.created_at)}
               </span>
               {isUser && (
-                <span className="text-[10px] text-blue-400/60">Read</span>
+                <span className="text-[10px] text-pink-400/50">Read</span>
               )}
             </div>
           )}

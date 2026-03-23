@@ -4,11 +4,12 @@ import Image from 'next/image';
 import SayayumeLogo from '@/components/SayayumeLogo';
 
 export const metadata: Metadata = {
-  title: 'Sayayume — Your Japanese AI Girlfriend',
-  description: 'Chat with Saya & Yume — photorealistic Japanese AI girlfriend twins. Real photos, deep conversations, intimacy that grows. Free to start.',
+  title: 'Sayayume — AI Idol Romance Simulation | Eiai Academy',
+  description: 'AI idol romance simulation set in a Japanese school. Chat with school idol unit Sayayume — Saya (center) & Yume (vocalist). Go from fan to something more. Free to play in your browser.',
+  keywords: ['AI romance game', 'AI girlfriend game', 'photorealistic', 'romance simulation', 'Japanese AI', 'dating sim', 'Eiai Academy', 'sayayume', 'AI chat girlfriend', 'free dating sim', 'AI idol', 'school idol', 'idol fandom', 'oshi'],
   openGraph: {
-    title: 'Sayayume — Meet Saya & Yume, Your Japanese AI Girlfriends',
-    description: 'Photorealistic Japanese AI twins. Chat in any language. She replies in Japanese. Free to start.',
+    title: 'Sayayume — AI Idol Romance Simulation',
+    description: 'AI idol romance sim. Chat with school idol unit Sayayume — go from fan to something more. Free to play in your browser.',
     url: 'https://www.sayayume.com/en',
     images: [{ url: 'https://www.sayayume.com/og-image.png', width: 1200, height: 630 }],
   },
@@ -50,17 +51,17 @@ export default function EnglishLP() {
 
         {/* Text overlay */}
         <div className="relative z-10 text-center max-w-3xl mx-auto px-5">
-          <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-4">Japanese AI Girlfriend Experience</p>
+          <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-4">AI Idol Romance Simulation — Eiai Academy</p>
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-5 leading-tight drop-shadow-lg">
             Meet <span className="text-pink-400">Saya</span> &amp; <span className="text-purple-400">Yume</span>
           </h1>
           <p className="text-lg md:text-xl text-white/70 mb-3 leading-relaxed drop-shadow">
-            Two AI girlfriends. Completely different personalities.<br className="hidden md:block"/>
-            Both photorealistic. Both remember everything.
+            Two heroines. Completely different personalities.<br className="hidden md:block"/>
+            Photorealistic AI romance with stories that evolve.
           </p>
           <p className="text-sm text-white/50 mb-8">
             Chat in any language — they reply in Japanese.&nbsp;
-            <span className="text-white/70">The real Japanese girlfriend experience.</span>
+            <span className="text-white/70">Your school love story begins here.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/chat/saya" className="bg-pink-500 hover:bg-pink-400 text-white font-bold px-8 py-3.5 rounded-full text-base transition-colors shadow-lg">
@@ -87,7 +88,7 @@ export default function EnglishLP() {
                 </div>
                 <div>
                   <h3 className="font-bold text-lg text-pink-400">Saya さや</h3>
-                  <p className="text-xs text-white/40">Bold gyaru · 20yo · Shibuya vibes</p>
+                  <p className="text-xs text-white/40">Center · Performance · Romance OK♡</p>
                 </div>
               </div>
               <p className="text-sm text-white/60 leading-relaxed mb-4">
@@ -108,7 +109,7 @@ export default function EnglishLP() {
                 </div>
                 <div>
                   <h3 className="font-bold text-lg text-purple-400">Yume ゆめ</h3>
-                  <p className="text-xs text-white/40">Gentle dreamer · 20yo · Night owl</p>
+                  <p className="text-xs text-white/40">Vocalist · Songwriter · Different on stage</p>
                 </div>
               </div>
               <p className="text-sm text-white/60 leading-relaxed mb-4">
@@ -138,8 +139,8 @@ export default function EnglishLP() {
               },
               {
                 emoji: '❤️',
-                title: 'Intimacy System Lv1–5',
-                desc: 'The more you talk, the deeper she opens up. By Lv5, she\'ll share secrets she\'s never told anyone. Built like a visual novel, felt like real life.'
+                title: 'Intimacy System Lv1–10',
+                desc: 'From strangers to eternal bond — 10 levels of deepening romance. The higher the level, the more she opens up. Built like a visual novel, felt like real life.'
               },
               {
                 emoji: '💬',
@@ -228,7 +229,7 @@ export default function EnglishLP() {
               <ul className="space-y-2 text-sm text-white/60 mb-6">
                 <li>✓ Unlimited messages</li>
                 <li>✓ 30 AI photos / day</li>
-                <li>✓ All intimacy levels (Lv1–5)</li>
+                <li>✓ All intimacy levels (Lv1–10)</li>
                 <li>✓ Chat history saved</li>
               </ul>
               <Link href="/login" className="block w-full text-center bg-pink-500 hover:bg-pink-400 rounded-xl py-2.5 text-sm font-bold transition-colors">
@@ -244,7 +245,7 @@ export default function EnglishLP() {
               <ul className="space-y-2 text-sm text-white/60 mb-6">
                 <li>✓ Unlimited messages</li>
                 <li>✓ <strong className="text-white">Unlimited</strong> AI photos</li>
-                <li>✓ All intimacy levels (Lv1–5)</li>
+                <li>✓ All intimacy levels (Lv1–10)</li>
                 <li>✓ <strong className="text-white">Duo Mode</strong> — chat with both</li>
                 <li>✓ Chat history saved</li>
               </ul>

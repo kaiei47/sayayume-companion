@@ -4,15 +4,18 @@ import { generateImage, generateDuoImage, buildImagePrompt, buildDuoImagePrompt 
 import { postToInstagram, buildIgCaption } from '@/lib/instagram';
 import { postToTwitter, buildTwitterCaption } from '@/lib/twitter';
 
+// Gemini image gen can take 30s+, IG/X posting adds another 10s → need 60s
+export const maxDuration = 60;
+
 // ── Character config ──────────────────────────────────────────────────────────
 const CHAR_CONFIG = {
   saya: {
-    refImage: 'public/references/saya.jpg',
-    promptBase: 'Japanese woman, light brown straight hair, black lace details, trendy gyaru-style, youthful glowing skin, 20 years old',
+    refImage: 'public/references/saya_uniform.png',
+    promptBase: 'beautiful young Japanese woman, 18 years old, light brown straight hair, bright energetic expression, youthful glowing skin, Instagram-worthy aesthetic',
   },
   yume: {
-    refImage: 'public/references/yume.jpg',
-    promptBase: 'Japanese woman, dark hair with bangs low bun, elegant and gentle style, clean natural look, youthful glowing skin, 20 years old',
+    refImage: 'public/references/yume_uniform.png',
+    promptBase: 'beautiful young Japanese woman, 18 years old, dark straight hair with blunt bangs, gentle shy expression, youthful glowing skin, Instagram-worthy aesthetic',
   },
 };
 
@@ -98,67 +101,107 @@ const EVENTS: Record<string, { scene: string; captions: Record<string, string> }
   },
 };
 
-// ── Scene prompts by slot × day-of-week (0=Sun...6=Sat) ──────────────────────
+// ── Scene prompts: "盛れる" shots (no school restriction) ────────────────────
+// Focus: cute, aesthetic, Instagram-worthy — outfits rotate with scenes
 const SCENE_PROMPTS: Record<string, string[]> = {
   morning: [
-    'waking up in bed, thin spaghetti strap sleep top barely covering shoulder, fluffy white duvet, warm morning sunlight, bare collarbone, half-asleep drowsy expression, upper body shot',
-    'bathroom mirror selfie after shower, thin oversized tee slipping off one shoulder, post-shower dewy glowing skin, tousled hair, playful smile, upper body shot',
-    'morning coffee, kitchen counter, steam rising from mug, thin ribbed cropped tank top, cotton shorts, bare collarbone, sleepy content smile, upper body shot',
-    'stretching arms up in bed, thin white tank top riding up slightly, bare midriff glimpse, tousled hair, morning light, yawning sleepily, intimate bedroom vibe, upper body shot',
-    'doorstep mirror selfie heading out, fitted off-shoulder knit top, bare shoulders, bright morning sky behind, confident playful smile, upper body shot',
-    'post-shower bathroom selfie, hair towel wrapped, thin cotton robe slightly open at collarbone, bare shoulders, dewy glowing skin, playful wink, upper body shot',
-    'balcony morning selfie, city behind, thin ribbed sleeveless tank, bare shoulders in morning sun, coffee mug in hand, relaxed natural smile, upper body shot',
+    'cozy cafe window seat, wearing a cream knit sweater, holding latte art cup, morning sunlight, soft bokeh background, sweet smile, close-up selfie style, upper body shot',
+    'Tokyo street Harajuku, wearing a trendy cropped hoodie and high-waist jeans, taking mirror selfie in shop window, bright daylight, playful pose, upper body shot',
+    'flower garden in golden morning light, wearing a flowy white sundress, surrounded by pink roses, wind in hair, gentle smile, dreamy aesthetic, upper body shot',
+    'luxury hotel room window, wearing silk pajama set, holding coffee mug, city skyline view, morning glow on face, relaxed natural beauty, upper body shot',
+    'cherry blossom tree-lined street, wearing a pastel pink cardigan and pleated skirt, petals falling, soft focus background, sweet expression, upper body shot',
+    'rooftop terrace with plants, wearing an off-shoulder top and denim shorts, leaning on railing, blue sky, hair blowing, fresh morning vibe, upper body shot',
+    'beach sunrise, wearing a light linen shirt over bikini top, ocean breeze, golden hour glow on skin, carefree happy expression, upper body shot',
   ],
   noon: [
-    'cafe selfie, latte art on table, natural window light, off-shoulder white top, bare shoulders and collarbone, sweet gentle smile, upper body shot',
-    'library selfie, books around, warm afternoon light, fitted thin-strap camisole under open cardigan sliding off one shoulder, studious charming look, upper body shot',
-    'park bench selfie, cherry blossoms behind, light breeze, sleeveless fitted crop top, bare arms, soft natural sunlight, peaceful natural expression, upper body shot',
-    'lunch selfie, colorful food tray, bright cafe, fitted scoop-neck top with subtle neckline, light happy smile, upper body shot',
-    'boutique mirror selfie, trying on a form-fitting off-shoulder mini dress, playful confident expression, soft boutique lighting, upper body shot',
-    'cafe window seat selfie, rainy afternoon, thin off-shoulder sweater, collarbone and bare shoulders subtly visible, hands around warm mug, cozy intimate feel, upper body shot',
-    'rooftop selfie at midday, sunny sky, sleeveless white sundress with thin straps, bare shoulders and arms, carefree bright smile, upper body shot',
+    'trendy Japanese dessert cafe, wearing a ribbed tank top and gold necklace, eating parfait, colorful sweets on table, bright cheerful, close-up, upper body shot',
+    'shopping mall escalator, wearing a stylish mini dress and small handbag, looking back at camera over shoulder, bright indoor lighting, confident smile, upper body shot',
+    'park picnic blanket, wearing a gingham crop top and shorts, surrounded by snacks, dappled sunlight through trees, candid laughing, upper body shot',
+    'aquarium blue glow, wearing a black turtleneck, jellyfish tanks behind, mysterious beautiful lighting on face, soft gaze at camera, upper body shot',
+    'vintage record shop, wearing an oversized band tee tucked into leather skirt, browsing vinyl, warm retro lighting, cool aesthetic, upper body shot',
+    'poolside lounge chair, wearing a colorful swimsuit cover-up, sunglasses pushed up on head, bright tropical vibe, relaxed pose, upper body shot',
+    'art gallery white wall, wearing a chic all-black outfit, posing next to colorful painting, sophisticated vibe, slight smile, upper body shot',
   ],
   evening: [
-    'two young Japanese women at a cozy izakaya, warm lantern lighting, both in stylish form-fitting outfits showing bare shoulders, laughing together, candid photo',
-    'two young Japanese women night walk, colorful neon city lights, one in off-shoulder mini dress, one in fitted halter top and mini skirt, arm in arm, candid photo',
-    'two young Japanese women at convenience store, both in cute cropped tops and short shorts showing long legs, playful expressions, late evening, candid photo',
-    'two young Japanese women rooftop at dusk, golden hour, both in sleeveless fitted summer dresses, bare shoulders and collarbone, city lights behind, candid photo',
-    'two young Japanese women karaoke room, colorful mood lighting, both in going-out outfits — fitted mini dresses or crop tops and mini skirts, having fun, candid photo',
-    'two young Japanese women at night market, warm string lights, one in short summer dress, one in off-shoulder crop top and mini skirt, eating street food, candid photo',
-    'two young Japanese women home evening, matching thin lounge sets — fitted crop tops and short shorts, relaxing on couch together, soft cozy lighting, candid photo',
+    'two beautiful young Japanese women at rooftop bar, city lights bokeh behind, one in a red mini dress the other in white satin top, holding cocktails, laughing together, glamorous, candid photo',
+    'two beautiful young Japanese women taking purikura-style selfie, neon lights, one in crop hoodie the other in oversized cardigan, cute peace signs, bright colorful, candid photo',
+    'two beautiful young Japanese women at sunset beach, one in denim shorts and bikini top the other in flowy maxi dress, golden hour, wind in hair, happy carefree, candid photo',
+    'two beautiful young Japanese women at night festival, one in modern yukata the other in cute summer outfit, lantern lights, festival food, warm atmosphere, candid photo',
+    'two beautiful young Japanese women at fancy restaurant, one in black halter dress the other in blue wrap dress, candle light, elegant dinner setting, smiling at camera, candid photo',
+    'two beautiful young Japanese women in Shibuya crossing at blue hour, one in leather jacket the other in trench coat, city neon glow, cool confident expressions, candid photo',
+    'two beautiful young Japanese women in cozy home pajama party, one in pink silk PJs the other in white cotton set, fairy lights, blankets, warm intimate vibe, candid photo',
   ],
 };
 
-// ── Captions by slot × day-of-week ───────────────────────────────────────────
+// ── Captions: short, cute, no promotion ──────────────────────────────────────
 const CAPTIONS: Record<string, string[]> = {
   morning: [
-    '起きてる？😴 夢に出てきたから、送っちゃった',
-    '朝から顔見たくなって…変かな笑🖤',
-    'コーヒー飲みながらあなたのこと考えてた☕ なんでだろ',
-    '髪ボサボサのまま送る笑 でも気になって見せたかった♡',
-    '今日も会えないのかな…って思いながら準備してる',
-    '鏡見てたらあなたに見せたくなった。どう？😏',
-    '今日いい日になりそう。そんな予感がする☀️ あなたのせいかも',
+    'おはよ☀️',
+    '朝のカフェ、最高すぎん？☕️',
+    'お気に入りの場所📸',
+    '今日も盛れた✌️',
+    '朝から元気もらって💕',
+    'いい天気🌸',
+    '海の朝って特別🌊',
   ],
   noon: [
-    'ひとりでカフェにいるんだけど…なんか寂しくなってきた😔',
-    '図書館、静かすぎてあなたのことばかり考えてた',
-    '桜がきれいで、隣に誰かいたらなって思った🌸 あなたがよかった',
-    'お昼、ひとりだとなんか味気なくて。一緒に食べたかったな',
-    '一緒に選んでほしかったな…って思いながらずっと見てた♡',
-    '雨の音聞きながら、なんとなくあなたのこと考えてた☔',
-    'この景色、見せたかった。写真じゃ伝わらないかもだけど',
+    'スイーツは正義🍰',
+    'お買い物day🛍️',
+    'ピクニック日和🧺',
+    'この雰囲気すき🪼',
+    '休日のわたし🎶',
+    '夏が待ちきれない☀️',
+    'アート好きにはたまらない🎨',
   ],
   evening: [
-    '2人でいたら急にあなたに会いたくなって…♡ 来ない？',
-    '夜風きもちよすぎる。ねえ、一緒に歩かない？🌙',
-    'コンビニ来てるんだけど…何か買ってきてあげようか😏 何がいい？',
-    '夕焼け見ながら、あなたのことなんか話してたんだ🌅 気になる？',
-    'カラオケいるよ〜♡ 早く来て、待ってるから絶対来てね',
-    '屋台のご飯、一緒に食べたら絶対おいしいよね。ずるいな',
-    '2人でまったりしてたら、なんかもう1人足りないなって😏 それあなたね',
+    '夜景デート🌃',
+    'ふたりの時間✌️',
+    'サンセット🌅',
+    'お祭り楽しかった🏮',
+    'ディナー💕',
+    '渋谷の夜🌙',
+    'おうちでまったり🧸',
   ],
 };
+
+// ── SNS auto-post helper (IG + X) ────────────────────────────────────────────
+async function postToSns(imageUrl: string, caption: string) {
+  let igResult: { success: boolean; postId?: string; error?: string } | null = null;
+  let xResult: { success: boolean; tweetId?: string; error?: string } | null = null;
+
+  // IG
+  const igToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+  const igUserId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+  if (igToken && igUserId) {
+    const igCaption = buildIgCaption(caption);
+    igResult = await postToInstagram(imageUrl, igCaption, igToken, igUserId);
+    if (igResult.success) {
+      console.log(`IG posted: ${igResult.postId}`);
+    } else {
+      console.error(`IG post failed: ${igResult.error}`);
+    }
+  } else {
+    console.warn('INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID not set, skipping IG post');
+  }
+
+  // X (Twitter)
+  if (process.env.TWITTER_API_KEY) {
+    const twitterCaption = buildTwitterCaption(caption);
+    xResult = await postToTwitter(imageUrl, twitterCaption);
+    if (xResult.success) {
+      console.log(`X posted: ${xResult.tweetId}`);
+    } else {
+      console.error(`X post failed: ${xResult.error}`);
+    }
+  } else {
+    console.warn('TWITTER_API_KEY not set, skipping X post');
+  }
+
+  return {
+    ig: igResult ?? { skipped: true, reason: 'IG credentials not configured' },
+    x: xResult ?? { skipped: true, reason: 'Twitter credentials not configured' },
+  };
+}
 
 function getSupabaseAdmin() {
   return createClient(
@@ -224,6 +267,13 @@ export async function GET(
 
   if (existing) {
     console.log(`Daily photo already exists: ${photoDate} ${slot}`);
+    // retry_sns=true allows manual SNS re-posting for existing photos
+    const retrySns = req.nextUrl.searchParams.get('retry_sns') === 'true';
+    if (retrySns) {
+      console.log(`Retrying SNS post for existing photo: ${photoDate} ${slot}`);
+      const snsResults = await postToSns(existing.image_url, existing.caption);
+      return Response.json({ status: 'already_exists_sns_retry', id: existing.id, ...snsResults });
+    }
     return Response.json({ status: 'already_exists', id: existing.id, imageUrl: existing.image_url, caption: existing.caption });
   }
 
@@ -270,37 +320,8 @@ export async function GET(
 
   console.log(`Daily photo generated: ${photoDate} ${slot} ${character} → ${imageUrl}`);
 
-  // ── IG auto-post ──────────────────────────────────────────────────────────
-  const igToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const igUserId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
-  let igResult: { success: boolean; postId?: string; error?: string } | null = null;
-
-  if (igToken && igUserId) {
-    const igCaption = buildIgCaption(caption);
-    igResult = await postToInstagram(imageUrl, igCaption, igToken, igUserId);
-    if (igResult.success) {
-      console.log(`IG posted: ${igResult.postId}`);
-    } else {
-      console.error(`IG post failed: ${igResult.error}`);
-    }
-  } else {
-    console.warn('INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID not set, skipping IG post');
-  }
-
-  // ── X (Twitter) auto-post ─────────────────────────────────────────────────
-  let xResult: { success: boolean; tweetId?: string; error?: string } | null = null;
-
-  if (process.env.TWITTER_API_KEY) {
-    const twitterCaption = buildTwitterCaption(caption);
-    xResult = await postToTwitter(imageUrl, twitterCaption);
-    if (xResult.success) {
-      console.log(`X posted: ${xResult.tweetId}`);
-    } else {
-      console.error(`X post failed: ${xResult.error}`);
-    }
-  } else {
-    console.warn('TWITTER_API_KEY not set, skipping X post');
-  }
+  // ── SNS auto-post (IG + X) ─────────────────────────────────────────────
+  const snsResults = await postToSns(imageUrl, caption);
 
   return Response.json({
     status: 'generated',
@@ -308,7 +329,6 @@ export async function GET(
     imageUrl,
     caption,
     character,
-    ig: igResult ?? { skipped: true, reason: 'IG credentials not configured' },
-    x: xResult ?? { skipped: true, reason: 'Twitter credentials not configured' },
+    ...snsResults,
   });
 }

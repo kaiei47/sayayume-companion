@@ -35,7 +35,7 @@ export default function AgeGate({ children }: { children: React.ReactNode }) {
       <div className="w-full max-w-sm space-y-6 text-center">
         <div className="flex flex-col items-center gap-2">
           <SayayumeLogo size="lg" />
-          <p className="text-muted-foreground text-sm">AI彼女</p>
+          <p className="text-muted-foreground text-sm">AI恋愛シミュレーション</p>
         </div>
 
         <div className="rounded-2xl border border-border/50 bg-card/50 p-6 space-y-4">

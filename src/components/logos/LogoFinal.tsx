@@ -156,7 +156,7 @@ export default function LogoFinal({
                   fill="#64748b"
                   fontFamily='"Inter", system-ui, sans-serif'
                 >
-                  AI GIRLFRIEND
+                  AI ROMANCE SIM
                 </text>
               )}
             </>

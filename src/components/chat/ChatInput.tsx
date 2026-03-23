@@ -7,9 +7,10 @@ interface ChatInputProps {
   onSend: (message: string) => void;
   disabled: boolean;
   placeholder?: string;
+  suggestions?: string[];
 }
 
-export default function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
+export default function ChatInput({ onSend, disabled, placeholder, suggestions }: ChatInputProps) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -50,7 +51,21 @@ export default function ChatInput({ onSend, disabled, placeholder }: ChatInputPr
   };
 
   return (
-    <div className="border-t border-border/50 bg-background/80 backdrop-blur-lg px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+    <div className="border-t border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      {/* 返信サジェストボタン */}
+      {suggestions && suggestions.length > 0 && !disabled && (
+        <div className="mx-auto max-w-2xl flex flex-wrap gap-2 mb-2">
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => onSend(s)}
+              className="text-sm px-3 py-1.5 rounded-full border border-pink-500/30 bg-pink-500/10 text-pink-300 hover:bg-pink-500/20 hover:border-pink-500/50 transition-all active:scale-95"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="mx-auto max-w-2xl flex items-end gap-2">
         <textarea
           ref={textareaRef}
@@ -61,13 +76,13 @@ export default function ChatInput({ onSend, disabled, placeholder }: ChatInputPr
           placeholder={placeholder || 'メッセージを入力...'}
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none rounded-2xl border border-border/50 bg-muted/30 px-4 py-2.5 text-base placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 disabled:opacity-50 transition-colors"
+          className="flex-1 resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-base text-white placeholder:text-white/25 focus:outline-none focus:ring-1 focus:ring-pink-500/50 focus:border-pink-500/30 disabled:opacity-50 transition-colors"
         />
         <Button
           onClick={handleSend}
           disabled={disabled || !input.trim()}
           size="icon"
-          className="h-10 w-10 rounded-full flex-shrink-0 bg-blue-600 hover:bg-blue-500 disabled:bg-muted disabled:text-muted-foreground transition-colors"
+          className="h-10 w-10 rounded-full flex-shrink-0 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 disabled:from-white/10 disabled:to-white/10 disabled:text-white/20 text-white transition-all"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

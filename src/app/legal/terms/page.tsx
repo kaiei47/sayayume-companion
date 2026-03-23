@@ -17,7 +17,7 @@ export default function TermsPage() {
         <section className="rounded-2xl border border-border/50 bg-card/50 p-6 space-y-3">
           <h2 className="text-lg font-semibold">第1条（サービスの概要）</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            「さやゆめ」（以下「本サービス」）は、AI技術を活用したコンパニオンチャットアプリケーションです。
+            「さやゆめ」（以下「本サービス」）は、AI技術を活用した恋愛シミュレーションゲームです。
             ユーザーはAIキャラクター（さや・ゆめ）とのテキストチャットおよびAI生成画像の閲覧を楽しむことができます。
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed">

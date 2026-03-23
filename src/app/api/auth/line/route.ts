@@ -1,18 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const state = crypto.randomBytes(16).toString('hex');
   const nonce = crypto.randomBytes(16).toString('hex');
 
-  // stateをcookieに保存（CSRF対策）
+  // mode=link のとき → 既存ユーザーとLINEを連携するフロー
+  const mode = request.nextUrl.searchParams.get('mode') || 'login';
+
+  // stateとmodeをcookieに保存（CSRF対策）
   const cookieStore = await cookies();
   cookieStore.set('line_oauth_state', state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 600, // 10分
+    path: '/',
+  });
+  cookieStore.set('line_oauth_mode', mode, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 600,
     path: '/',
   });
 

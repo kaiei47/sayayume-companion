@@ -28,6 +28,16 @@ interface RateLimitResult {
   reset: number;
 }
 
+/**
+ * クオータを消費せずに超過チェックのみ行う（ゲスト画像クオータ確認用）
+ */
+export function peekRateLimit(key: string, limit: number): boolean {
+  const now = Date.now();
+  const entry = store.get(key);
+  if (!entry || now > entry.resetAt) return false; // 未使用 = 超過していない
+  return entry.count >= limit;
+}
+
 export function rateLimit(
   key: string,
   limit: number,

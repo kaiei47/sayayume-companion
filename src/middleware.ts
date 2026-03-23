@@ -37,6 +37,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // auth/callback はPKCE code_verifier cookieをミドルウェアが消費しないよう除外
+    '/((?!_next/static|_next/image|favicon.ico|api/line/|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

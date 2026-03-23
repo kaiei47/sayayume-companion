@@ -1,13 +1,13 @@
 {
-  "name": "さやゆめ - AI彼女",
+  "name": "さやゆめ - AI恋愛シミュレーション",
   "short_name": "さやゆめ",
-  "description": "東京の双子AIガールフレンド♡",
+  "description": "永愛学園を舞台にしたフォトリアルAI恋愛シミュレーション♡",
+  "categories": ["games", "entertainment"],
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0f0f1a",
   "theme_color": "#0f0f1a",
-  "categories": ["entertainment", "social"],
   "icons": [
     {
       "src": "/icons/icon-192.png",

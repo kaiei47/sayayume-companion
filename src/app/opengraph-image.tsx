@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'さやゆめ - AI彼女';
+export const alt = 'さやゆめ - フォトリアルAI恋愛シミュレーション | 永愛学園';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -78,7 +78,7 @@ export default function Image() {
               alignItems: 'center',
             }}
           >
-            <span>東京の双子AIガールフレンド</span>
+            <span>永愛学園 AI恋愛シミュレーション</span>
             <span style={{ color: '#ec4899' }}>♡</span>
           </div>
 
@@ -90,7 +90,7 @@ export default function Image() {
               marginTop: 20,
             }}
           >
-            {['リアルタイムチャット', 'AI自撮り写真', 'プライバシー保護'].map(
+            {['恋愛シミュレーション', 'AI自撮り写真', '親密度システム'].map(
               (text) => (
                 <div
                   key={text}
