@@ -27,7 +27,12 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('signup') === '1';
+    }
+    return false;
+  });
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(() => {
@@ -205,6 +210,40 @@ export default function LoginPage() {
         {/* Glassmorphism login card */}
         <div className="mx-4 mb-4 rounded-2xl border border-white/10 p-5 space-y-4" style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}>
 
+          {/* Guest CTA - most prominent option */}
+          {!isForgotPassword && (
+            <div className="rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-500/20 p-4 text-center">
+              <p className="text-xs text-white/50 mb-2">登録なしで今すぐ試せる</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => router.push('/chat/saya')}
+                  className="flex-1 rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:opacity-90 transition-all shadow-lg shadow-pink-500/25"
+                >
+                  さやと話してみる →
+                </button>
+                <button
+                  onClick={() => router.push('/chat/yume')}
+                  className="flex-1 rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:opacity-90 transition-all shadow-lg shadow-purple-500/25"
+                >
+                  ゆめと話してみる →
+                </button>
+              </div>
+              <p className="text-[10px] text-white/30 mt-2">無料 &middot; 登録不要 &middot; 匿名でOK</p>
+            </div>
+          )}
+
+          {/* Divider */}
+          {!isForgotPassword && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-3 text-white/30" style={{ backgroundColor: 'rgba(10,10,26,0.8)' }}>アカウント登録で会話が保存される</span>
+              </div>
+            </div>
+          )}
+
           {/* OAuth buttons */}
           <button
             onClick={() => handleOAuthLogin('google')}
@@ -217,7 +256,7 @@ export default function LoginPage() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            {isSignUp ? 'Googleで登録' : 'Googleでログイン'}
+            {isSignUp ? 'Googleで30秒登録（無料）' : 'Googleでログイン'}
           </button>
 
           <a
@@ -296,6 +335,9 @@ export default function LoginPage() {
                 minLength={6}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-pink-500/40 focus:border-pink-500/30 transition-all placeholder:text-white/30"
               />
+              {isSignUp && (
+                <p className="text-[11px] text-white/30">登録後に確認メールが届きます。メールのリンクをクリックして完了です。</p>
+              )}
               {error && (
                 <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
                   {error}
@@ -340,17 +382,6 @@ export default function LoginPage() {
                 : 'アカウントをお持ちでない方は無料登録'}
             </button>
           )}
-        </div>
-
-        {/* Guest mode - prominent */}
-        <div className="flex flex-col items-center px-6 mb-3">
-          <button
-            onClick={() => router.push('/chat/saya')}
-            className="text-sm font-medium text-white/60 hover:text-white transition-colors"
-          >
-            ゲストで試す <span className="ml-1">→</span>
-          </button>
-          <span className="text-[11px] text-white/30 mt-1">登録不要 &middot; 匿名でOK</span>
         </div>
 
         {/* Trust signals */}
@@ -406,6 +437,36 @@ export default function LoginPage() {
 
               {!isForgotPassword && (
                 <>
+                  {/* Guest CTA - most prominent option */}
+                  <div className="rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-500/20 p-4 text-center">
+                    <p className="text-xs text-white/50 mb-2">登録なしで今すぐ試せる</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => router.push('/chat/saya')}
+                        className="flex-1 rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:opacity-90 transition-all shadow-lg shadow-pink-500/25"
+                      >
+                        さやと話してみる →
+                      </button>
+                      <button
+                        onClick={() => router.push('/chat/yume')}
+                        className="flex-1 rounded-xl py-3 text-sm font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:opacity-90 transition-all shadow-lg shadow-purple-500/25"
+                      >
+                        ゆめと話してみる →
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-white/30 mt-2">無料 &middot; 登録不要 &middot; 匿名でOK</p>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-white/10" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="px-3 text-white/30" style={{ backgroundColor: 'rgba(10,10,26,0.9)' }}>アカウント登録で会話が保存される</span>
+                    </div>
+                  </div>
+
                   {/* OAuth */}
                   <button
                     onClick={() => handleOAuthLogin('google')}
@@ -418,7 +479,7 @@ export default function LoginPage() {
                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
-                    {isSignUp ? 'Googleで登録' : 'Googleでログイン'}
+                    {isSignUp ? 'Googleで30秒登録（無料）' : 'Googleでログイン'}
                   </button>
 
                   <a
@@ -498,6 +559,9 @@ export default function LoginPage() {
                     minLength={6}
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-pink-500/40 focus:border-pink-500/30 transition-all placeholder:text-white/30"
                   />
+                  {isSignUp && (
+                    <p className="text-[11px] text-white/30">登録後に確認メールが届きます。メールのリンクをクリックして完了です。</p>
+                  )}
                   {error && (
                     <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
                       {error}
@@ -548,11 +612,10 @@ export default function LoginPage() {
                 <div>
                   <button
                     onClick={() => router.push('/chat/saya')}
-                    className="text-sm font-medium text-white/50 hover:text-white transition-colors"
+                    className="text-sm font-medium text-white/40 hover:text-white/70 transition-colors"
                   >
-                    ゲストで試す <span className="ml-1">→</span>
+                    登録せずにゲストで試す
                   </button>
-                  <p className="text-[11px] text-white/25 mt-1">登録不要 &middot; 匿名でOK</p>
                 </div>
               </div>
             )}
