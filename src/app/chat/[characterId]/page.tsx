@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import ChatMessages, { ChatMessage } from '@/components/chat/ChatMessages';
 import ChatInput from '@/components/chat/ChatInput';
 import ExpPopup, { ExpEvent } from '@/components/chat/ExpPopup';
@@ -33,6 +33,7 @@ const CHARACTER_SECRETS: Record<string, Array<{ level: number; hint: string }>> 
 function ChatPageInner() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const characterId = params.characterId as CharacterId;
   const character = CHARACTERS[characterId];
 
@@ -62,6 +63,7 @@ function ChatPageInner() {
   const [levelCapped, setLevelCapped] = useState(false);
   const [gateStory, setGateStory] = useState<{ id: string; title: string } | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [lineLinked, setLineLinked] = useState<boolean | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const pendingToggles = useRef<Set<string>>(new Set());
   const pendingGreetingRef = useRef<string | null>(null); // greeting text to save as initial AI msg
@@ -89,11 +91,23 @@ function ChatPageInner() {
     async function loadUserData() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setIsGuest(true); return; }
+      if (!user) {
+        const isFromLine = searchParams.get('openExternalBrowser') === '1';
+        if (isFromLine) {
+          router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+          return;
+        }
+        setIsGuest(true);
+        return;
+      }
       const { data: dbUser } = await supabase.from('users').select('id').eq('auth_id', user.id).single();
       if (!dbUser) return;
       const { data: sub } = await supabase.from('subscriptions').select('plan').eq('user_id', dbUser.id).eq('status', 'active').single();
       if (sub) setUserPlan(sub.plan);
+
+      // LINE連携チェック
+      const { data: lineUser } = await supabase.from('line_users').select('id').eq('user_id', dbUser.id).maybeSingle();
+      setLineLinked(!!lineUser);
 
       // 親密度 + ストリーク + デイリーミッション取得
       try {
@@ -666,6 +680,26 @@ function ChatPageInner() {
           </div>
         );
       })()}
+
+      {/* LINE連携促進バナー */}
+      {!isGuest && lineLinked === false && messages.length >= 3 && (
+        <a
+          href="/api/auth/line?mode=link"
+          className="border-t border-[#06C755]/20 bg-[#06C755]/5 backdrop-blur-sm px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-[#06C755]/10 transition-all"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#06C755" className="flex-shrink-0">
+              <path d="M12 2C6.48 2 2 6.03 2 11c0 3.13 1.67 5.9 4.25 7.61V21l2.5-1.39c.73.2 1.5.3 2.25.3 5.52 0 10-4.03 10-9S17.52 2 12 2z"/>
+            </svg>
+            <p className="text-[11px] text-white/50 leading-tight">
+              LINEと連携すると{character.nameJa}からメッセージが届く♡
+            </p>
+          </div>
+          <span className="flex-shrink-0 text-[11px] font-bold text-white px-3 py-1.5 rounded-full" style={{ backgroundColor: '#06C755' }}>
+            連携する →
+          </span>
+        </a>
+      )}
 
       {/* ゲスト向け登録促進バナー */}
       {isGuest && messages.length >= 2 && (

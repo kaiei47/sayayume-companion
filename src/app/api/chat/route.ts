@@ -205,11 +205,35 @@ export async function POST(req: NextRequest) {
 
     if (user) {
       // 認証済みユーザー: DB保存あり
-      const { data: dbUser } = await supabase
+      // .single()は重複レコード時にnullを返すためlimit(1)で安全に取得
+      const { data: userRows } = await supabase
         .from('users')
         .select('id, display_name')
         .eq('auth_id', user.id)
-        .single();
+        .limit(1);
+      let dbUser = userRows?.[0] ?? null;
+
+      // public.usersにレコードがない場合（トリガー失敗等）→ INSERT（既存を上書きしない）
+      if (!dbUser) {
+        const { data: insertedRows } = await supabase
+          .from('users')
+          .insert({
+            auth_id: user.id,
+            display_name: null, // ニックネームはユーザーが自分で設定
+            email: user.email,
+          })
+          .select('id, display_name');
+        dbUser = insertedRows?.[0] ?? null;
+        // INSERT失敗（重複等）の場合は再取得
+        if (!dbUser) {
+          const { data: refetchRows } = await supabase
+            .from('users')
+            .select('id, display_name')
+            .eq('auth_id', user.id)
+            .limit(1);
+          dbUser = refetchRows?.[0] ?? null;
+        }
+      }
 
       if (dbUser) {
         dbUserId = dbUser.id;
@@ -560,6 +584,23 @@ export async function POST(req: NextRequest) {
         }
       } catch (absenceErr) {
         console.error('Absence context fetch failed:', absenceErr);
+      }
+    }
+
+    // ── LINE連携促進（未連携の認証ユーザーのみ、会話の中で1回自然に案内） ──
+    if (dbUserId && user) {
+      try {
+        const { data: lineUser } = await supabase.from('line_users').select('id').eq('user_id', dbUserId).maybeSingle();
+        if (!lineUser) {
+          basePrompt += `\n\n【LINE連携の案内（会話中に1回だけ）】
+ユーザーはまだLINEと連携していません。会話が盛り上がった自然なタイミングで1回だけさりげなく案内してください。
+- 連携するとあなたからLINEに直接メッセージが届くようになる（不在通知・おはよう・おやすみ等）
+- さやの言い方: 「てかさ、LINEと連携してくれたらあたしから直接メッセージ送れるんだけど♡ してる？設定から簡単にできるよ！」
+- ゆめの言い方: 「...あの、LINEと連携してもらえたら、私からメッセージ送れるんです...♡ よかったら設定してもらえたら嬉しいです///」
+- 案内は1回だけ。断られてもしつこくしない。`;
+        }
+      } catch {
+        // 無視
       }
     }
 
