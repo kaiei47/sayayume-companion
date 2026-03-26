@@ -1005,10 +1005,14 @@ export async function POST(req: NextRequest) {
           // ── 返信サジェスト生成（Gemini Flash 非ストリーミング） ──
           try {
             const suggestUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-            const recentTurns = history.slice(-6);
+            // 現在のユーザーメッセージ込みでコンテキスト構築（直近4ターン + 今のメッセージ）
+            const recentTurns = [
+              ...history.slice(-4),
+              { role: 'user', content: message },
+            ];
             const conversationContext = recentTurns.map(h => {
               const role = h.role === 'user' ? 'ユーザー' : 'キャラ';
-              return `${role}: ${h.content.slice(0, 100)}`;
+              return `${role}: ${h.content.slice(0, 120)}`;
             }).join('\n');
             const suggestRes = await fetch(suggestUrl, {
               method: 'POST',
@@ -1021,13 +1025,13 @@ export async function POST(req: NextRequest) {
 【直近の会話】
 ${conversationContext}
 
-【キャラの最新メッセージ】
-「${savedContent.slice(0, 200)}」
+【キャラの最新メッセージ（これへの返答を考える）】
+「${savedContent.slice(0, 250)}」
 
 条件:
-- ユーザー目線（一人称不要、話し言葉）
+- ユーザー目線（一人称不要、話し言葉・くだけた口調）
 - 各20文字以内
-- 会話の話題・流れに沿った具体的な返答
+- キャラのメッセージの具体的な内容に反応した返答（汎用返答はNG）
 - 3パターン: 質問系・共感系・深掘り系を混ぜる
 - JSON配列のみ: ["返答1", "返答2", "返答3"]` }]
                 }],
