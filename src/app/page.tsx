@@ -51,12 +51,26 @@ export default function Home() {
   const [isLoadingImages, setIsLoadingImages] = useState(true);
   const [imageFilter, setImageFilter] = useState<'all' | 'favorite'>('all');
   const [userPlan, setUserPlan] = useState<string>('free');
+  const [dailyMissions, setDailyMissions] = useState<Array<{id: string; label: string; icon: string; points: number; completed: boolean}>>([]);
   const [dailyPhotos, setDailyPhotos] = useState<DailyPhoto[] | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [dbUserId, setDbUserId] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
 
   const pendingToggles = useRef<Set<string>>(new Set());
+
+  // localStorage からキャッシュを即時復元（ちらつき防止）
+  useEffect(() => {
+    try {
+      const cachedPlan = localStorage.getItem('userPlan');
+      if (cachedPlan) setUserPlan(cachedPlan);
+      const cachedIntimacy = localStorage.getItem('intimacy_home');
+      if (cachedIntimacy) {
+        const parsed = JSON.parse(cachedIntimacy);
+        if (parsed) setIntimacy(parsed);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const toggleFavorite = async (messageId: string, current: boolean) => {
     if (pendingToggles.current.has(messageId)) return;
@@ -119,8 +133,12 @@ export default function Home() {
         fetch('/api/intimacy', { cache: 'no-store' })
           .then(res => res.json())
           .then(data => {
-            if (data.intimacy) setIntimacy(data.intimacy);
+            if (data.intimacy) {
+              setIntimacy(data.intimacy);
+              try { localStorage.setItem('intimacy_home', JSON.stringify(data.intimacy)); } catch { /* ignore */ }
+            }
             if (data.streak) setStreak(data.streak.count || 0);
+            if (data.dailyMissions) setDailyMissions(data.dailyMissions);
           })
           .catch(() => {});
 
@@ -153,7 +171,10 @@ export default function Home() {
                 .eq('status', 'active')
                 .maybeSingle()
                 .then(({ data: sub }) => {
-                  if (sub?.plan) setUserPlan(sub.plan);
+                  if (sub?.plan) {
+                    setUserPlan(sub.plan);
+                    try { localStorage.setItem('userPlan', sub.plan); } catch { /* ignore */ }
+                  }
                 });
             }
           });
@@ -163,8 +184,12 @@ export default function Home() {
           fetch('/api/intimacy', { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
-              if (data.intimacy) setIntimacy(data.intimacy);
+              if (data.intimacy) {
+                setIntimacy(data.intimacy);
+                try { localStorage.setItem('intimacy_home', JSON.stringify(data.intimacy)); } catch { /* ignore */ }
+              }
               if (data.streak) setStreak(data.streak.count || 0);
+              if (data.dailyMissions) setDailyMissions(data.dailyMissions);
             })
             .catch(() => {});
         };
@@ -213,6 +238,7 @@ export default function Home() {
     userPlan={userPlan}
     dailyPhotos={dailyPhotos}
     streak={streak}
+    dailyMissions={dailyMissions}
   />
   </>;
 }
@@ -1241,6 +1267,7 @@ function Dashboard({
   userPlan,
   dailyPhotos,
   streak,
+  dailyMissions,
 }: {
   user: User;
   lastMessages: Record<string, LastMessage>;
@@ -1253,6 +1280,7 @@ function Dashboard({
   userPlan: string;
   dailyPhotos: DailyPhoto[] | null;
   streak: number;
+  dailyMissions: Array<{id: string; label: string; icon: string; points: number; completed: boolean}>;
 }) {
   const [lightboxImg, setLightboxImg] = useState<ReceivedImage | null>(null);
 
@@ -1405,13 +1433,19 @@ function Dashboard({
     return { text: `あと${hours}時間${minutes}分`, expired: false };
   }
 
-  // Daily missions state (client-side tracking from intimacy events)
-  const missions = [
-    { id: 'daily_first', label: '初回メッセージ', exp: 5, icon: '💬' },
-    { id: 'long_message', label: '50文字以上のメッセージ', exp: 2, icon: '📝' },
-    { id: 'compliment', label: '褒める', exp: 3, icon: '😍' },
-    { id: 'image_request', label: '写真をリクエスト', exp: 1, icon: '📸' },
-    { id: 'story_complete', label: 'ストーリーをプレイ', exp: 20, icon: '📖' },
+  // Daily missions: APIから取得した実データを使用
+  const missions = dailyMissions.length > 0 ? dailyMissions.map(m => ({
+    id: m.id,
+    label: m.label,
+    exp: m.points,
+    icon: m.icon,
+    completed: m.completed,
+  })) : [
+    { id: 'daily_first', label: '初回メッセージ', exp: 5, icon: '💬', completed: Object.keys(lastMessages).length > 0 },
+    { id: 'long_message', label: '50文字以上のメッセージ', exp: 2, icon: '📝', completed: false },
+    { id: 'compliment', label: '褒める', exp: 3, icon: '😍', completed: false },
+    { id: 'image_request', label: '写真をリクエスト', exp: 1, icon: '📸', completed: receivedImages.length > 0 },
+    { id: 'story_complete', label: 'ストーリーをプレイ', exp: 20, icon: '📖', completed: false },
   ];
 
   return (
@@ -1680,16 +1714,7 @@ function Dashboard({
               </div>
               <div className="space-y-2">
                 {missions.map((mission) => {
-                  // Check if any character has completed this mission today
-                  // We approximate from lastMessages and intimacy data
-                  const completed = (() => {
-                    if (mission.id === 'daily_first') return Object.keys(lastMessages).length > 0;
-                    if (mission.id === 'long_message') return false;
-                    if (mission.id === 'compliment') return false;
-                    if (mission.id === 'image_request') return receivedImages.length > 0;
-                    if (mission.id === 'story_complete') return false;
-                    return false;
-                  })();
+                  const completed = mission.completed;
                   return (
                     <div
                       key={mission.id}

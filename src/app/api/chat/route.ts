@@ -967,8 +967,8 @@ export async function POST(req: NextRequest) {
               })
               .eq('id', conversation_id);
 
-            // 3メッセージごとにメモリ抽出（awaitして確実に保存）
-            if (dbUserId && currentTotalMessageCount % 3 === 0 && currentTotalMessageCount > 0) {
+            // 十分なコンテキストがあるメッセージごとにメモリ抽出（awaitして確実に保存）
+            if (dbUserId && currentTotalMessageCount >= 2) {
               const recentForExtract = history.slice(-20);
               await extractAndSaveMemories(
                 supabase,
@@ -1005,23 +1005,33 @@ export async function POST(req: NextRequest) {
           // ── 返信サジェスト生成（Gemini Flash 非ストリーミング） ──
           try {
             const suggestUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+            const recentTurns = history.slice(-6);
+            const conversationContext = recentTurns.map(h => {
+              const role = h.role === 'user' ? 'ユーザー' : 'キャラ';
+              return `${role}: ${h.content.slice(0, 100)}`;
+            }).join('\n');
             const suggestRes = await fetch(suggestUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 contents: [{
                   role: 'user',
-                  parts: [{ text: `AIキャラクターが以下のメッセージを送ってきました。あなた（ユーザー）はどう返しますか？自然なユーザーの返答候補を3つ作ってください。
+                  parts: [{ text: `以下の会話の流れを踏まえて、ユーザーの自然な返答候補を3つ作ってください。
 
-キャラのメッセージ: 「${savedContent.slice(0, 200)}」
+【直近の会話】
+${conversationContext}
+
+【キャラの最新メッセージ】
+「${savedContent.slice(0, 200)}」
 
 条件:
-- ユーザー目線の言葉（一人称「あたし」「俺」「私」は使わない、短くシンプル）
-- 各15文字以内
-- 例: 「えっ本当に？」「わかる〜！」「もっと教えて」「それ気になる」「なんで？」
+- ユーザー目線（一人称不要、話し言葉）
+- 各20文字以内
+- 会話の話題・流れに沿った具体的な返答
+- 3パターン: 質問系・共感系・深掘り系を混ぜる
 - JSON配列のみ: ["返答1", "返答2", "返答3"]` }]
                 }],
-                generationConfig: { temperature: 0.9, maxOutputTokens: 100 },
+                generationConfig: { temperature: 0.9, maxOutputTokens: 150 },
               }),
             });
             if (suggestRes.ok) {
