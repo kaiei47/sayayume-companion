@@ -1939,6 +1939,83 @@ function Dashboard({
               </Link>
             </div>
 
+            {/* 開発者とのやり取り */}
+            <div className="rounded-2xl border border-border/30 bg-card/30 overflow-hidden">
+              {/* ヘッダー（タップで開閉） */}
+              <button
+                onClick={() => setSupportOpen(v => !v)}
+                className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💌</span>
+                  <span className="text-sm font-semibold">開発者とのやり取り</span>
+                  {supportMessages.some(m => m.sender === 'admin') && (
+                    <span className="text-[10px] bg-pink-500/20 text-pink-400 px-1.5 py-0.5 rounded-full font-medium">返信あり</span>
+                  )}
+                </div>
+                <span className="text-muted-foreground text-xs">{supportOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {supportOpen && (
+                <div className="border-t border-border/20">
+                  {/* メッセージ一覧 */}
+                  <div className="max-h-72 overflow-y-auto px-4 py-3 space-y-3">
+                    {!supportLoaded ? (
+                      <p className="text-xs text-muted-foreground text-center py-4 animate-pulse">読み込み中...</p>
+                    ) : supportMessages.length === 0 ? (
+                      <div className="text-center py-4 space-y-1">
+                        <p className="text-sm">✉️</p>
+                        <p className="text-xs text-muted-foreground">「こんな機能がほしい」「ここが使いにくい」</p>
+                        <p className="text-xs text-muted-foreground">なんでも教えてください♡ 開発者が直接返信します。</p>
+                      </div>
+                    ) : (
+                      supportMessages.map(msg => (
+                        <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          {msg.sender === 'admin' && (
+                            <div className="mr-2 mt-1 flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-blue-500 flex items-center justify-center text-[10px] text-white font-bold">S</div>
+                          )}
+                          <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                            msg.sender === 'user'
+                              ? 'bg-pink-500/20 text-foreground rounded-br-sm'
+                              : 'bg-card border border-border/40 rounded-bl-sm'
+                          }`}>
+                            {msg.sender === 'admin' && (
+                              <p className="text-[10px] text-pink-400 font-semibold mb-0.5">さやゆめ運営</p>
+                            )}
+                            <p>{msg.message}</p>
+                            <p className="text-[10px] text-muted-foreground/50 mt-1 text-right">
+                              {new Date(msg.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div ref={supportBottomRef} />
+                  </div>
+
+                  {/* 入力エリア */}
+                  <div className="border-t border-border/20 p-3 flex gap-2">
+                    <input
+                      type="text"
+                      value={supportInput}
+                      onChange={e => setSupportInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSupport(); } }}
+                      placeholder="メッセージを入力..."
+                      maxLength={2000}
+                      className="flex-1 rounded-xl border border-border/40 bg-background/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500/30 transition-all placeholder:text-muted-foreground/40"
+                    />
+                    <button
+                      onClick={sendSupport}
+                      disabled={!supportInput.trim() || supportSending}
+                      className="rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold px-3 py-2 hover:bg-pink-500/20 disabled:opacity-40 transition-all whitespace-nowrap"
+                    >
+                      {supportSending ? '...' : '送信'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Footer */}
             <div className="text-center space-y-2 pt-2">
               <p className="text-xs text-muted-foreground">Sayayume v0.1.0</p>
