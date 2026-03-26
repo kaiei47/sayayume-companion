@@ -64,6 +64,7 @@ function ChatPageInner() {
   const [gateStory, setGateStory] = useState<{ id: string; title: string } | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [lineLinked, setLineLinked] = useState<boolean | null>(null);
+  const [typingDelay, setTypingDelay] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pendingToggles = useRef<Set<string>>(new Set());
   const pendingGreetingRef = useRef<string | null>(null); // greeting text to save as initial AI msg
@@ -271,6 +272,10 @@ function ChatPageInner() {
       setIsLoading(true);
       setStreamingContent('');
       setSuggestions([]);
+      // タイピング遅延演出（1〜3秒ランダム）
+      const delay = 1000 + Math.random() * 2000;
+      setTypingDelay(true);
+      setTimeout(() => setTypingDelay(false), delay);
 
       try {
         // greeting があれば（新規・既存会話問わず）initial_assistant_message として渡す
@@ -721,6 +726,7 @@ function ChatPageInner() {
         isLoading={isLoading}
         isLoadingHistory={isLoadingHistory}
         isGeneratingImage={isGeneratingImage}
+        typingDelay={typingDelay}
         onToggleFavorite={toggleFavorite}
       />
 

@@ -54,6 +54,7 @@ function DuoChatPageInner() {
   const [messages, setMessages] = useState<DuoMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [typingDelay, setTypingDelay] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -254,6 +255,10 @@ function DuoChatPageInner() {
       setIsLoading(true);
       setStreamingContent('');
       setSuggestions([]);
+      // タイピング遅延演出（1〜3秒ランダム）
+      const delay = 1000 + Math.random() * 2000;
+      setTypingDelay(true);
+      setTimeout(() => setTypingDelay(false), delay);
 
       try {
         const initialMsg = pendingGreetingRef.current;
@@ -613,8 +618,8 @@ function DuoChatPageInner() {
             />
           ))}
 
-          {/* ストリーミング中（まだパースしないで raw 表示） */}
-          {streamingContent && (
+          {/* ストリーミング中（タイピング遅延中は非表示） */}
+          {streamingContent && !typingDelay && (
             <div className="flex items-end gap-2">
               <Avatar className="h-7 w-7 flex-shrink-0">
                 <AvatarImage src={saya.avatarUrl} alt="さや" />
@@ -651,7 +656,7 @@ function DuoChatPageInner() {
           )}
 
           {/* タイピング */}
-          {isLoading && !streamingContent && !generatingImage && (
+          {isLoading && (typingDelay || (!streamingContent && !generatingImage)) && (
             <div className="flex items-end gap-2">
               <div className="flex -space-x-2">
                 <Avatar className="h-6 w-6">

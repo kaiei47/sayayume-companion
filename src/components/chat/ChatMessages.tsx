@@ -24,6 +24,7 @@ interface ChatMessagesProps {
   isLoading: boolean;
   isLoadingHistory?: boolean;
   isGeneratingImage?: boolean;
+  typingDelay?: boolean;
   onToggleFavorite?: (messageId: string, current: boolean) => void;
 }
 
@@ -34,6 +35,7 @@ export default function ChatMessages({
   isLoading,
   isLoadingHistory = false,
   isGeneratingImage = false,
+  typingDelay = false,
   onToggleFavorite,
 }: ChatMessagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -150,8 +152,8 @@ export default function ChatMessages({
           );
         })}
 
-        {/* ストリーミング中のメッセージ */}
-        {streamingContent && (
+        {/* ストリーミング中のメッセージ（タイピング遅延中は非表示） */}
+        {streamingContent && !typingDelay && (
           <MessageBubble
             message={{
               id: 'streaming',
@@ -165,8 +167,8 @@ export default function ChatMessages({
           />
         )}
 
-        {/* タイピングインジケータ */}
-        {isLoading && !streamingContent && !isGeneratingImage && (
+        {/* タイピングインジケータ（遅延中 or コンテンツ待ち） */}
+        {isLoading && (typingDelay || (!streamingContent && !isGeneratingImage)) && (
           <div className="flex items-end gap-2">
             <img
               src={character.avatarUrl}
