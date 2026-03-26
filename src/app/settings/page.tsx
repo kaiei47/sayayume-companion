@@ -48,6 +48,9 @@ export default function SettingsPage() {
     setMemoriesLoading(false);
   };
 
+  // ページ開いた時点で件数を取得（遅延なし）
+  useEffect(() => { loadMemories(); }, []);
+
   const deleteMemory = async (id: string) => {
     setDeletingMemory(id);
     await fetch(`/api/memories?id=${id}`, { method: 'DELETE' });
