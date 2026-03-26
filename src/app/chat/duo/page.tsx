@@ -54,6 +54,7 @@ function DuoChatPageInner() {
   const [messages, setMessages] = useState<DuoMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -252,6 +253,7 @@ function DuoChatPageInner() {
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
       setStreamingContent('');
+      setSuggestions([]);
 
       try {
         const initialMsg = pendingGreetingRef.current;
@@ -339,6 +341,10 @@ function DuoChatPageInner() {
                     created_at: new Date().toISOString(),
                     isLevelUp: true,
                   }]);
+                }
+                // サジェスト
+                if (currentEvent === 'suggestions' && data.suggestions) {
+                  setSuggestions(data.suggestions);
                 }
                 // 親密度イベント
                 if (currentEvent === 'intimacy' && data.level) {
@@ -667,6 +673,7 @@ function DuoChatPageInner() {
         onSend={sendMessage}
         disabled={isLoading}
         placeholder="さやとゆめにメッセージ..."
+        suggestions={suggestions}
       />
     </div>
   );

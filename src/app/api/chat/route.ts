@@ -969,7 +969,12 @@ export async function POST(req: NextRequest) {
 
             // 十分なコンテキストがあるメッセージごとにメモリ抽出（awaitして確実に保存）
             if (dbUserId && currentTotalMessageCount >= 2) {
-              const recentForExtract = history.slice(-20);
+              // 現在の会話（ユーザーメッセージ + AI返答）も含めて抽出
+              const recentForExtract = [
+                ...history.slice(-18),
+                { role: 'user', content: message },
+                { role: 'assistant', content: savedContent },
+              ];
               await extractAndSaveMemories(
                 supabase,
                 dbUserId,
@@ -1014,6 +1019,13 @@ export async function POST(req: NextRequest) {
               const role = h.role === 'user' ? 'ユーザー' : 'キャラ';
               return `${role}: ${h.content.slice(0, 120)}`;
             }).join('\n');
+            // DUOモードは[SAYA]/[YUME]タグを除去して自然な文章にする
+            const latestCharMsg = savedContent
+              .replace(/\[SAYA\]\s*/gi, '')
+              .replace(/\[YUME\]\s*/gi, '\n')
+              .replace(/\[IMAGE:[^\]]*\]/gi, '')
+              .trim()
+              .slice(0, 250);
             const suggestRes = await fetch(suggestUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1026,7 +1038,7 @@ export async function POST(req: NextRequest) {
 ${conversationContext}
 
 【キャラの最新メッセージ（これへの返答を考える）】
-「${savedContent.slice(0, 250)}」
+「${latestCharMsg}」
 
 条件:
 - ユーザー目線（一人称不要、話し言葉・くだけた口調）
