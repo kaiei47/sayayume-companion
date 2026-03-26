@@ -11,7 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 // 抽出タスクは軽いので Flash-Lite でコスト最適化（Flash の約 50% のコスト）
-const EXTRACT_MODEL = 'gemini-2.0-flash-lite';
+const EXTRACT_MODEL = 'gemini-2.0-flash';
 const EXTRACT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EXTRACT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // 1会話で注入する記憶の最大件数（トークン節約）
@@ -151,25 +151,28 @@ export async function saveMemoriesToDB(
       : 'global',
     category: m.category,
     key: m.key,
-    value: m.value,
-    emotional_weight: m.emotional_weight,
+    // DB制約: value≤200文字, confidence 1-5, emotional_weight 1-10
+    value: m.value.slice(0, 200),
+    emotional_weight: Math.max(1, Math.min(10, m.emotional_weight || 3)),
     needs_followup: m.needs_followup,
     follow_up_date: m.needs_followup
       ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() // 3日後
       : null,
-    confidence: m.confidence,
+    confidence: Math.max(1, Math.min(5, m.confidence || 3)),
     source_conversation_id: conversationId || null,
     updated_at: new Date().toISOString(),
   }));
 
+  console.log('[Memory] Upserting', toUpsert.length, 'memories for user', userId);
   const { error } = await supabase
     .from('user_memories')
     .upsert(toUpsert, { onConflict: 'user_id,character_id,key', ignoreDuplicates: false });
 
   if (error) {
-    console.error('[Memory] Save failed:', error.message);
+    console.error('[Memory] Save failed:', error.message, JSON.stringify(toUpsert));
     return;
   }
+  console.log('[Memory] Saved successfully');
 
   // episodeのローテーション: MAX_EPISODE_COUNT件を超えたら古いものを削除
   const episodeCount = toUpsert.filter(m => m.category === 'episode').length;
@@ -307,15 +310,10 @@ export async function extractAndSaveMemories(
 ): Promise<void> {
   try {
     const extracted = await extractMemoriesFromMessages(messages, characterName);
+    console.log(`[Memory] Gemini extracted ${extracted.length} items (plan: ${plan})`);
     if (extracted.length > 0) {
-      // Freeプランはprofile/preferenceのみ保存（名前・職業・好みだけ覚える）
-      const toSave = plan === 'free'
-        ? extracted.filter(m => m.category === 'profile' || m.category === 'preference')
-        : extracted;
-      if (toSave.length > 0) {
-        await saveMemoriesToDB(supabase, userId, characterId, toSave, conversationId);
-        console.log(`[Memory] Extracted ${toSave.length} memories for user ${userId} (plan: ${plan})`);
-      }
+      // 全プランで全カテゴリ保存（freeはDB上限で自然に制限される）
+      await saveMemoriesToDB(supabase, userId, characterId, extracted, conversationId);
     }
   } catch (err) {
     console.error('[Memory] extractAndSaveMemories failed:', err);
