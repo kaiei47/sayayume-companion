@@ -27,6 +27,14 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [redirectUrl] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const r = new URLSearchParams(window.location.search).get('redirect');
+      // 外部URLへのリダイレクトは禁止（/から始まるパスのみ許可）
+      if (r && r.startsWith('/')) return r;
+    }
+    return '/';
+  });
   const [isSignUp, setIsSignUp] = useState(() => {
     if (typeof window !== 'undefined') {
       return new URLSearchParams(window.location.search).get('signup') === '1';
@@ -63,7 +71,7 @@ export default function LoginPage() {
       if (error) {
         setError(translateError(error.message));
       } else if (data.session) {
-        router.push('/');
+        router.push(redirectUrl);
         router.refresh();
       } else {
         setMessage('確認メールを送信しました。受信トレイをご確認ください。');
@@ -76,7 +84,7 @@ export default function LoginPage() {
       if (error) {
         setError(translateError(error.message));
       } else {
-        router.push('/');
+        router.push(redirectUrl);
         router.refresh();
       }
     }
@@ -108,7 +116,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback?next=/chat/saya`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback?next=${encodeURIComponent(redirectUrl)}`,
       },
     });
     if (error) {
