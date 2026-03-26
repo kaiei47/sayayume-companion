@@ -967,24 +967,8 @@ export async function POST(req: NextRequest) {
               })
               .eq('id', conversation_id);
 
-            // 十分なコンテキストがあるメッセージごとにメモリ抽出（awaitして確実に保存）
-            if (dbUserId && currentTotalMessageCount >= 2) {
-              // 現在の会話（ユーザーメッセージ + AI返答）も含めて抽出
-              const recentForExtract = [
-                ...history.slice(-18),
-                { role: 'user', content: message },
-                { role: 'assistant', content: savedContent },
-              ];
-              await extractAndSaveMemories(
-                supabase,
-                dbUserId,
-                character_id,
-                recentForExtract,
-                character.nameJa,
-                conversation_id ?? undefined,
-                userPlan as 'free' | 'basic' | 'premium' | 'vip'
-              ).catch(err => console.error('[Memory] extract failed:', err));
-            }
+            // メモリ抽出はSSEストリーム外でフロントエンドが呼ぶため、ここでは何もしない
+            // フロントエンドが done イベント受信後に POST /api/memories を呼ぶ
           }
 
           // ゲストの場合: guest_events に保存（管理者分析用・fire-and-forget）

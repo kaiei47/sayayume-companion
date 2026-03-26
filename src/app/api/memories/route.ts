@@ -70,37 +70,42 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: true, message: 'テスト保存成功' });
   }
 
-  // 手動抽出: 直近の会話からメモリを抽出して保存
-  if (searchParams.get('extract') === '1') {
-    const { character_id } = await req.json().catch(() => ({ character_id: 'saya' }));
+  // 抽出: 指定した会話からメモリを抽出して保存（チャット完了後にフロントから呼ぶ）
+  const body = await req.json().catch(() => ({}));
+  const { character_id, conversation_id } = body as { character_id?: string; conversation_id?: string };
+  if (!character_id) return Response.json({ ok: false, error: 'character_id required' }, { status: 400 });
 
-    // 直近の会話を取得
+  // 会話のメッセージを取得
+  let convId = conversation_id;
+  if (!convId) {
     const { data: conv } = await supabase
       .from('conversations').select('id')
       .eq('user_id', dbUser.id).eq('character_id', character_id)
       .order('last_message_at', { ascending: false }).limit(1).single();
-
-    if (!conv) return Response.json({ ok: false, error: 'No conversation found' });
-
-    const { data: msgs } = await supabase
-      .from('messages').select('role, content')
-      .eq('conversation_id', conv.id)
-      .order('created_at', { ascending: false }).limit(20);
-
-    const messages = (msgs || []).reverse();
-    if (messages.length < 2) return Response.json({ ok: false, error: 'Not enough messages', count: messages.length });
-
-    const { extractMemoriesFromMessages, saveMemoriesToDB } = await import('@/lib/user-memory');
-    const charName = character_id === 'yume' ? 'ゆめ' : 'さや';
-    const extracted = await extractMemoriesFromMessages(messages, charName);
-
-    if (extracted.length === 0) return Response.json({ ok: false, error: 'Gemini returned empty', messages: messages.length });
-
-    await saveMemoriesToDB(supabase, dbUser.id, character_id, extracted, conv.id);
-    return Response.json({ ok: true, extracted: extracted.length, items: extracted });
+    convId = conv?.id;
   }
+  if (!convId) return Response.json({ ok: false, error: 'No conversation found' });
 
-  return Response.json({ error: 'Specify ?test=1 or ?extract=1' }, { status: 400 });
+  const { data: msgs } = await supabase
+    .from('messages').select('role, content')
+    .eq('conversation_id', convId)
+    .order('created_at', { ascending: false }).limit(20);
+
+  const messages = (msgs || []).reverse();
+  if (messages.length < 2) return Response.json({ ok: false, saved: 0 });
+
+  const { extractMemoriesFromMessages, saveMemoriesToDB } = await import('@/lib/user-memory');
+  const CHAR_NAMES: Record<string, string> = { saya: 'さや', yume: 'ゆめ', duo: 'さや・ゆめ' };
+  const charName = CHAR_NAMES[character_id] || 'キャラ';
+  const extracted = await extractMemoriesFromMessages(messages, charName);
+
+  if (extracted.length > 0) {
+    await saveMemoriesToDB(supabase, dbUser.id, character_id, extracted, convId);
+  }
+  return Response.json({ ok: true, saved: extracted.length });
+
+  // デバッグ用テスト保存は searchParams で分岐
+  // (test=1 は上で処理済み)
 }
 
 export async function DELETE(req: NextRequest) {

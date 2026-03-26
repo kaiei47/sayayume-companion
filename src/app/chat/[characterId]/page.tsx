@@ -466,6 +466,15 @@ function ChatPageInner() {
           setMessages((prev) => [...prev, assistantMessage]);
           setStreamingContent('');
         }
+
+        // メモリ抽出: SSEストリーム外で独立実行（Vercel関数のライフサイクルに依存しない）
+        if (conversationId) {
+          fetch('/api/memories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ character_id: characterId, conversation_id: conversationId }),
+          }).catch(() => {});
+        }
       } catch (error) {
         console.error('Chat error:', error);
         // エラーメッセージを表示

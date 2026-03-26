@@ -425,6 +425,15 @@ function DuoChatPageInner() {
           setMessages((prev) => [...prev, ...newMessages]);
           setStreamingContent('');
         }
+
+        // メモリ抽出: SSEストリーム外で独立実行
+        if (conversationId) {
+          fetch('/api/memories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ character_id: 'duo', conversation_id: conversationId }),
+          }).catch(() => {});
+        }
       } catch (error) {
         console.error('Duo chat error:', error);
         setMessages((prev) => [...prev, {
