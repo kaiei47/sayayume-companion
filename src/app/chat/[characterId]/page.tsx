@@ -109,8 +109,21 @@ function ChatPageInner() {
       const { data: lineUser } = await supabase.from('line_users').select('id').eq('user_id', dbUser.id).maybeSingle();
       setLineLinked(!!lineUser);
 
-      // 親密度 + ストリーク + デイリーミッション取得
+      // 親密度 + ストリーク + デイリーミッション取得（localStorage即時復元 + API更新）
       try {
+        // キャッシュから即座に復元（ちらつき防止）
+        const cached = localStorage.getItem(`intimacy_${characterId}`);
+        if (cached) {
+          try {
+            const c = JSON.parse(cached);
+            if (c.level) setIntimacyLevel(c.level);
+            if (c.progress !== undefined) setIntimacyProgress(c.progress);
+            if (c.points !== undefined) setIntimacyPoints(c.points);
+            if (c.pointsToNext !== undefined) setPointsToNext(c.pointsToNext);
+            if (c.levelInfo) setIntimacyInfo(c.levelInfo);
+          } catch { /* ignore parse errors */ }
+        }
+
         const res = await fetch('/api/intimacy');
         if (res.ok) {
           const data = await res.json();
@@ -121,6 +134,14 @@ function ChatPageInner() {
             setIntimacyPoints(charIntimacy.points || 0);
             setPointsToNext(charIntimacy.pointsToNext ?? 100);
             setIntimacyInfo(charIntimacy.levelInfo);
+            // 次回ロード用にキャッシュ
+            localStorage.setItem(`intimacy_${characterId}`, JSON.stringify({
+              level: charIntimacy.level,
+              progress: charIntimacy.progress,
+              points: charIntimacy.points || 0,
+              pointsToNext: charIntimacy.pointsToNext ?? 100,
+              levelInfo: charIntimacy.levelInfo,
+            }));
           }
           if (data.streak) setStreak(data.streak.count || 0);
           if (data.dailyMissions) setDailyMissions(data.dailyMissions);
@@ -195,6 +216,20 @@ function ChatPageInner() {
             created_at: new Date().toISOString(),
           }];
         });
+        const initialSuggestions = character.id === 'saya'
+          ? ['やっほー！', '写真見せて♡', '今日何してたの？']
+          : character.id === 'yume'
+          ? ['こんにちは...', '好きな曲は？', '写真見せてほしいな']
+          : ['ふたりとも！', 'どんなユニットなの？', '写真見せて♡'];
+        setSuggestions(initialSuggestions);
+      } else if (messages.length === 0) {
+        // greetingなし・履歴なし（初回アクセス）でもサジェスト表示
+        const initialSuggestions = character.id === 'saya'
+          ? ['やっほー！', '写真見せて♡', '今日何してたの？']
+          : character.id === 'yume'
+          ? ['こんにちは...', '好きな曲は？', '写真見せてほしいな']
+          : ['ふたりとも！', 'どんなユニットなの？', '写真見せて♡'];
+        setSuggestions(initialSuggestions);
       }
     }
   }, [isLoadingHistory, searchParams, conversationId]);
@@ -332,7 +367,18 @@ function ChatPageInner() {
                 if (currentEvent === 'intimacy' && data.level) {
                   setIntimacyLevel(data.level);
                   setIntimacyProgress(data.progress || 0);
+                  if (data.points !== undefined) setIntimacyPoints(data.points);
                   if (data.levelInfo) setIntimacyInfo(data.levelInfo);
+                  // localStorage更新（次回ロード時のちらつき防止）
+                  try {
+                    localStorage.setItem(`intimacy_${characterId}`, JSON.stringify({
+                      level: data.level,
+                      progress: data.progress || 0,
+                      points: data.points || 0,
+                      pointsToNext: data.pointsToNext,
+                      levelInfo: data.levelInfo,
+                    }));
+                  } catch { /* ignore */ }
                   if (data.levelChanged && data.level > data.previousLevel) {
                     setLevelUpNotice({
                       from: data.previousLevel,
@@ -357,6 +403,10 @@ function ChatPageInner() {
                     setLevelCapped(false);
                     setGateStory(null);
                   }
+                  // デイリーミッション再フェッチ（達成状況を最新化）
+                  fetch('/api/intimacy').then(r => r.json()).then(d => {
+                    if (d.dailyMissions) setDailyMissions(d.dailyMissions);
+                  }).catch(() => {});
                 }
 
                 // image または done イベントからimage_urlを取得（短いURLのみ）
@@ -438,7 +488,7 @@ function ChatPageInner() {
   if (!character) {
     return (
       <div className="flex h-dvh items-center justify-center">
-        <p>Character not found</p>
+        <p>キャラクターが見つかりません</p>
       </div>
     );
   }
@@ -492,15 +542,13 @@ function ChatPageInner() {
             )}
           </div>
         </div>
-        {/* ストリーク表示 */}
-        {streak > 0 && (
-          <button
-            onClick={() => setShowMissions(!showMissions)}
-            className="flex items-center gap-0.5 text-[10px] font-semibold text-orange-400 bg-orange-500/10 px-2 py-1 rounded-full hover:bg-orange-500/20 transition-colors border border-orange-500/20"
-          >
-            🔥{streak}
-          </button>
-        )}
+        {/* 絆ボタン（ストリーク + 絆の記録を開く） */}
+        <button
+          onClick={() => setShowMissions(!showMissions)}
+          className="flex items-center gap-0.5 text-[10px] font-semibold text-orange-400 bg-orange-500/10 px-2 py-1 rounded-full hover:bg-orange-500/20 transition-colors border border-orange-500/20"
+        >
+          {streak > 0 ? `🔥${streak}` : '♡'}
+        </button>
         {/* ゲスト・フリープランのバッジ */}
         {isGuest ? (
           <Link
@@ -565,29 +613,61 @@ function ChatPageInner() {
         </div>
       </header>
 
-      {/* デイリーミッション */}
-      {showMissions && dailyMissions.length > 0 && (
+      {/* デイリーミッション + 絆の記録 */}
+      {showMissions && (
         <div className="border-b border-white/5 bg-white/5 backdrop-blur-sm px-4 py-3 animate-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">Today&apos;s Missions</p>
-            <p className="text-[10px] text-white/20">
-              {dailyMissions.filter(m => m.completed).length}/{dailyMissions.length}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            {dailyMissions.map(mission => (
-              <div key={mission.id} className="flex items-center gap-2">
-                <div className={`h-4 w-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${
-                  mission.completed ? 'bg-green-500 text-white' : 'bg-white/5 border border-white/10'
-                }`}>
-                  {mission.completed ? '✓' : ''}
-                </div>
-                <span className={`text-xs ${mission.completed ? 'line-through text-white/20' : 'text-white/60'}`}>
-                  {mission.icon} {mission.label}
-                </span>
-                <span className="ml-auto text-[10px] text-white/20">+{mission.points}pt</span>
+          {dailyMissions.length > 0 && (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">Today&apos;s Missions</p>
+                <p className="text-[10px] text-white/20">
+                  {dailyMissions.filter(m => m.completed).length}/{dailyMissions.length}
+                </p>
               </div>
-            ))}
+              <div className="space-y-1.5 mb-3">
+                {dailyMissions.map(mission => (
+                  <div key={mission.id} className="flex items-center gap-2">
+                    <div className={`h-4 w-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${
+                      mission.completed ? 'bg-green-500 text-white' : 'bg-white/5 border border-white/10'
+                    }`}>
+                      {mission.completed ? '✓' : ''}
+                    </div>
+                    <span className={`text-xs ${mission.completed ? 'line-through text-white/20' : 'text-white/60'}`}>
+                      {mission.icon} {mission.label}
+                    </span>
+                    <span className="ml-auto text-[10px] text-white/20">+{mission.points}pt</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          {/* 絆の記録 */}
+          <div className={dailyMissions.length > 0 ? 'border-t border-white/5 pt-3' : ''}>
+            <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">絆の記録</p>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-white/40">連続ログイン</span>
+                <span className="text-xs font-semibold text-orange-400">🔥 {streak}日</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-white/40">やり取り総数</span>
+                <span className="text-xs font-semibold text-white/60">
+                  💬 {conversationList.reduce((sum, c) => sum + c.message_count, 0)}通
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-white/40">会話の数</span>
+                <span className="text-xs font-semibold text-white/60">
+                  📖 {conversationList.length}回
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-white/40">絆レベル</span>
+                <span className="text-xs font-semibold text-pink-400">
+                  {intimacyInfo ? `${intimacyInfo.emoji} Lv${intimacyLevel} ${intimacyInfo.nameJa}` : '-'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -704,15 +784,22 @@ function ChatPageInner() {
       {/* ゲスト向け登録促進バナー */}
       {isGuest && messages.length >= 2 && (
         <div className="border-t border-white/5 bg-white/[0.02] backdrop-blur-sm px-4 py-2.5 flex items-center justify-between gap-3">
-          <p className="text-[11px] text-white/40 leading-tight">
-            会話履歴を残したい？<br />
-            <span className="text-[10px] text-white/20">無料登録で毎日3枚の写真+履歴保存</span>
-          </p>
+          {messages.length >= 5 ? (
+            <p className="text-[11px] text-pink-300/70 leading-tight">
+              この会話、消えちゃうよ？<br />
+              <span className="text-[10px] text-white/30">登録すれば履歴保存 + 写真1日3枚 + ストーリー27本</span>
+            </p>
+          ) : (
+            <p className="text-[11px] text-white/40 leading-tight">
+              {character.nameJa}との会話を保存しておく？<br />
+              <span className="text-[10px] text-white/20">無料・30秒・クレカ不要</span>
+            </p>
+          )}
           <Link
-            href="/login"
+            href="/login?signup=1"
             className="flex-shrink-0 text-[11px] font-semibold bg-gradient-to-r from-pink-500 to-purple-500 text-white px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity"
           >
-            無料登録 →
+            登録して続ける →
           </Link>
         </div>
       )}

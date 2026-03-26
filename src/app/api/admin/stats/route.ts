@@ -90,7 +90,7 @@ export async function GET() {
     }
     const topUserIds = Object.keys(latestByUser).slice(0, 5);
 
-    let recentUsers: { display_name: string | null; email: string | null; is_premium: boolean; created_at: string }[] = [];
+    let recentUsers: { user_id: string; display_name: string | null; email: string | null; is_premium: boolean; created_at: string }[] = [];
     if (topUserIds.length > 0) {
       const { data: usersData } = await adminSupabase
         .from('users')
@@ -104,6 +104,7 @@ export async function GET() {
           return tb.localeCompare(ta);
         })
         .map(u => ({
+          user_id: u.id,
           display_name: u.display_name,
           email: u.email,
           is_premium: u.is_premium,

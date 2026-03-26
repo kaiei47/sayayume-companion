@@ -203,15 +203,29 @@ export async function getUserMemories(
   characterId: string,
   plan: 'free' | 'basic' | 'premium' | 'vip' = 'free'
 ): Promise<UserMemory[]> {
-  // Freeプランはクロスセッション記憶なし
-  if (plan === 'free') return [];
+  // Freeプランはprofile/preferenceのみ7日間保持（名前・職業・好みを覚える）
+  if (plan === 'free') {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase
+      .from('user_memories')
+      .select('*')
+      .eq('user_id', userId)
+      .in('character_id', ['global', characterId])
+      .in('category', ['profile', 'preference'])
+      .gte('updated_at', sevenDaysAgo)
+      .gte('confidence', 1)
+      .order('emotional_weight', { ascending: false })
+      .limit(3);
+    if (error) return [];
+    return (data as UserMemory[]) || [];
+  }
 
   let query = supabase
     .from('user_memories')
     .select('*')
     .eq('user_id', userId)
     .in('character_id', ['global', characterId])
-    .gte('confidence', 2)
+    .gte('confidence', 1)
     .order('emotional_weight', { ascending: false })
     .limit(30);
 
@@ -291,14 +305,17 @@ export async function extractAndSaveMemories(
   conversationId?: string,
   plan: 'free' | 'basic' | 'premium' | 'vip' = 'free'
 ): Promise<void> {
-  // Freeプランはクロスセッション記憶を保存しない
-  if (plan === 'free') return;
-
   try {
     const extracted = await extractMemoriesFromMessages(messages, characterName);
     if (extracted.length > 0) {
-      await saveMemoriesToDB(supabase, userId, characterId, extracted, conversationId);
-      console.log(`[Memory] Extracted ${extracted.length} memories for user ${userId} (plan: ${plan})`);
+      // Freeプランはprofile/preferenceのみ保存（名前・職業・好みだけ覚える）
+      const toSave = plan === 'free'
+        ? extracted.filter(m => m.category === 'profile' || m.category === 'preference')
+        : extracted;
+      if (toSave.length > 0) {
+        await saveMemoriesToDB(supabase, userId, characterId, toSave, conversationId);
+        console.log(`[Memory] Extracted ${toSave.length} memories for user ${userId} (plan: ${plan})`);
+      }
     }
   } catch (err) {
     console.error('[Memory] extractAndSaveMemories failed:', err);

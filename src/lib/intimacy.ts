@@ -371,13 +371,13 @@ export async function checkStoryGate(
   const gate = LEVEL_GATES[targetLevel];
   if (!gate) return true; // ゲートなし → 常にOK
 
-  // story_sessions テーブルで completed = true のレコードを確認
+  // story_sessions テーブルで status = 'completed' のレコードを確認
   const { data } = await supabase
     .from('story_sessions')
     .select('id')
     .eq('user_id', userId)
     .eq('story_id', gate.storyId)
-    .eq('completed', true)
+    .eq('status', 'completed')
     .limit(1)
     .maybeSingle();
 
@@ -449,7 +449,7 @@ export async function updateIntimacy(
   const levelChanged = newLevel !== previousLevel;
 
   // DB更新
-  await supabase
+  const { error: updateError } = await supabase
     .from('character_intimacy')
     .update({
       affection_points: newPoints,
@@ -460,6 +460,10 @@ export async function updateIntimacy(
     })
     .eq('user_id', userId)
     .eq('character_id', characterId);
+
+  if (updateError) {
+    console.error('[Intimacy] DB update failed:', updateError.message, { newLevel, newPoints });
+  }
 
   // イベント履歴を記録
   const eventRecords = analysis.events.map(eventType => ({
@@ -835,7 +839,12 @@ export function applyIntimacyToPrompt(
   level: number
 ): string {
   const modifier = getIntimacyPromptModifier(characterId, level);
-  return modifier.prefix + systemPrompt + modifier.suffix;
+  // 親密度口調を最優先で適用（先頭に配置＋末尾にも再掲して確実に反映させる）
+  const intimacySuffix = modifier.suffix;
+  const priorityPrefix = intimacySuffix
+    ? `【最優先ルール】以下の「現在の親密度」セクションの口調・接し方を必ず守ること。過去の会話履歴の口調に引きずられず、現在のレベルに合った話し方をすること。\n\n`
+    : '';
+  return priorityPrefix + modifier.prefix + systemPrompt + intimacySuffix;
 }
 
 // ── レベルアップ特別メッセージ ──────────────────

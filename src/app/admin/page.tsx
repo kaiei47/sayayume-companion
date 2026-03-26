@@ -7,10 +7,30 @@ import { useRouter } from 'next/navigation';
 const ADMIN_EMAILS = ['yoshihide.maruyama@gmail.com'];
 
 interface RecentUser {
+  user_id: string;
   display_name: string | null;
   email: string | null;
   is_premium: boolean;
   created_at: string;
+}
+
+interface ActivityMessage {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+interface ActivityConversation {
+  id: string;
+  character_id: string;
+  title: string | null;
+  message_count: number;
+  last_message_at: string | null;
+  mood: string | null;
+  created_at: string;
+  messages: ActivityMessage[];
 }
 
 interface SupportMsg {
@@ -68,6 +88,9 @@ export default function AdminPage() {
   const threadBottomRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [guestSessions, setGuestSessions] = useState<GuestSession[]>([]);
   const [openGuestSession, setOpenGuestSession] = useState<string | null>(null);
+  const [openRecentUser, setOpenRecentUser] = useState<string | null>(null);
+  const [userActivityCache, setUserActivityCache] = useState<Record<string, ActivityConversation[]>>({});
+  const [loadingActivity, setLoadingActivity] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchThreads = useCallback(async () => {
@@ -87,6 +110,19 @@ export default function AdminPage() {
       setGuestSessions(data.sessions ?? []);
     } catch { /* ignore */ }
   }, []);
+
+  const fetchUserActivity = useCallback(async (userId: string) => {
+    if (userActivityCache[userId]) return;
+    setLoadingActivity(userId);
+    try {
+      const res = await fetch(`/api/admin/user-activity?user_id=${userId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setUserActivityCache(prev => ({ ...prev, [userId]: data.conversations ?? [] }));
+    } finally {
+      setLoadingActivity(null);
+    }
+  }, [userActivityCache]);
 
   const sendReply = async (userId: string) => {
     const message = replyInputs[userId]?.trim();
@@ -240,7 +276,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Recent Signups */}
+        {/* Recent Active */}
         <div className="rounded-2xl border border-border/50 bg-card/50 p-6">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
             Recent Active
@@ -248,28 +284,88 @@ export default function AdminPage() {
           {stats.recentUsers.length === 0 ? (
             <p className="text-sm text-muted-foreground">No users yet</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {stats.recentUsers.map((user, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between gap-4"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">
-                      {user.display_name || 'Anonymous'}
-                      {user.is_premium && (
-                        <span className="ml-2 text-xs text-yellow-400">
-                          Premium
-                        </span>
+                <div key={i} className="rounded-xl border border-border/40 overflow-hidden">
+                  <button
+                    onClick={() => {
+                      const next = openRecentUser === user.user_id ? null : user.user_id;
+                      setOpenRecentUser(next);
+                      if (next) fetchUserActivity(user.user_id);
+                    }}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {user.display_name || 'Anonymous'}
+                        {user.is_premium && (
+                          <span className="ml-2 text-xs text-yellow-400">Premium</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email || 'No email'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatRelativeTime(user.created_at)}
+                      </span>
+                      <span className="text-muted-foreground/40 text-xs">
+                        {openRecentUser === user.user_id ? '▲' : '▼'}
+                      </span>
+                    </div>
+                  </button>
+
+                  {openRecentUser === user.user_id && (
+                    <div className="border-t border-border/30 bg-background/20">
+                      {loadingActivity === user.user_id ? (
+                        <p className="text-xs text-muted-foreground px-4 py-3 animate-pulse">Loading...</p>
+                      ) : !userActivityCache[user.user_id]?.length ? (
+                        <p className="text-xs text-muted-foreground px-4 py-3">会話なし</p>
+                      ) : (
+                        <div className="divide-y divide-border/20">
+                          {userActivityCache[user.user_id].map(conv => (
+                            <div key={conv.id} className="px-4 py-3 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                                  conv.character_id === 'saya' ? 'bg-pink-500/15 text-pink-400' :
+                                  conv.character_id === 'yume' ? 'bg-blue-500/15 text-blue-400' :
+                                  'bg-purple-500/15 text-purple-400'
+                                }`}>
+                                  {conv.character_id}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/50">
+                                  {conv.message_count}msgs · {conv.mood ?? 'neutral'}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/40 ml-auto">
+                                  {conv.last_message_at ? formatRelativeTime(conv.last_message_at) : '—'}
+                                </span>
+                              </div>
+                              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                {conv.messages.map(msg => (
+                                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                                    <div className={`max-w-[85%] rounded-xl px-2.5 py-1.5 ${
+                                      msg.role === 'user'
+                                        ? 'bg-card border border-border/40 rounded-bl-sm'
+                                        : 'bg-pink-500/10 border border-pink-500/20 rounded-br-sm'
+                                    }`}>
+                                      <p className="text-[10px] text-muted-foreground/50 mb-0.5">
+                                        {msg.role === 'user' ? user.display_name || 'User' : conv.character_id}
+                                        {' · '}{new Date(msg.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                      </p>
+                                      <p className="text-xs leading-relaxed text-foreground/80">
+                                        {msg.content.slice(0, 200)}{msg.content.length > 200 ? '…' : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.email || 'No email'}
-                    </p>
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {formatRelativeTime(user.created_at)}
-                  </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

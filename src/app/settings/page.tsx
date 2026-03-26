@@ -141,10 +141,10 @@ export default function SettingsPage() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        setPortalError(data.error || 'Something went wrong. Please try again.');
+        setPortalError(data.error || 'エラーが発生しました。もう一度お試しください。');
       }
     } catch {
-      setPortalError('Something went wrong. Please try again.');
+      setPortalError('エラーが発生しました。もう一度お試しください。');
     } finally {
       setPortalLoading(false);
     }
@@ -204,7 +204,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex min-h-dvh items-center justify-center" style={{ background: '#0a0a1a' }}>
-        <div className="animate-pulse text-white/40 text-sm">Loading...</div>
+        <div className="animate-pulse text-white/40 text-sm">読み込み中...</div>
       </div>
     );
   }
@@ -242,7 +242,7 @@ export default function SettingsPage() {
             </svg>
             もどる
           </button>
-          <h1 className="text-lg font-bold text-white">Settings</h1>
+          <h1 className="text-lg font-bold text-white">設定</h1>
           <div className="w-12" /> {/* spacer */}
         </div>
 
@@ -357,7 +357,7 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <span className="text-xs text-white/30">
-                    {plan.price === 0 ? 'Free' : `¥${plan.price.toLocaleString()}/月`}
+                    {plan.price === 0 ? '無料' : `¥${plan.price.toLocaleString()}/月`}
                   </span>
                 </div>
               </div>
@@ -536,19 +536,19 @@ export default function SettingsPage() {
         <div className="flex items-center justify-around py-2 max-w-lg mx-auto">
           <Link href="/" className="flex flex-col items-center gap-0.5 text-white/40 hover:text-white/60 transition-colors">
             <span className="text-lg">🏠</span>
-            <span className="text-[9px]">Home</span>
+            <span className="text-[9px]">ホーム</span>
           </Link>
           <Link href="/chat/saya" className="flex flex-col items-center gap-0.5 text-white/40 hover:text-white/60 transition-colors">
             <span className="text-lg">💬</span>
-            <span className="text-[9px]">Chat</span>
+            <span className="text-[9px]">チャット</span>
           </Link>
           <Link href="/story" className="flex flex-col items-center gap-0.5 text-white/40 hover:text-white/60 transition-colors">
             <span className="text-lg">📖</span>
-            <span className="text-[9px]">Story</span>
+            <span className="text-[9px]">ストーリー</span>
           </Link>
           <Link href="/settings" className="flex flex-col items-center gap-0.5 text-pink-400">
             <span className="text-lg">⚙️</span>
-            <span className="text-[9px]">Settings</span>
+            <span className="text-[9px]">設定</span>
           </Link>
         </div>
       </nav>

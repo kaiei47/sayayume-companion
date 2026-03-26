@@ -26,11 +26,25 @@ export async function GET(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { data: dbUser } = await admin
+    let { data: dbUser } = await admin
       .from('users')
       .select('id')
       .eq('auth_id', user.id)
       .single();
+
+    // public.usersにレコードがない場合 → 自動upsert
+    if (!dbUser) {
+      const { data: created } = await admin
+        .from('users')
+        .upsert({
+          auth_id: user.id,
+          display_name: null,
+          email: user.email,
+        }, { onConflict: 'auth_id' })
+        .select('id')
+        .single();
+      dbUser = created;
+    }
 
     if (!dbUser) {
       return Response.json({ conversation: null, messages: [], conversations: [] });
@@ -68,13 +82,14 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // メッセージ履歴を取得（最新50件）
-    const { data: messages, error: messagesError } = await admin
+    // メッセージ履歴を取得（最新100件、降順取得→昇順に反転）
+    const { data: messagesDesc, error: messagesError } = await admin
       .from('messages')
       .select('id, role, content, content_type, image_url, is_favorite, created_at')
       .eq('conversation_id', conversation.id)
-      .order('created_at', { ascending: true })
-      .limit(50);
+      .order('created_at', { ascending: false })
+      .limit(100);
+    const messages = messagesDesc ? [...messagesDesc].reverse() : [];
 
     if (messagesError) {
       console.error('Failed to fetch messages:', messagesError.message);
@@ -82,7 +97,7 @@ export async function GET(req: NextRequest) {
 
     return Response.json({
       conversation,
-      messages: messages || [],
+      messages: messages,
       conversations: allConversations || [],
     });
   } catch (error) {

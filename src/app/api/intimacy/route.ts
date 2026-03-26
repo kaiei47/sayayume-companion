@@ -43,7 +43,10 @@ export async function GET(_req: NextRequest) {
       });
     }
 
-    const { data: dbUser } = await supabase
+    // RLSバイパスのためadminクライアントを使用（character_intimacy/intimacy_eventsのRLSがauth.uid()比較のため）
+    const adminDb = getSupabaseAdmin();
+
+    const { data: dbUser } = await adminDb
       .from('users')
       .select('id, login_streak, last_login_date')
       .eq('auth_id', user.id)
@@ -69,8 +72,6 @@ export async function GET(_req: NextRequest) {
         streak = 1; // リセット
       }
 
-      // adminでストリーク更新（RLSバイパス）
-      const adminDb = getSupabaseAdmin();
       await adminDb
         .from('users')
         .update({ login_streak: streak, last_login_date: today })
@@ -79,7 +80,7 @@ export async function GET(_req: NextRequest) {
 
     // ── デイリーミッション達成状況 ──────────────────
     const todayStart = getTodayStartUTC();
-    const { data: todayEvents } = await supabase
+    const { data: todayEvents } = await adminDb
       .from('intimacy_events')
       .select('event_type')
       .eq('user_id', dbUser.id)
@@ -110,8 +111,8 @@ export async function GET(_req: NextRequest) {
       },
     ];
 
-    // ── 親密度取得 ──────────────────────────────────
-    const rawIntimacy = await getAllIntimacy(supabase, dbUser.id);
+    // ── 親密度取得（adminでRLSバイパス） ───────────────
+    const rawIntimacy = await getAllIntimacy(adminDb, dbUser.id);
 
     const intimacy: Record<string, {
       level: number;

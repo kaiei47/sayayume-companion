@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import SayayumeLogo from '@/components/SayayumeLogo';
 import type { Story } from '@/lib/stories';
 
+
 interface StoryWithStatus extends Story {
   isLocked: boolean;
   lockReason: 'plan' | 'intimacy' | null;
@@ -154,6 +155,22 @@ export default function StorySelectPage() {
           ))}
         </div>
 
+        {/* Guest Banner */}
+        {data?.plan === 'guest' && (
+          <div className="mb-4 rounded-2xl bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 px-4 py-3.5 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-bold text-white/90 mb-0.5">3本は今すぐプレイ可能！</p>
+              <p className="text-[11px] text-white/40">登録で全27本解放 · 30秒 · クレカ不要</p>
+            </div>
+            <Link
+              href="/login?signup=1"
+              className="flex-shrink-0 px-4 py-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-[12px] font-bold text-white hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              無料登録 →
+            </Link>
+          </div>
+        )}
+
         {/* Story Cards */}
         <div className="space-y-3">
           {filtered.map(story => (
@@ -161,6 +178,7 @@ export default function StorySelectPage() {
               key={story.id}
               story={story}
               starting={starting === story.id}
+              isGuest={data?.plan === 'guest'}
               onStart={() => startStory(story.id)}
               onContinue={() => story.session && continueStory(story.id, story.session.id)}
             />
@@ -170,7 +188,7 @@ export default function StorySelectPage() {
         {filtered.length === 0 && (
           <div className="text-center text-white/30 py-16">
             <div className="text-4xl mb-3 opacity-50">📖</div>
-            <p className="text-sm">No stories available</p>
+            <p className="text-sm">ストーリーが見つかりません</p>
           </div>
         )}
       </main>
@@ -179,10 +197,10 @@ export default function StorySelectPage() {
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a1a]/70 backdrop-blur-2xl border-t border-white/[0.06]">
         <div className="max-w-lg mx-auto flex justify-around py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           {[
-            { href: '/', icon: '🏠', label: 'Home', active: false },
-            { href: '/chat/saya', icon: '💬', label: 'Chat', active: false },
-            { href: '/story', icon: '📖', label: 'Story', active: true },
-            { href: '/settings', icon: '⚙️', label: 'Settings', active: false },
+            { href: '/', icon: '🏠', label: 'ホーム', active: false },
+            { href: '/chat/saya', icon: '💬', label: 'チャット', active: false },
+            { href: '/story', icon: '📖', label: 'ストーリー', active: true },
+            { href: '/settings', icon: '⚙️', label: '設定', active: false },
           ].map(item => (
             <Link
               key={item.href}
@@ -211,16 +229,18 @@ export default function StorySelectPage() {
 function StoryCard({
   story,
   starting,
+  isGuest,
   onStart,
   onContinue,
 }: {
   story: StoryWithStatus;
   starting: boolean;
+  isGuest?: boolean;
   onStart: () => void;
   onContinue: () => void;
 }) {
   const difficultyStars = '★'.repeat(story.difficulty) + '☆'.repeat(3 - story.difficulty);
-  const charLabel = story.character === 'saya' ? 'Saya' : story.character === 'yume' ? 'Yume' : 'Saya × Yume';
+  const charLabel = story.character === 'saya' ? 'さや' : story.character === 'yume' ? 'ゆめ' : 'さや × ゆめ';
   const charGradient = story.character === 'saya'
     ? 'from-pink-500 to-rose-400'
     : story.character === 'yume'
@@ -274,14 +294,18 @@ function StoryCard({
             )}
 
             {/* Completed badge on image */}
-            {story.isCompleted && (
+            {story.isCompleted ? (
               <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-emerald-500/80 backdrop-blur-sm text-[10px] font-bold text-white flex items-center gap-1">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                Clear
+                クリア
               </div>
-            )}
+            ) : isGuest && story.requiredIntimacy === 0 && !story.isLocked ? (
+              <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-pink-500/80 backdrop-blur-sm text-[10px] font-bold text-white">
+                登録不要
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -309,7 +333,7 @@ function StoryCard({
           {isInProgress && story.session && (
             <div className="mt-2.5">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-white/30 font-medium tracking-wide">MISSIONS</span>
+                <span className="text-[10px] text-white/30 font-medium tracking-wide">ミッション</span>
                 <span className="text-[10px] font-bold text-pink-400">
                   {story.session.completedMissions.length}/{story.session.totalMissions}
                 </span>
@@ -328,10 +352,19 @@ function StoryCard({
           {/* Action Buttons */}
           <div className="mt-3">
             {story.isLocked ? (
-              <div className="text-[11px] text-white/20 py-1.5">
-                {story.lockReason === 'plan'
-                  ? 'Requires Basic plan or higher'
-                  : `Requires Intimacy Lv${story.requiredIntimacy}`}
+              <div className="py-1">
+                {story.lockReason === 'plan' ? (
+                  <Link
+                    href="/login?signup=1"
+                    className="inline-block text-[12px] font-bold text-pink-400/80 hover:text-pink-400 transition-colors"
+                  >
+                    登録して読む →
+                  </Link>
+                ) : (
+                  <span className="text-[11px] text-white/20">
+                    親密度 Lv{story.requiredIntimacy} で解放
+                  </span>
+                )}
               </div>
             ) : isInProgress ? (
               <div className="flex gap-2">
@@ -339,14 +372,14 @@ function StoryCard({
                   onClick={onContinue}
                   className={`flex-1 py-2 rounded-xl bg-gradient-to-r ${charGradient} text-[13px] font-bold text-white transition-all hover:opacity-90 hover:shadow-lg hover:shadow-pink-500/20`}
                 >
-                  Continue
+                  続きから
                 </button>
                 <button
                   onClick={onStart}
                   disabled={starting}
                   className="px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[12px] text-white/40 hover:bg-white/[0.08] hover:text-white/60 transition-all"
                 >
-                  Restart
+                  最初から
                 </button>
               </div>
             ) : (
@@ -362,9 +395,9 @@ function StoryCard({
                 {starting ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Loading...
+                    読み込み中...
                   </span>
-                ) : story.isCompleted ? 'Play Again' : 'Start'}
+                ) : story.isCompleted ? 'もう一度' : 'はじめる'}
               </button>
             )}
           </div>

@@ -10,6 +10,7 @@ import type { Story, StoryMission } from '@/lib/stories';
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  image_url?: string | null;
 }
 
 interface MissionStatus {
@@ -34,6 +35,8 @@ export default function StoryPlayPage() {
   const [storyCompleted, setStoryCompleted] = useState(false);
   const [completionTitle, setCompletionTitle] = useState<string | null>(null);
   const [newMissionCompleted, setNewMissionCompleted] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [viewerImage, setViewerImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -50,6 +53,32 @@ export default function StoryPlayPage() {
       })));
     }
   }, [storyId]);
+
+  // セッション履歴を復元（ページリロード対応）
+  useEffect(() => {
+    if (!sessionId || messages.length > 0) return;
+    fetch(`/api/story/sessions?session_id=${sessionId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.history && data.history.length > 0) {
+          setMessages(data.history.map((h: { role: string; content: string }) => ({
+            role: h.role === 'model' ? 'assistant' : h.role,
+            content: h.content,
+          })));
+        }
+        if (data.completedMissions && data.completedMissions.length > 0) {
+          setMissions(prev => prev.map(m => ({
+            ...m,
+            completed: data.completedMissions.includes(m.id),
+          })));
+        }
+        if (data.status === 'completed') {
+          setStoryCompleted(true);
+        }
+      })
+      .catch(err => console.error('History restore error:', err));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   // 自動スクロール
   useEffect(() => {
@@ -98,8 +127,10 @@ export default function StoryPlayPage() {
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
+        let currentEvent = '';
         for (const line of lines) {
           if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim();
             continue;
           }
           if (line.startsWith('data: ')) {
@@ -108,10 +139,34 @@ export default function StoryPlayPage() {
             try {
               const data = JSON.parse(jsonStr);
 
+              // 画像生成中
+              if (currentEvent === 'generating_image') {
+                setIsGeneratingImage(true);
+              }
+
+              // クリーンテキスト（画像タグ除去済み）
+              if (currentEvent === 'clean_text' && data.content !== undefined) {
+                assistantText = data.content;
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: 'assistant', content: assistantText };
+                  return updated;
+                });
+              }
+
+              // 画像URL受信
+              if (currentEvent === 'image' && data.image_url) {
+                setIsGeneratingImage(false);
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { ...updated[updated.length - 1], image_url: data.image_url };
+                  return updated;
+                });
+              }
+
               // トークンストリーミング
-              if (data.text !== undefined) {
+              if (currentEvent === 'token' && data.text !== undefined) {
                 assistantText += data.text;
-                // [IMAGE:...]タグを除去（ストーリーモードでは画像生成しない）
                 const cleanText = assistantText.replace(/\[IMAGE:[^\]]*\]/g, '').trim();
                 setMessages(prev => {
                   const updated = [...prev];
@@ -150,6 +205,7 @@ export default function StoryPlayPage() {
       console.error('Story chat error:', err);
     } finally {
       setIsStreaming(false);
+      setIsGeneratingImage(false);
     }
   }, [input, isStreaming, sessionId, story]);
 
@@ -163,7 +219,7 @@ export default function StoryPlayPage() {
   if (!story) {
     return (
       <div className="min-h-screen bg-[#0a0a1a] flex items-center justify-center">
-        <div className="text-white/30 text-sm">Story not found</div>
+        <div className="text-white/30 text-sm">ストーリーが見つかりません</div>
       </div>
     );
   }
@@ -194,7 +250,7 @@ export default function StoryPlayPage() {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
-              <span className="text-sm">Back</span>
+              <span className="text-sm">もどる</span>
             </Link>
 
             <div className="text-center flex-1 mx-4">
@@ -234,7 +290,7 @@ export default function StoryPlayPage() {
       >
         <div className="bg-[#0a0a1a]/95 backdrop-blur-xl border-b border-white/[0.06]">
           <div className="max-w-lg mx-auto px-4 py-3 space-y-1.5">
-            <div className="text-[10px] text-white/20 font-medium tracking-widest uppercase mb-2">Missions</div>
+            <div className="text-[10px] text-white/20 font-medium tracking-widest uppercase mb-2">ミッション</div>
             {missions.map(m => (
               <div
                 key={m.id}
@@ -299,7 +355,7 @@ export default function StoryPlayPage() {
                   <h2 className="text-lg font-bold mb-1.5">{story.title}</h2>
                   <p className="text-sm text-white/35 text-center mb-6 max-w-[280px] leading-relaxed">{story.description}</p>
                   <div className="px-5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[12px] text-white/25">
-                    Send a message to start the story
+                    メッセージを送ってストーリーを始めよう
                   </div>
                 </>
               )}
@@ -309,7 +365,7 @@ export default function StoryPlayPage() {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} gap-1`}
             >
               <div
                 className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed ${
@@ -326,12 +382,50 @@ export default function StoryPlayPage() {
                   </span>
                 )}
               </div>
+              {msg.image_url && (
+                <img
+                  src={msg.image_url}
+                  alt="photo"
+                  className="max-w-[240px] rounded-2xl object-cover cursor-pointer hover:opacity-90 transition-opacity shadow-lg"
+                  onClick={() => setViewerImage(msg.image_url!)}
+                />
+              )}
             </div>
           ))}
+
+          {/* 撮影中インジケータ */}
+          {isGeneratingImage && (
+            <div className="flex justify-start">
+              <div className="bg-white/[0.05] rounded-2xl rounded-bl-md px-4 py-3 border border-white/[0.06]">
+                <div className="flex items-center gap-2 text-sm text-white/50">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 animate-pulse text-pink-400">
+                    <path d="M12 9a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 9Z" />
+                    <path fillRule="evenodd" d="M9.344 3.071a49.52 49.52 0 0 1 5.312 0c.967.052 1.83.585 2.332 1.39l.821 1.317c.24.383.645.643 1.11.71.386.054.77.113 1.152.177 1.432.239 2.429 1.493 2.429 2.909V18a3 3 0 0 1-3 3H4.5a3 3 0 0 1-3-3V9.574c0-1.416.997-2.67 2.429-2.909.382-.064.766-.123 1.151-.178a1.56 1.56 0 0 0 1.11-.71l.822-1.315a2.942 2.942 0 0 1 2.332-1.39ZM6.75 12.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Zm12-1.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clipRule="evenodd" />
+                  </svg>
+                  <span className="animate-pulse">自撮り中...</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div ref={messagesEndRef} />
         </div>
       </div>
+
+      {/* 画像ビューアー */}
+      {viewerImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setViewerImage(null)}
+        >
+          <button onClick={() => setViewerImage(null)} className="absolute top-4 right-4 text-white/70 hover:text-white p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+              <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <img src={viewerImage} alt="Full size" className="max-w-full max-h-full object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
 
       {/* Mission Complete Toast */}
       {newMissionCompleted && (
@@ -343,7 +437,7 @@ export default function StoryPlayPage() {
               </svg>
             </div>
             <div>
-              <div className="text-[10px] text-emerald-400 font-medium tracking-wider uppercase">Mission Complete</div>
+              <div className="text-[10px] text-emerald-400 font-medium tracking-wider uppercase">ミッション達成</div>
               <div className="text-sm font-bold">{newMissionCompleted}</div>
             </div>
           </div>
@@ -376,7 +470,7 @@ export default function StoryPlayPage() {
             <div className="text-5xl animate-bounce">🎉</div>
 
             <h2 className="text-2xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Story Clear!
+              ストーリークリア！
             </h2>
 
             <p className="text-white/50 text-sm">{story.title}</p>
@@ -397,13 +491,13 @@ export default function StoryPlayPage() {
                 href="/story"
                 className="py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/50 hover:bg-white/[0.08] hover:text-white/70 transition-all text-center"
               >
-                Back to Stories
+                ストーリー一覧に戻る
               </Link>
               <Link
                 href={`/chat/${story.character === 'duo' ? 'saya' : story.character}`}
                 className={`py-3 rounded-xl bg-gradient-to-r ${charGradient} text-sm font-bold text-white hover:opacity-90 hover:shadow-lg hover:shadow-pink-500/20 transition-all text-center`}
               >
-                Continue Chatting
+                チャットを続ける
               </Link>
             </div>
           </div>
@@ -418,7 +512,7 @@ export default function StoryPlayPage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={storyCompleted ? 'Story completed' : 'Type a message...'}
+            placeholder={storyCompleted ? 'ストーリー完了' : 'メッセージを入力...'}
             disabled={isStreaming || storyCompleted}
             rows={1}
             className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-base text-white placeholder-white/20 resize-none focus:outline-none focus:border-pink-500/30 focus:bg-white/[0.06] disabled:opacity-40 transition-all"

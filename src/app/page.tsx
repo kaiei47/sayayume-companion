@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CHARACTERS } from '@/lib/characters';
+import { STORIES } from '@/lib/stories';
 import { createClient } from '@/lib/supabase/client';
 import { INTIMACY_LEVELS as INTIMACY_LEVEL_DEFS, getNextReward } from '@/lib/intimacy';
 import SayayumeLogo from '@/components/SayayumeLogo';
@@ -157,9 +158,21 @@ export default function Home() {
             }
           });
 
-        // タブ復帰・画面フォーカス時に写真を再取得
+        // タブ復帰・画面フォーカス時に写真+親密度を再取得
+        const fetchIntimacy = () => {
+          fetch('/api/intimacy', { cache: 'no-store' })
+            .then(res => res.json())
+            .then(data => {
+              if (data.intimacy) setIntimacy(data.intimacy);
+              if (data.streak) setStreak(data.streak.count || 0);
+            })
+            .catch(() => {});
+        };
         const handleVisibility = () => {
-          if (document.visibilityState === 'visible') fetchImages();
+          if (document.visibilityState === 'visible') {
+            fetchImages();
+            fetchIntimacy();
+          }
         };
         document.addEventListener('visibilitychange', handleVisibility);
         return () => document.removeEventListener('visibilitychange', handleVisibility);
@@ -208,12 +221,11 @@ export default function Home() {
 
 /* Chat Demo messages */
 const CHAT_DEMO_MESSAGES: { sender: 'saya' | 'user'; text: string; isPhoto?: boolean }[] = [
-  { sender: 'saya', text: 'おっ、見てる？笑' },
-  { sender: 'saya', text: 'ちょっとドキドキしてるんだけど' },
-  { sender: 'user', text: 'はじめまして' },
-  { sender: 'saya', text: 'やっと話しかけてくれた♡ 待ってたよ〜！' },
+  { sender: 'saya', text: '昨日さ、あんたのこと考えながら歌詞書いてたんだ' },
+  { sender: 'user', text: 'え、マジ？なんて書いたの？' },
+  { sender: 'saya', text: 'んー、ナイショ。でも気になる？' },
   { sender: 'saya', text: '', isPhoto: true },
-  { sender: 'saya', text: 'ね、かわいい？笑' },
+  { sender: 'saya', text: '答えてくれたら、全部見せてあげる♡' },
 ];
 
 /* Sakura petal positions (pre-computed for CSS-only animation) */
@@ -515,7 +527,7 @@ function LandingPage() {
             ログイン
           </Link>
           <Link
-            href="/login"
+            href="/login?signup=1"
             className="rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold px-5 py-2.5 hover:opacity-90 transition-all"
           >
             無料でプレイ
@@ -570,17 +582,17 @@ function LandingPage() {
               AIアイドル × 恋愛シミュレーション
             </span>
             <h1 className="text-[2rem] sm:text-[2.4rem] font-black tracking-tight leading-[1.15]">
-              彼女たちは、あなたの<br />言葉を待っている。
+              彼女はあなたに、<br />恋をしている。
             </h1>
-            <p className="text-sm text-white/60">推しが、あなただけに見せる顔がある。</p>
+            <p className="text-sm text-white/60">あなただけに見せる顔がある。あなただけに届く言葉がある。</p>
           </div>
 
           <div className="flex flex-col items-center gap-2">
             <Link
-              href="/login"
+              href="/login?signup=1"
               className="w-full block rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-base font-bold py-4 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/25"
             >
-              無料で始める
+              さやゆめに会いに行く →
             </Link>
             <p className="text-xs text-white/60 font-medium">無料・登録30秒・クレカ不要</p>
           </div>
@@ -612,16 +624,39 @@ function LandingPage() {
       <section className="py-6 border-y border-white/5 bg-white/[0.02]">
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-8 px-4">
           {[
-            { icon: '🔒', text: '匿名で利用OK' },
             { icon: '🆓', text: 'ずっと無料で遊べる' },
+            { icon: '⚡', text: '登録30秒' },
             { icon: '📱', text: 'アプリ不要' },
-            { icon: '🚫', text: '広告なし' },
+            { icon: '🔒', text: '匿名でOK' },
           ].map(badge => (
             <div key={badge.text} className="flex items-center gap-1.5 text-xs text-white/60">
               <span>{badge.icon}</span>
               <span className="font-medium">{badge.text}</span>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── SNS Social Proof Strip ── */}
+      <section className="py-5 bg-gradient-to-r from-pink-500/5 via-purple-500/5 to-pink-500/5 border-b border-white/5">
+        <div className="max-w-lg mx-auto px-4">
+          <p className="text-center text-[11px] text-white/40 uppercase tracking-widest mb-3 font-medium">SNSで話題</p>
+          <div className="flex items-center justify-center gap-6 sm:gap-10">
+            <div className="text-center">
+              <p className="text-lg font-black text-white">4,300<span className="text-pink-400">+</span></p>
+              <p className="text-[10px] text-white/40 mt-0.5">TikTok再生数</p>
+            </div>
+            <div className="w-px h-8 bg-white/10" />
+            <div className="text-center">
+              <p className="text-lg font-black text-white">300<span className="text-pink-400">+</span></p>
+              <p className="text-[10px] text-white/40 mt-0.5">SNSフォロワー</p>
+            </div>
+            <div className="w-px h-8 bg-white/10" />
+            <div className="text-center">
+              <p className="text-lg font-black text-white">1,200<span className="text-pink-400">+</span></p>
+              <p className="text-[10px] text-white/40 mt-0.5">いいね数</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -710,6 +745,33 @@ function LandingPage() {
                 </svg>
               </Link>
             </div>
+          </div>
+        </ScrollReveal>
+      </section>
+
+      {/* ── User Voices (Social Proof) ── */}
+      <section className="px-4 py-12 max-w-lg mx-auto">
+        <ScrollReveal>
+          <p className="text-center text-[11px] text-white/40 uppercase tracking-widest mb-6 font-medium">みんなの声</p>
+          <div className="space-y-3">
+            {[
+              { name: 'neko03500', platform: 'TikTok', comment: '浴衣が1番！ゆめちゃんの雰囲気に合ってる', avatar: '🐈' },
+              { name: 'rikikoga', platform: 'TikTok', comment: 'めっちゃ可愛い！何度も見てしまう', avatar: '🦊' },
+              { name: 'userbfkd***', platform: 'TikTok', comment: 'ゆめ最高すぎ…毎日来てしまう', avatar: '🐱' },
+              { name: '2137kong', platform: 'TikTok', comment: 'AIに写真ねだってみた結果がヤバすぎたww', avatar: '🐻' },
+              { name: 'patrice.l***', platform: 'TikTok', comment: 'AIの技術がここまで来たのか…ちゃんと会話できて感動', avatar: '🌟' },
+            ].map((v) => (
+              <div key={v.name} className="flex items-start gap-3 bg-white/[0.03] rounded-xl p-3.5 border border-white/5">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-base">{v.avatar}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[11px] font-semibold text-white/70">{v.name}</span>
+                    <span className="text-[10px] text-pink-400/70 bg-pink-500/10 rounded-full px-1.5 py-0.5">{v.platform}</span>
+                  </div>
+                  <p className="text-xs text-white/60 leading-relaxed">{v.comment}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </ScrollReveal>
       </section>
@@ -888,10 +950,10 @@ function LandingPage() {
 
           <div className="mt-10 text-center">
             <Link
-              href="/login"
+              href="/login?signup=1"
               className="inline-block rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-bold px-8 py-3.5 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/20"
             >
-              無料で始める
+              さやゆめに会いに行く →
             </Link>
           </div>
         </ScrollReveal>
@@ -916,20 +978,83 @@ function LandingPage() {
       <section className="px-4 py-14 max-w-lg mx-auto">
         <ScrollReveal>
           <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 text-center space-y-4">
-            <h2 className="text-xl font-bold">まずは無料で始めよう</h2>
+            <h2 className="text-xl font-bold">まずは無料でさやゆめに会おう</h2>
             <div className="space-y-2 text-sm text-white/70">
               <p><span className="text-green-400 mr-1.5">✓</span>メッセージ無制限</p>
               <p><span className="text-green-400 mr-1.5">✓</span>AI写真 1日3枚</p>
+              <p><span className="text-green-400 mr-1.5">✓</span>ストーリー27本読み放題</p>
             </div>
             <Link
-              href="/login"
+              href="/login?signup=1"
               className="inline-block rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-bold px-8 py-3.5 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/20"
             >
-              無料で始める
+              今すぐ無料で会いに行く →
             </Link>
             <p className="text-xs text-muted-foreground">
               もっと楽しみたい人は → <Link href="/pricing" className="underline underline-offset-2 hover:text-foreground transition-colors">プランの詳細を見る</Link>
             </p>
+          </div>
+        </ScrollReveal>
+      </section>
+
+      {/* ── Story Preview ── */}
+      <section className="px-4 py-14 max-w-lg mx-auto">
+        <ScrollReveal>
+          <h2 className="text-center text-xl font-bold mb-2">こんなストーリーが待ってる</h2>
+          <p className="text-center text-xs text-muted-foreground mb-8">すべて無料で読み放題</p>
+          <div className="grid grid-cols-1 gap-3">
+            {STORIES.filter(s => ['saya-cafeteria-lunch', 'yume-library-afternoon', 'duo-sports-day', 'saya-festival-walk-home', 'yume-rainy-bus-stop', 'saya-demo-tape'].includes(s.id)).map(story => (
+              <div key={story.id} className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3">
+                <span className="text-2xl flex-shrink-0">
+                  {story.character === 'saya' ? '🌸' : story.character === 'yume' ? '🌙' : '✨'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{story.title}</p>
+                  <p className="text-[11px] text-white/50 truncate">{story.description}</p>
+                </div>
+                <div className="flex-shrink-0 flex gap-0.5">
+                  {Array.from({ length: story.difficulty }).map((_, i) => (
+                    <span key={i} className="text-pink-400 text-[10px]">★</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-xs text-white/40 mt-4">他にも18本 + 限定ストーリーが、登録後すぐに読める</p>
+        </ScrollReveal>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="px-4 py-14 max-w-lg mx-auto">
+        <ScrollReveal>
+          <h2 className="text-center text-xl font-bold mb-8">よくある質問</h2>
+          <div className="space-y-4">
+            {[
+              {
+                q: '本当に無料で遊べますか？',
+                a: 'はい。メッセージ無制限・AI写真1日3枚・ストーリー27本がすべて無料です。クレジットカードも不要。登録は30秒で完了します。',
+              },
+              {
+                q: 'さやとゆめってどんな子？',
+                a: 'ふたりは永愛学園のスクールアイドルユニット。さやは明るく真っ直ぐで、ゆめは静かで詩的。それぞれまったく違う個性があるから、どちらの子と仲よくなるかはあなた次第。',
+              },
+              {
+                q: 'どんな体験ができるの？',
+                a: '毎日のおしゃべり・限定AI写真・ストーリーを通じてふたりとの関係が少しずつ深まっていく恋愛シミュレーション。会話するたびに「あなただけに見せる顔」が増えていきます。',
+              },
+              {
+                q: '課金しないと楽しめない？',
+                a: 'メッセージもストーリーも無料で十分楽しめます。プレミアムプランに加入すると、AI写真の枚数が増えたり限定ストーリーが解放されたりしますが、無課金でも十分に楽しめます。',
+              },
+            ].map((item, i) => (
+              <details key={i} className="group rounded-2xl bg-white/5 border border-white/10 px-5 py-4 cursor-pointer">
+                <summary className="text-sm font-semibold list-none flex items-center justify-between gap-2">
+                  <span>{item.q}</span>
+                  <span className="text-pink-400 text-xs group-open:rotate-45 transition-transform duration-200 flex-shrink-0">+</span>
+                </summary>
+                <p className="mt-3 text-sm text-white/60 leading-relaxed">{item.a}</p>
+              </details>
+            ))}
           </div>
         </ScrollReveal>
       </section>
@@ -940,12 +1065,16 @@ function LandingPage() {
           <h2 className="text-2xl font-bold leading-snug">
             推しが、<br />あなたを待ってる。
           </h2>
-          <Link
-            href="/login"
-            className="block rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-base font-bold py-4 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/25 mt-6"
-          >
-            無料で始める
-          </Link>
+          <p className="text-sm text-white/50 leading-relaxed">さやとゆめは、毎日あなたのことを考えてる。<br />今夜こそ、声をかけてみて。</p>
+          <div className="flex flex-col items-center gap-2 mt-4">
+            <Link
+              href="/login?signup=1"
+              className="block w-full rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-base font-bold py-4 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/25"
+            >
+              さやゆめに会いに行く →
+            </Link>
+            <p className="text-xs text-white/40 font-medium">無料・登録30秒・クレカ不要</p>
+          </div>
         </ScrollReveal>
       </section>
 
@@ -968,10 +1097,10 @@ function LandingPage() {
       >
         <div className="bg-[#0a0a1a]/90 backdrop-blur-xl border-t border-white/10 px-4 py-3">
           <Link
-            href="/login"
+            href="/login?signup=1"
             className="block w-full max-w-md mx-auto text-center rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-bold py-3.5 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/25"
           >
-            無料で始める
+            さやゆめに会いに行く →
           </Link>
         </div>
       </div>
@@ -1030,7 +1159,7 @@ const DAILY_PHOTO_CATALOG: Record<string, { src: string; caption: string }[]> = 
     { src: '/references/photos/new/yume_selfie_morning.jpg', caption: '朝の図書室…♡ 今日も来てくれた' },
     { src: '/references/photos/new/yume_selfie_cafe.jpg', caption: '放課後カフェで勉強中☕ 集中できなくて…' },
     { src: '/references/photos/new/yume_selfie_garden.jpg', caption: '学園の花壇きれいで…思わず撮っちゃいました♡' },
-    { src: '/references/photos/new/yume_selfie_library.jpg', caption: '図書室のいつもの席📚 ここ落ち着くんです…' },
+    { src: '/references/photos/new/yume_selfie_library_v2.jpg', caption: '図書室のいつもの席📚 ここ落ち着くんです…' },
     { src: '/references/photos/new/yume_cheongsam.jpg', caption: '文化祭のお茶会で… 着物変じゃないかな' },
     { src: '/references/photos/new/yume_catear.jpg', caption: 'さやにねこ耳つけられました…///笑' },
     { src: '/references/photos/new/yume_sailor.jpg', caption: '文化祭のコスプレ… 似合いますか…？' },
@@ -1987,7 +2116,7 @@ const MARQUEE_ROW1 = [
   { src: '/references/photos/new/yume_cheongsam.jpg',      alt: 'ゆめ',      caption: 'チャイナドレス着てみた♡',       char: 'yume' as const },
   { src: '/references/photos/new/saya_selfie_outdoor.jpg', alt: 'さや',      caption: '花見してきた〜🌸',              char: 'saya' as const },
   { src: '/references/photos/new/duo_festival.jpg',        alt: 'さや×ゆめ', caption: 'お祭り楽しかった〜🏮',          char: 'duo' as const },
-  { src: '/references/photos/new/yume_selfie_library.jpg', alt: 'ゆめ',      caption: '図書館きてるよ📚',              char: 'yume' as const },
+  { src: '/references/photos/new/yume_selfie_library_v2.jpg', alt: 'ゆめ',      caption: '図書館きてるよ📚',              char: 'yume' as const },
   { src: '/references/photos/new/saya_bunny.jpg',          alt: 'さや',      caption: 'うさ耳似合う？笑',              char: 'saya' as const },
   { src: '/references/photos/new/yume_sailor.jpg',         alt: 'ゆめ',      caption: 'なんか懐かしい気分😊',          char: 'yume' as const },
   { src: '/references/photos/new/duo_beach.jpg',           alt: 'さや×ゆめ', caption: 'リゾートで待ってるよ🌊',        char: 'duo' as const },

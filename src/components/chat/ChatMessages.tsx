@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { CharacterConfig } from '@/lib/characters';
@@ -96,7 +97,7 @@ export default function ChatMessages({
             <div className="flex flex-col items-center justify-center pt-8 pb-4 text-center">
               <div className="relative w-32 h-48 mx-auto mb-4 rounded-2xl overflow-hidden">
                 <Image
-                  src={`/chat/${character.id}_welcome.jpg`}
+                  src={character.id === 'yume' ? '/chat/yume_welcome_v2.jpg' : `/chat/${character.id}_welcome.jpg`}
                   alt={character.nameJa}
                   fill
                   className="object-cover"
@@ -214,12 +215,42 @@ function TypingDots() {
   );
 }
 
-// [IMAGE: ...] タグや余分な空白をテキスト表示から除去
+// [IMAGE: ...] タグ・[LOCKED_PHOTO]マーカーや余分な空白をテキスト表示から除去
 function cleanDisplayText(text: string): string {
   return text
     .replace(/\[IMAGE:\s*[^\]]*\]/g, '')
+    .replace(/\[LOCKED_PHOTO\]/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+// [LOCKED_PHOTO]マーカーが含まれているか確認
+function hasLockedPhoto(text: string): boolean {
+  return text.includes('[LOCKED_PHOTO]');
+}
+
+function LockedPhotoCard({ character }: { character: CharacterConfig }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl max-w-[240px] shadow-lg">
+      <img
+        src={character.avatarUrl}
+        alt="locked photo"
+        className="w-full object-cover blur-xl scale-110 brightness-75"
+        style={{ height: '200px' }}
+      />
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 backdrop-blur-sm">
+        <div className="text-2xl">🔒</div>
+        <p className="text-white text-xs font-semibold text-center px-2">プレミアムで解禁</p>
+        <Link
+          href="/pricing"
+          className="mt-1 px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[11px] font-semibold hover:opacity-90 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
+          プランを見る
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 function formatTime(dateStr: string): string {
@@ -318,6 +349,11 @@ function MessageBubble({
                 {cleanDisplayText(message.content)}
               </p>
             </div>
+          )}
+
+          {/* ロック済み写真プレビュー（上限・プラン不足時） */}
+          {!isUser && !message.image_url && message.content && hasLockedPhoto(message.content) && (
+            <LockedPhotoCard character={character} />
           )}
 
           {/* 画像（バブルとは別に表示） */}

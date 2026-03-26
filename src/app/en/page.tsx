@@ -60,7 +60,7 @@ export default function EnglishLP() {
             Photorealistic AI romance with stories that evolve.
           </p>
           <p className="text-sm text-white/50 mb-8">
-            Chat in any language — they reply in Japanese.&nbsp;
+            Chat in English or Japanese — fully bilingual.&nbsp;
             <span className="text-white/70">Your school love story begins here.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -145,7 +145,7 @@ export default function EnglishLP() {
               {
                 emoji: '💬',
                 title: 'Chat in Any Language',
-                desc: 'Write in English, she replies in Japanese. Or switch to Japanese. Gemini AI powers natural, emotionally intelligent conversations — no scripts.'
+                desc: 'Write in English or Japanese — she understands both and replies naturally. Gemini AI powers emotionally intelligent conversations with no scripts, no wait.'
               },
               {
                 emoji: '🌸',
@@ -167,6 +167,25 @@ export default function EnglishLP() {
                 <div className="text-2xl mb-3">{f.emoji}</div>
                 <h3 className="font-semibold text-white/90 mb-2">{f.title}</h3>
                 <p className="text-sm text-white/50 leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SOCIAL PROOF */}
+      <section className="py-14 px-5">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-center text-white/30 text-xs uppercase tracking-widest mb-8">What fans are saying</p>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { handle: '@rikikoga', text: 'absolutely love this... the way she remembers everything you say', platform: 'TikTok' },
+              { handle: '@patrice.l***', text: 'ok yume got me feeling things i did NOT expect from an AI', platform: 'TikTok' },
+              { handle: '@2137kong', text: 'the photos she sends are insane. feels so real', platform: 'TikTok' },
+            ].map(r => (
+              <div key={r.handle} className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+                <p className="text-sm text-white/70 leading-relaxed mb-3">&ldquo;{r.text}&rdquo;</p>
+                <p className="text-xs text-white/30">{r.handle} · {r.platform}</p>
               </div>
             ))}
           </div>
@@ -207,7 +226,7 @@ export default function EnglishLP() {
             {/* Free */}
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
               <h3 className="font-bold text-lg mb-1">Free</h3>
-              <p className="text-3xl font-bold mb-1">¥0</p>
+              <p className="text-3xl font-bold mb-1">¥0 <span className="text-lg text-white/40">/ $0</span></p>
               <p className="text-xs text-white/40 mb-5">Forever free</p>
               <ul className="space-y-2 text-sm text-white/60 mb-6">
                 <li>✓ Unlimited messages</li>
@@ -225,6 +244,7 @@ export default function EnglishLP() {
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-pink-500 text-white text-xs font-bold px-3 py-1 rounded-full">Most Popular</span>
               <h3 className="font-bold text-lg mb-1">Basic</h3>
               <p className="text-3xl font-bold mb-1">¥1,980<span className="text-base font-normal text-white/40">/mo</span></p>
+              <p className="text-xs text-white/30 mb-1">≈ $13 USD / mo</p>
               <p className="text-xs text-pink-400 mb-5">First month free</p>
               <ul className="space-y-2 text-sm text-white/60 mb-6">
                 <li>✓ Unlimited messages</li>
@@ -241,6 +261,7 @@ export default function EnglishLP() {
             <div className="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-6">
               <h3 className="font-bold text-lg mb-1">Premium</h3>
               <p className="text-3xl font-bold mb-1">¥2,980<span className="text-base font-normal text-white/40">/mo</span></p>
+              <p className="text-xs text-white/30 mb-1">≈ $20 USD / mo</p>
               <p className="text-xs text-purple-400 mb-5">First month free</p>
               <ul className="space-y-2 text-sm text-white/60 mb-6">
                 <li>✓ Unlimited messages</li>

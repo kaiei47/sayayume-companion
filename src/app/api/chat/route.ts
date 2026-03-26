@@ -540,6 +540,39 @@ export async function POST(req: NextRequest) {
     // クロスセッションメモリを注入（システムプロンプト末尾）
     if (memoryContext) basePrompt += memoryContext;
 
+    // ── 写真残枚数をAIに伝える（「あと1枚…」の感情演出） ──
+    if (dbUserId) {
+      const planLimitsForPrompt = PLAN_LIMITS[userPlan] || PLAN_LIMITS.guest;
+      if (planLimitsForPrompt.dailyImages > 0 && planLimitsForPrompt.imageGeneration === true) {
+        try {
+          const todayJSTForPrompt = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+          todayJSTForPrompt.setUTCHours(0, 0, 0, 0);
+          const todayStartUTCForPrompt = new Date(todayJSTForPrompt.getTime() - 9 * 60 * 60 * 1000).toISOString();
+          const convIdsForPrompt = (await supabase.from('conversations').select('id').eq('user_id', dbUserId)).data?.map(c => c.id) || [];
+          if (convIdsForPrompt.length > 0) {
+            const { count: imgCountForPrompt } = await supabase
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('role', 'assistant')
+              .eq('content_type', 'image')
+              .gte('created_at', todayStartUTCForPrompt)
+              .in('conversation_id', convIdsForPrompt);
+            const usedCount = imgCountForPrompt || 0;
+            const remaining = planLimitsForPrompt.dailyImages - usedCount;
+            if (remaining <= 0) {
+              basePrompt += `\n\n【写真の今日の上限】今日の写真は全て送り終わりました（${planLimitsForPrompt.dailyImages}/${planLimitsForPrompt.dailyImages}枚）。写真リクエストには応じられない。テキストで会話を続けること。会話を切らさず、言葉で描写したり話題を提供したりして継続させる。`;
+            } else if (remaining === 1) {
+              basePrompt += `\n\n【写真の残り枚数】今日あと${remaining}枚だけ写真を送れます。「あと1枚しか送れないんだけど...特別なやつ送ってあげようか？」のように希少性を演出して会話を盛り上げること。`;
+            } else if (remaining <= planLimitsForPrompt.dailyImages / 2) {
+              basePrompt += `\n\n【写真の残り枚数】今日あと${remaining}枚写真を送れます。残り少なくなってきたタイミングで自然に触れてもよい。`;
+            }
+          }
+        } catch {
+          // 残枚数取得失敗は無視（AI生成を止めない）
+        }
+      }
+    }
+
     // ── ランダムムード注入（会話IDベースで決定的） ──
     const mood = getRandomMood(conversation_id || `session-${Date.now()}`);
     if (mood.mood !== '通常') {
@@ -874,7 +907,7 @@ export async function POST(req: NextRequest) {
             } else {
               // 画像生成失敗（セーフティフィルター等）→ キャラっぽいフォールバックメッセージ
               const failMsg = '\n\nえ〜ん、その写真は怒られちゃった...😢 もうちょっと普通のやつなら撮れるかも！';
-              savedContent += failMsg;
+              savedContent = cleanText + failMsg; // [IMAGE:]タグを除去してからfailMsgを追加
               controller.enqueue(
                 encoder.encode(
                   `event: image_failed\ndata: ${JSON.stringify({ fallback_text: failMsg })}\n\n`
@@ -883,11 +916,24 @@ export async function POST(req: NextRequest) {
             }
           } else if (imageDescriptions.length > 0 && !canGenerateImages) {
             savedContent = cleanText;
-            const upgradeMsg = !dbUserId
-              ? '\n\n今日の無料体験分の写真はもう使ったよ♡ 無料登録したら毎日3枚まで引き続き見れるよ！ /login から登録してね♡'
-              : imageQuotaExceeded
-              ? `\n\n今日の写真は${planLimits.dailyImages}枚まで...明日またね♡ もっと見たいならプランアップグレードで増えるよ！`
-              : '\n\n写真を見るにはプランのアップグレードが必要だよ♡ Basicプランなら画像付きでチャットできるよ！';
+            // キャラクター別・状況別の感情的な上限メッセージ（会話継続フック付き）
+            let upgradeMsg: string;
+            if (!dbUserId) {
+              // ゲスト向け
+              upgradeMsg = character_id === 'yume'
+                ? '\n\n...今日の写真はもう送れなくなってしまって...ごめんなさい。登録してくれたら毎日続けて見せられるのに...♡ よかったら /login から登録してみてください'
+                : '\n\nごめん、今日はもう写真送れなくなっちゃった😢 登録してくれたら毎日3枚見せてあげられるのに♡ /login から1分でできるよ！でも話すのはまだできるから、何か聞いて？';
+            } else if (imageQuotaExceeded) {
+              // 上限到達（感情的・継続フック付き + ぼかしプレビューマーカー）
+              upgradeMsg = character_id === 'yume'
+                ? `\n\n...今日の写真は${planLimits.dailyImages}枚までで...もう送れないんです。ごめんなさい。\n[LOCKED_PHOTO]\nでもまだ話せるから...いてくれますか？ 明日また見せますね♡`
+                : `\n\nごめん！今日の写真は${planLimits.dailyImages}枚までで打ち止めだ〜😢\n[LOCKED_PHOTO]\nでもまだ話せるじゃん♡ てか今日あったこと全部聞きたいし、もっと教えて！明日また写真送るから待っててね♡`;
+            } else {
+              // プラン不足（ぼかしプレビューマーカー）
+              upgradeMsg = character_id === 'yume'
+                ? '\n\n...写真を見るには、プランのアップグレードが必要で...もっと見せてあげたいんですけど///\n[LOCKED_PHOTO]\nBasicプランなら毎日送れます'
+                : '\n\n写真見せたいけど、プランのアップグレードが必要なんだよね💦\n[LOCKED_PHOTO]\nBasicプランにするとAI写真付きでチャットできるよ♡ でも今は言葉で話そ！何が聞きたい？';
+            }
             savedContent += upgradeMsg;
             controller.enqueue(
               encoder.encode(
@@ -921,10 +967,10 @@ export async function POST(req: NextRequest) {
               })
               .eq('id', conversation_id);
 
-            // 5メッセージごとにメモリ抽出（fire-and-forget）
-            if (dbUserId && currentTotalMessageCount % 5 === 0 && currentTotalMessageCount > 0) {
+            // 3メッセージごとにメモリ抽出（awaitして確実に保存）
+            if (dbUserId && currentTotalMessageCount % 3 === 0 && currentTotalMessageCount > 0) {
               const recentForExtract = history.slice(-20);
-              extractAndSaveMemories(
+              await extractAndSaveMemories(
                 supabase,
                 dbUserId,
                 character_id,
@@ -932,7 +978,7 @@ export async function POST(req: NextRequest) {
                 character.nameJa,
                 conversation_id ?? undefined,
                 userPlan as 'free' | 'basic' | 'premium' | 'vip'
-              ).catch(err => console.error('[Memory] fire-and-forget failed:', err));
+              ).catch(err => console.error('[Memory] extract failed:', err));
             }
           }
 
@@ -965,16 +1011,15 @@ export async function POST(req: NextRequest) {
               body: JSON.stringify({
                 contents: [{
                   role: 'user',
-                  parts: [{ text: `以下はAIキャラクターの最新の返信です。ユーザーがワンタップで返信できる候補を3つ、日本語で生成してください。
+                  parts: [{ text: `AIキャラクターが以下のメッセージを送ってきました。あなた（ユーザー）はどう返しますか？自然なユーザーの返答候補を3つ作ってください。
 
-キャラクターの返信:
-「${savedContent.slice(0, 300)}」
+キャラのメッセージ: 「${savedContent.slice(0, 200)}」
 
-ルール:
-- 各候補は15文字以内
-- 会話の流れに自然に合う内容
-- 1つは共感/リアクション系、1つは質問/深掘り系、1つは感情表現系
-- JSON配列のみ出力: ["候補1", "候補2", "候補3"]` }]
+条件:
+- ユーザー目線の言葉（一人称「あたし」「俺」「私」は使わない、短くシンプル）
+- 各15文字以内
+- 例: 「えっ本当に？」「わかる〜！」「もっと教えて」「それ気になる」「なんで？」
+- JSON配列のみ: ["返答1", "返答2", "返答3"]` }]
                 }],
                 generationConfig: { temperature: 0.9, maxOutputTokens: 100 },
               }),

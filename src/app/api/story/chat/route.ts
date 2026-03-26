@@ -1,11 +1,23 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
-import { getCharacter } from '@/lib/characters';
+import { getCharacter, CHARACTERS } from '@/lib/characters';
 import { getStory, buildStorySystemPrompt } from '@/lib/stories';
 import { applyIntimacyToPrompt, getIntimacy, updateIntimacy, analyzeMessage, getLevelInfo, getLevelProgress } from '@/lib/intimacy';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { saveStoryMemory } from '@/lib/user-memory';
+import { extractImageTags, buildImagePrompt, generateImage } from '@/lib/gemini-image';
+import { isNSFWDescription } from '@/lib/runware-image';
+import { generateImageReplicate } from '@/lib/replicate-image';
+import { uploadChatImage } from '@/lib/supabase/storage';
+
+const PLAN_LIMITS = {
+  guest:   { imageGeneration: true, dailyImages: 3  },
+  free:    { imageGeneration: true, dailyImages: 3  },
+  basic:   { imageGeneration: true, dailyImages: 30 },
+  premium: { imageGeneration: true, dailyImages: -1 },
+  vip:     { imageGeneration: true, dailyImages: -1 },
+} as const;
 
 export const maxDuration = 60;
 
@@ -55,6 +67,18 @@ export async function POST(req: NextRequest) {
     if (!dbUser) {
       return new Response(JSON.stringify({ error: 'user_not_found' }), { status: 404 });
     }
+
+    // ユーザープラン取得
+    let userPlan: keyof typeof PLAN_LIMITS = 'free';
+    try {
+      const { data: sub } = await adminDb
+        .from('subscriptions')
+        .select('plan')
+        .eq('user_id', dbUser.id)
+        .eq('status', 'active')
+        .single();
+      if (sub?.plan) userPlan = sub.plan as keyof typeof PLAN_LIMITS;
+    } catch { /* フォールバック: free */ }
 
     let body: StoryChatRequest;
     try {
@@ -210,11 +234,71 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          // [IMAGE:] タグを処理して画像生成
+          const { cleanText, imageDescriptions } = extractImageTags(fullResponse);
+          let savedContent = fullResponse;
+
+          if (imageDescriptions.length > 0) {
+            const planLimits = PLAN_LIMITS[userPlan] || PLAN_LIMITS.free;
+
+            // 当日の画像枚数チェック
+            let dailyImageCount = 0;
+            if (planLimits.dailyImages > 0) {
+              const todayJST = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+              todayJST.setUTCHours(0, 0, 0, 0);
+              const todayStartUTC = new Date(todayJST.getTime() - 9 * 60 * 60 * 1000).toISOString();
+              const convIds = (await adminDb.from('conversations').select('id').eq('user_id', dbUser.id)).data?.map(c => c.id) || [];
+              if (convIds.length > 0) {
+                const { count } = await adminDb
+                  .from('messages')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('role', 'assistant')
+                  .eq('content_type', 'image')
+                  .gte('created_at', todayStartUTC)
+                  .in('conversation_id', convIds);
+                dailyImageCount = count || 0;
+              }
+            }
+
+            const canGenerate = planLimits.dailyImages === -1 || dailyImageCount < planLimits.dailyImages;
+
+            if (canGenerate) {
+              savedContent = cleanText;
+              controller.enqueue(encoder.encode(`event: clean_text\ndata: ${JSON.stringify({ content: cleanText })}\n\n`));
+              controller.enqueue(encoder.encode(`event: generating_image\ndata: ${JSON.stringify({ status: 'started' })}\n\n`));
+
+              const imgDescription = imageDescriptions[0];
+              const charConfig = CHARACTERS[story.character === 'duo' ? 'saya' : story.character];
+              const useReplicate = (story.character === 'saya' || story.character === 'yume') && isNSFWDescription(imgDescription);
+
+              let result;
+              if (useReplicate) {
+                result = await generateImageReplicate(imgDescription, story.character === 'duo' ? 'saya' : story.character);
+                if (!result) {
+                  const imgPrompt = buildImagePrompt(charConfig.imagePromptBase, imgDescription, !!charConfig.referenceImagePath);
+                  result = await generateImage(imgPrompt, charConfig.referenceImagePath);
+                }
+              } else {
+                const imgPrompt = buildImagePrompt(charConfig.imagePromptBase, imgDescription, !!charConfig.referenceImagePath);
+                result = await generateImage(imgPrompt, charConfig.referenceImagePath);
+              }
+
+              if (result) {
+                try {
+                  const publicUrl = await uploadChatImage(adminDb, result.base64, result.mimeType, `story-${session_id}`);
+                  if (publicUrl) {
+                    controller.enqueue(encoder.encode(`event: image\ndata: ${JSON.stringify({ image_url: publicUrl })}\n\n`));
+                  }
+                } catch { /* upload失敗は無視 */ }
+              }
+            }
+          }
+
           // 会話履歴を更新
           const newHistory = [
             ...conversationHistory,
             { role: 'user', content: message },
-            { role: 'model', content: fullResponse },
+            { role: 'model', content: savedContent },
           ];
 
           // 親密度更新（メッセージ分析）
@@ -306,18 +390,7 @@ ${judgePrompt}
             ).catch(err => console.error('Story memory save failed:', err));
           }
 
-          // ミッションボーナスを適用
-          if (missionIntimacyBonus > 0) {
-            const storyEventType = allMissionsCleared ? 'story_complete' as const : 'mission_complete' as const;
-            const storyEventLabel = allMissionsCleared ? 'ストーリークリア！' : 'ミッション達成！';
-            await updateIntimacy(adminDb, dbUser.id, targetCharId, {
-              events: [storyEventType],
-              detailedEvents: [{ type: storyEventType, points: missionIntimacyBonus, label: storyEventLabel }],
-              totalDelta: missionIntimacyBonus,
-            });
-          }
-
-          // セッション更新
+          // セッション更新（intimacyゲートチェックより先にstatusをcompletedにする必要がある）
           await adminDb
             .from('story_sessions')
             .update({
@@ -327,6 +400,17 @@ ${judgePrompt}
               updated_at: new Date().toISOString(),
             })
             .eq('id', session_id);
+
+          // ミッションボーナスを適用（セッション更新後にゲートチェックが正しく動く）
+          if (missionIntimacyBonus > 0) {
+            const storyEventType = allMissionsCleared ? 'story_complete' as const : 'mission_complete' as const;
+            const storyEventLabel = allMissionsCleared ? 'ストーリークリア！' : 'ミッション達成！';
+            await updateIntimacy(adminDb, dbUser.id, targetCharId, {
+              events: [storyEventType],
+              detailedEvents: [{ type: storyEventType, points: missionIntimacyBonus, label: storyEventLabel }],
+              totalDelta: missionIntimacyBonus,
+            });
+          }
 
           // ミッション達成情報を送信
           if (newlyCompleted.length > 0) {

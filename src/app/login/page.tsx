@@ -205,6 +205,16 @@ export default function LoginPage() {
           <div className="mt-2 inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
             <span className="text-[10px] font-medium text-white/50 tracking-wider uppercase">AIアイドル恋愛シミュレーション</span>
           </div>
+          {isSignUp && (
+            <div className="mt-4 text-center space-y-2">
+              <p className="text-base font-bold text-white/90">さやとゆめが、あなたを待ってる。</p>
+              <div className="flex flex-col items-center gap-1 text-[11px] text-white/50">
+                <span>✓ 会話が保存されて毎日続けられる</span>
+                <span>✓ ストーリー27本 無料で全部読める</span>
+                <span>✓ AI写真 1日3枚プレゼント</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Glassmorphism login card */}
@@ -421,8 +431,14 @@ export default function LoginPage() {
             {/* Form header */}
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">
-                {isForgotPassword ? 'パスワードリセット' : isSignUp ? 'アカウント作成' : 'おかえりなさい♡'}
+                {isForgotPassword ? 'パスワードリセット' : isSignUp ? 'さやゆめに会いに行こう' : 'おかえりなさい♡'}
               </h1>
+              {isSignUp && !isForgotPassword && (
+                <div className="mt-2 flex flex-col gap-0.5 text-[11px] text-white/40">
+                  <span>✓ 会話保存 &nbsp;✓ ストーリー27本 &nbsp;✓ AI写真1日3枚</span>
+                  <span className="text-white/30">無料 &middot; 登録30秒 &middot; クレカ不要</span>
+                </div>
+              )}
               <p className="text-white/40 text-sm mt-1">
                 {isForgotPassword
                   ? 'メールアドレスを入力してリセットリンクを受け取る'

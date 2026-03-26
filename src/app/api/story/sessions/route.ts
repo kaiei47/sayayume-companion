@@ -14,8 +14,9 @@ function getSupabaseAdmin() {
 
 /**
  * GET /api/story/sessions - ストーリー一覧 + セッション情報を取得
+ * GET /api/story/sessions?session_id=xxx - 特定セッションの会話履歴を取得
  */
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -32,6 +33,28 @@ export async function GET(_req: NextRequest) {
 
     if (!dbUser) {
       return Response.json({ error: 'user_not_found' }, { status: 404 });
+    }
+
+    // 特定セッションの履歴取得
+    const sessionId = req.nextUrl.searchParams.get('session_id');
+    if (sessionId) {
+      const adminDb = getSupabaseAdmin();
+      const { data: session, error } = await adminDb
+        .from('story_sessions')
+        .select('id, story_id, status, completed_missions, conversation_history')
+        .eq('id', sessionId)
+        .eq('user_id', dbUser.id)
+        .single();
+
+      if (error || !session) {
+        return Response.json({ error: 'session_not_found' }, { status: 404 });
+      }
+
+      return Response.json({
+        history: session.conversation_history || [],
+        completedMissions: session.completed_missions || [],
+        status: session.status,
+      });
     }
 
     // ユーザーのプランを取得
