@@ -460,7 +460,7 @@ export default function SettingsPage() {
               <div>
                 <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wider text-left">メモリー</h2>
                 <p className="text-[11px] text-white/25 mt-1 text-left">
-                  キャラが覚えていること ({memories.length}件)
+                  キャラが覚えていること ({memoriesLoading ? '…' : `${memories.length}件`})
                 </p>
               </div>
               <span className={`text-white/30 text-sm transition-transform duration-200 ${memoriesOpen ? 'rotate-180' : ''}`}>
