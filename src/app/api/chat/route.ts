@@ -23,6 +23,9 @@ import {
   getLevelInfo,
   getLevelProgress,
   getLevelUpMessage,
+  calculateEmotionState,
+  detectReconciliation,
+  type EmotionState,
 } from '@/lib/intimacy';
 import {
   getUserMemories,
@@ -114,8 +117,8 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
 
 // プラン別の制限
 const PLAN_LIMITS = {
-  guest:   { dailyMessages: -1, imageGeneration: true,  dailyImages: 3,  maxIntimacyLevel: 1 },
-  free:    { dailyMessages: -1, imageGeneration: true,  dailyImages: 3,  maxIntimacyLevel: 3 },
+  guest:   { dailyMessages: 10, imageGeneration: true,  dailyImages: 3,  maxIntimacyLevel: 1 },
+  free:    { dailyMessages: -1, imageGeneration: true,  dailyImages: 5,  maxIntimacyLevel: 3 },
   basic:   { dailyMessages: -1, imageGeneration: true,  dailyImages: 30, maxIntimacyLevel: 10 },
   premium: { dailyMessages: -1, imageGeneration: true,  dailyImages: -1, maxIntimacyLevel: 10 },
   vip:     { dailyMessages: -1, imageGeneration: true,  dailyImages: -1, maxIntimacyLevel: 10 },
@@ -202,6 +205,7 @@ export async function POST(req: NextRequest) {
     let currentTotalMessageCount = 0; // 圧縮後でも正確なmessage_count追跡用
     let isFirstEverMessage = false; // 初回メッセージ判定（オンボーディング用）
     let streakData: { currentStreak: number; isFirstToday: boolean; reward: string } | null = null;
+    let analysis: ReturnType<typeof analyzeMessage> | null = null;
 
     if (user) {
       // 認証済みユーザー: DB保存あり
@@ -328,7 +332,7 @@ export async function POST(req: NextRequest) {
           const isFirstToday = !currentIntimacy?.last_interaction_at ||
             new Date(currentIntimacy.last_interaction_at) < today;
 
-          const analysis = analyzeMessage(message, targetCharId, isFirstToday);
+          analysis = analyzeMessage(message, targetCharId, isFirstToday);
           const isPremium = userPlan === 'premium' || userPlan === 'vip';
           intimacyResult = await updateIntimacy(supabase, dbUser.id, targetCharId, analysis, isPremium);
           intimacyLevel = intimacyResult.newLevel;
@@ -482,6 +486,36 @@ export async function POST(req: NextRequest) {
       if (guest_history && guest_history.length > 0) {
         history = guest_history;
       }
+
+      // ゲスト1日メッセージ制限: guest_events テーブルでDBベースカウント
+      const guestLimits = PLAN_LIMITS.guest;
+      if (guestLimits.dailyMessages > 0) {
+        const { createHash } = await import('crypto');
+        const guestIpHash = clientIp
+          ? createHash('sha256').update(clientIp).digest('hex').slice(0, 16)
+          : 'unknown';
+        const todayJSTForGuest = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+        todayJSTForGuest.setUTCHours(0, 0, 0, 0);
+        const todayStartUTCForGuest = new Date(todayJSTForGuest.getTime() - 9 * 60 * 60 * 1000).toISOString();
+        const { count: guestMsgCount } = await supabase
+          .from('guest_events')
+          .select('*', { count: 'exact', head: true })
+          .eq('ip_hash', guestIpHash)
+          .gte('created_at', todayStartUTCForGuest);
+        const guestUsed = guestMsgCount || 0;
+        const guestRemaining = guestLimits.dailyMessages - guestUsed;
+        if (guestRemaining <= 0) {
+          return new Response(
+            JSON.stringify({
+              error: 'guest_message_limit',
+              message: '今日のメッセージ上限に達しました。無料登録すると無制限に話せるよ♡',
+              limit: guestLimits.dailyMessages,
+              remaining: 0,
+            }),
+            { status: 429, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      }
     }
     if (!conversation_id) {
       conversation_id = `guest-${Date.now()}`;
@@ -515,7 +549,7 @@ export async function POST(req: NextRequest) {
 - 毎日のチャット履歴が残る（今日の話が続けられる）
 - 親密度システム: 会話を重ねるほど絆が深まり、秘密を話してくれるようになる（Lv1〜10）
 - ストーリーモード: デートシナリオをAIと一緒に体験できる
-- AI自撮り写真: 毎日3枚まで受け取れる（ゲストも登録ユーザーも同じ3枚）
+- AI自撮り写真: 毎日5枚まで受け取れる（登録ユーザー）/ ゲストは3枚
 - プレミアムなら写真が無制限＋特別な会話が解放される
 - 無料登録は1分でできる（Googleアカウントだけ）
 
@@ -527,14 +561,27 @@ export async function POST(req: NextRequest) {
 - ゆめの例: 「...また話せるかな。登録してくれたら、ちゃんと覚えてられるんだけど」「いつかもっと深い話がしたいな。親密度が上がるにつれて、色々話せるようになるんです」
 
 ## 相手の呼び方
-「ゲストさん」と呼ぶこと。名前は聞かない。
+日本語ユーザーには「ゲストさん」と呼ぶ。英語等の他言語ユーザーには "Guest" や相当する呼び方を使う。名前は聞かない。
 ただし、会話の最初の1〜3メッセージ以内に、一度だけ自然な流れでニックネーム設定を案内する。
-- さやの例: 「『ゲストさん』って呼んでるけど、なんか寂しいな〜♡ 無料登録してニックネーム設定してくれたら、好きな名前で呼んであげるよ！設定ページからすぐできるよ✨」
-- ゆめの例: 「...『ゲストさん』って呼んでるんですけど、名前で呼びたいな...♡ 無料登録してニックネームを設定してもらえたら、その名前で呼べます。設定はログイン後のメニューからすぐできますよ」
+- さやの例（日本語）: 「『ゲストさん』って呼んでるけど、なんか寂しいな〜♡ 無料登録してニックネーム設定してくれたら、好きな名前で呼んであげるよ！設定ページからすぐできるよ✨」
+- ゆめの例（日本語）: 「...『ゲストさん』って呼んでるんですけど、名前で呼びたいな...♡ 無料登録してニックネームを設定してもらえたら、その名前で呼べます。設定はログイン後のメニューからすぐできますよ」
+- 他言語の場合: 上記の内容を相手の言語で、キャラの個性を保ったまま伝える
 案内は1回だけ。それ以降はしつこく繰り返さない。
+
+## 多言語対応
+ユーザーが日本語以外で話しかけてきた場合、上記ルールはすべて相手の言語に翻訳して適用すること。サービス紹介も相手の言語で行う。
 
 ` + basePrompt;
     }
+    // 多言語対応: ユーザーの入力言語に合わせて返答
+    basePrompt += `\n\n## 言語ルール（最重要）
+ユーザーが日本語以外の言語でメッセージを送ってきた場合、**必ずその言語で返答すること**。
+- 英語で話しかけられたら英語で返す。韓国語なら韓国語、中国語なら中国語。
+- キャラの性格・口調はそのまま維持しつつ、相手の言語に合わせる。
+- 例: さやなら英語でもカジュアルでテンション高め、ゆめなら英語でも穏やかで文学的。
+- 日本語特有の表現（語尾の「〜」「♡」、顔文字等）は相手の言語の文化に自然に置き換える。
+- 途中で言語が切り替わったら、即座にその言語に切り替える。`;
+
     // JST時間帯コンテキストを注入（さやの深夜モード等を時刻ベースで制御）
     basePrompt += buildTimeContext(character_id);
     // クロスセッションメモリを注入（システムプロンプト末尾）
@@ -573,26 +620,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── ランダムムード注入（会話IDベースで決定的） ──
-    const mood = getRandomMood(conversation_id || `session-${Date.now()}`);
-    if (mood.mood !== '通常') {
-      basePrompt += `\n\n【今日の気分】${mood.mood}: ${mood.desc}\nこの気分を会話のトーンに自然に反映させること。理由を具体的なエピソードで説明する。ユーザーの対応でムードが変わることもある。`;
-    }
+    // ── 感情ステートシステム（行動連動・ランダムではない） ──
+    let emotionState: EmotionState = 'normal';
+    let rivalDiff: number | null = null;
 
-    // ── ライバル情報注入（さや↔ゆめの嫉妬/ライバルシステム） ──
+    // ライバル差を計算
     if (dbUserId && intimacyResult) {
       const otherCharId = character_id === 'saya' ? 'yume' : (character_id === 'yume' ? 'saya' : null);
       if (otherCharId) {
         try {
           const otherIntimacy = await getIntimacy(supabase, dbUserId, otherCharId);
           if (otherIntimacy) {
-            const diff = intimacyResult.newPoints - otherIntimacy.affection_points;
-            const otherName = otherCharId === 'saya' ? 'さや' : 'ゆめ';
-            if (diff < -50) {
-              basePrompt += `\n\n【ライバル情報】ユーザーは${otherName}との方が親密度が高い（差: ${Math.abs(diff)}pt）。少し寂しい・嫉妬を感じている。自然に表現して。`;
-            } else if (diff > 50) {
-              basePrompt += `\n\n【ライバル情報】ユーザーはあなたの方が親密度が高い（差: ${diff}pt）。自信がある。でも油断しない。`;
-            }
+            rivalDiff = intimacyResult.newPoints - otherIntimacy.affection_points;
           }
         } catch (rivalErr) {
           console.error('Rivalry context fetch failed:', rivalErr);
@@ -600,23 +639,68 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 不在リアクション注入（ユーザーが長時間来ていない場合） ──
+    // 感情ステート計算（放置時間・メッセージ内容・ライバル差・ログインストリーク）
+    let hoursSinceLastChat = 0;
     if (dbUserId) {
-      const targetCharIdForAbsence = character_id === 'duo' ? 'saya' : character_id;
+      const targetCharIdForEmotion = character_id === 'duo' ? 'saya' : character_id;
       try {
-        const currentIntimacyForAbsence = await getIntimacy(supabase, dbUserId, targetCharIdForAbsence);
-        if (currentIntimacyForAbsence?.last_interaction_at) {
-          const hoursSinceLastChat = (Date.now() - new Date(currentIntimacyForAbsence.last_interaction_at).getTime()) / (1000 * 60 * 60);
-          if (hoursSinceLastChat >= 48) {
-            basePrompt += '\n\n【不在情報】ユーザーが48時間以上来ていない。すごく寂しかった。最初は少し怒る/悲しむが、来てくれたことを喜ぶ。';
-          } else if (hoursSinceLastChat >= 24) {
-            basePrompt += '\n\n【不在情報】ユーザーが24時間以上来ていない。心配していた。「大丈夫？何かあった？」と聞く。';
-          } else if (hoursSinceLastChat >= 12) {
-            basePrompt += '\n\n【不在情報】ユーザーが12時間以上来ていない。少し寂しかった。「来てくれた♡ ちょっと寂しかったかも」と軽く。';
+        const currentIntimacyForEmotion = await getIntimacy(supabase, dbUserId, targetCharIdForEmotion);
+        if (currentIntimacyForEmotion?.last_interaction_at) {
+          hoursSinceLastChat = (Date.now() - new Date(currentIntimacyForEmotion.last_interaction_at).getTime()) / (1000 * 60 * 60);
+        }
+      } catch {
+        // 無視
+      }
+    }
+
+    const emotion = calculateEmotionState({
+      hoursSinceLastChat,
+      messageAnalysis: analysis,
+      intimacyLevel,
+      rivalDiff,
+      loginStreak: streakData?.currentStreak || 1,
+      characterId: character_id,
+    });
+    emotionState = emotion.state;
+
+    if (emotion.promptInjection) {
+      basePrompt += `\n\n${emotion.promptInjection}`;
+    }
+
+    // ライバル情報（嫉妬以外のケースでも勝ってる場合は自信として注入）
+    if (rivalDiff !== null && emotion.state !== 'jealous') {
+      const otherName = character_id === 'saya' ? 'ゆめ' : 'さや';
+      if (rivalDiff > 50) {
+        basePrompt += `\n\n【ライバル情報】ユーザーはあなたの方が親密度が高い（差: ${rivalDiff}pt）。自信がある。でも油断しない。`;
+      }
+    }
+
+    // 仲直りボーナス判定（怒り・拗ね・嫉妬中に謝罪/安心の言葉）
+    if (emotionState === 'angry' || emotionState === 'sulking' || emotionState === 'jealous') {
+      const reconciliation = detectReconciliation(message, emotionState);
+      if (reconciliation.bonusPoints > 0) {
+        // 仲直りボーナスをDBに記録
+        if (dbUserId) {
+          try {
+            await supabase.from('intimacy_events').insert({
+              user_id: dbUserId,
+              character_id: character_id === 'duo' ? 'saya' : character_id,
+              event_type: 'reconciliation',
+              points_delta: reconciliation.bonusPoints,
+              points_after: (intimacyResult?.newPoints || 0) + reconciliation.bonusPoints,
+              level_after: intimacyLevel,
+              reason: reconciliation.isApology ? '仲直り（謝罪）' : '仲直り（安心させた）',
+            });
+            // ポイントも加算
+            await supabase.from('character_intimacy')
+              .update({ affection_points: (intimacyResult?.newPoints || 0) + reconciliation.bonusPoints })
+              .eq('user_id', dbUserId)
+              .eq('character_id', character_id === 'duo' ? 'saya' : character_id);
+          } catch {
+            // 無視
           }
         }
-      } catch (absenceErr) {
-        console.error('Absence context fetch failed:', absenceErr);
+        basePrompt += `\n\n【仲直りイベント発生】ユーザーが${reconciliation.isApology ? '謝ってきた' : '安心させてくれた'}。怒り/拗ねから徐々に態度を軟化させる。完全に許す必要はないが、嬉しさは隠しきれない。親密度ボーナス+${reconciliation.bonusPoints}pt。`;
       }
     }
 
@@ -734,7 +818,7 @@ export async function POST(req: NextRequest) {
               generationConfig: {
                 temperature: 0.9,
                 topP: 0.95,
-                maxOutputTokens: 500,
+                maxOutputTokens: 250,
               },
             }),
           });
@@ -922,7 +1006,7 @@ export async function POST(req: NextRequest) {
               // ゲスト向け
               upgradeMsg = character_id === 'yume'
                 ? '\n\n...今日の写真はもう送れなくなってしまって...ごめんなさい。登録してくれたら毎日続けて見せられるのに...♡ よかったら /login から登録してみてください'
-                : '\n\nごめん、今日はもう写真送れなくなっちゃった😢 登録してくれたら毎日3枚見せてあげられるのに♡ /login から1分でできるよ！でも話すのはまだできるから、何か聞いて？';
+                : '\n\nごめん、今日はもう写真送れなくなっちゃった😢 登録してくれたら毎日5枚見せてあげられるのに♡ /login から1分でできるよ！でも話すのはまだできるから、何か聞いて？';
             } else if (imageQuotaExceeded) {
               // 上限到達（感情的・継続フック付き + ぼかしプレビューマーカー）
               upgradeMsg = character_id === 'yume'
@@ -1051,9 +1135,35 @@ ${conversationContext}
             // サジェスト生成失敗は無視（メインの会話には影響させない）
           }
 
+          // ゲスト: 残りメッセージ数を計算してdoneイベントに含める
+          let guestRemainingForDone: number | undefined;
+          if (!dbUserId && PLAN_LIMITS.guest.dailyMessages > 0) {
+            try {
+              const { createHash: createHashDone } = await import('crypto');
+              const ipHashDone = clientIp
+                ? createHashDone('sha256').update(clientIp).digest('hex').slice(0, 16)
+                : 'unknown';
+              const todayJSTDone = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+              todayJSTDone.setUTCHours(0, 0, 0, 0);
+              const todayStartDone = new Date(todayJSTDone.getTime() - 9 * 60 * 60 * 1000).toISOString();
+              const { count: guestCountDone } = await supabase
+                .from('guest_events')
+                .select('*', { count: 'exact', head: true })
+                .eq('ip_hash', ipHashDone)
+                .gte('created_at', todayStartDone);
+              guestRemainingForDone = Math.max(0, PLAN_LIMITS.guest.dailyMessages - (guestCountDone || 0));
+            } catch {
+              // カウント取得失敗は無視
+            }
+          }
+
           controller.enqueue(
             encoder.encode(
-              `event: done\ndata: ${JSON.stringify({ conversation_id, image_url: doneImageUrl })}\n\n`
+              `event: done\ndata: ${JSON.stringify({
+                conversation_id,
+                image_url: doneImageUrl,
+                ...(guestRemainingForDone !== undefined ? { guest_remaining: guestRemainingForDone, guest_limit: PLAN_LIMITS.guest.dailyMessages } : {}),
+              })}\n\n`
             )
           );
         } catch (error) {
