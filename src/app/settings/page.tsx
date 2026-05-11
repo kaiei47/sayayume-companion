@@ -34,6 +34,11 @@ export default function SettingsPage() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelError, setCancelError] = useState('');
 
+  // LINE連携解除フロー
+  const [showUnlinkModal, setShowUnlinkModal] = useState(false);
+  const [unlinkLoading, setUnlinkLoading] = useState(false);
+  const [unlinkError, setUnlinkError] = useState('');
+
   // メモリカード
   interface MemoryItem { id: string; character_id: string; category: string; value: string; emotional_weight: number; needs_followup: boolean; }
   const [memories, setMemories] = useState<MemoryItem[]>([]);
@@ -99,7 +104,9 @@ export default function SettingsPage() {
           .from('subscriptions')
           .select('plan, status, current_period_end, cancel_at_period_end')
           .eq('user_id', dbUser.id)
-          .eq('status', 'active')
+          .in('status', ['active', 'cancelled'])
+          .order('updated_at', { ascending: false })
+          .limit(1)
           .single();
 
         if (sub) {
@@ -198,6 +205,25 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUnlinkLine = async () => {
+    setUnlinkLoading(true);
+    setUnlinkError('');
+    try {
+      const res = await fetch('/api/auth/line/unlink', { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setLineLinked(false);
+        setShowUnlinkModal(false);
+      } else {
+        setUnlinkError(data.error || '連携解除に失敗しました。もう一度お試しください。');
+      }
+    } catch {
+      setUnlinkError('連携解除に失敗しました。もう一度お試しください。');
+    } finally {
+      setUnlinkLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -215,6 +241,7 @@ export default function SettingsPage() {
   const plan = subscription ? PLANS[subscription.plan] : PLANS.free;
   const isPaid = subscription?.plan !== 'free';
   const isCancelScheduled = subscription?.cancel_at_period_end === true;
+  const isCancelled = subscription?.status === 'cancelled';
   const periodEndDate = subscription?.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
     : null;
@@ -306,14 +333,24 @@ export default function SettingsPage() {
             {lineChecking ? (
               <div className="text-sm text-white/30">確認中...</div>
             ) : lineLinked ? (
-              <div className="flex items-center gap-3">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#06C755] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#06C755]"></span>
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-white">連携済み</p>
-                  <p className="text-[11px] text-white/30">さや & ゆめからLINEで通知が届きます♡</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#06C755] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#06C755]"></span>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white">連携済み</p>
+                      <p className="text-[11px] text-white/30">さや & ゆめからLINEで通知が届きます♡</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setShowUnlinkModal(true); setUnlinkError(''); }}
+                    className="flex-shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-white/50 hover:bg-white/5 hover:text-white/70 transition-colors"
+                  >
+                    解除
+                  </button>
                 </div>
               </div>
             ) : (
@@ -348,14 +385,19 @@ export default function SettingsPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-base font-bold text-white">{plan.nameJa}</span>
-                    {isPaid && !isCancelScheduled && (
+                    {isPaid && !isCancelScheduled && !isCancelled && (
                       <span className="text-[10px] text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full border border-green-400/20">
                         利用中
                       </span>
                     )}
-                    {isCancelScheduled && (
+                    {isCancelScheduled && !isCancelled && (
                       <span className="text-[10px] text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded-full border border-orange-400/20">
                         解約予定
+                      </span>
+                    )}
+                    {isCancelled && (
+                      <span className="text-[10px] text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full border border-red-400/20">
+                        解約済み
                       </span>
                     )}
                   </div>
@@ -405,18 +447,35 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {isCancelled && (
+              <div className="rounded-xl bg-red-500/5 border border-red-500/15 p-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-sm leading-none mt-0.5">🔒</span>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-red-300">サブスクリプションは解約済みです</p>
+                    <p className="text-xs text-white/50">
+                      現在はFreeプランの機能のみご利用いただけます。
+                    </p>
+                    <p className="text-[11px] text-white/25">
+                      再度プランに加入する場合は下のボタンからアップグレードしてください。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {cancelError && (
               <p className="text-xs text-red-400">{cancelError}</p>
             )}
 
             {/* Action buttons */}
             <div className="flex gap-2">
-              {!isPaid ? (
+              {(!isPaid || isCancelled) ? (
                 <Link
                   href="/pricing"
                   className="flex-1 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white py-2.5 text-sm font-medium text-center hover:opacity-90 transition-all shadow-lg shadow-pink-500/10"
                 >
-                  プランをアップグレード
+                  {isCancelled ? '再度プランに加入する' : 'プランをアップグレード'}
                 </Link>
               ) : (
                 <>
@@ -437,7 +496,7 @@ export default function SettingsPage() {
                 </>
               )}
             </div>
-            {isPaid && (
+            {isPaid && !isCancelled && (
               <button
                 onClick={handleManageSubscription}
                 disabled={portalLoading}
@@ -555,6 +614,52 @@ export default function SettingsPage() {
           </Link>
         </div>
       </nav>
+
+      {/* ── LINE連携解除モーダル ── */}
+      {showUnlinkModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white/[0.06] backdrop-blur-2xl border border-white/10 p-6 space-y-5 mb-4 sm:mb-0 shadow-2xl">
+            <div className="space-y-3">
+              <h3 className="text-lg font-bold text-white">LINE連携を解除しますか？</h3>
+              <ul className="space-y-2.5">
+                <li className="flex items-start gap-2.5 text-sm text-white/70">
+                  <span className="text-white/40 mt-0.5 flex-shrink-0">·</span>
+                  <span>さや & ゆめからのLINE通知が届かなくなります。</span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-white/70">
+                  <span className="text-white/40 mt-0.5 flex-shrink-0">·</span>
+                  <span>サイトへのログインや会話履歴には影響しません。</span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-white/30">
+                  <span className="mt-0.5 flex-shrink-0">·</span>
+                  <span>いつでも再連携できます。</span>
+                </li>
+              </ul>
+            </div>
+
+            {unlinkError && (
+              <p className="text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2 border border-red-500/20">{unlinkError}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowUnlinkModal(false); setUnlinkError(''); }}
+                disabled={unlinkLoading}
+                className="flex-1 rounded-xl border border-white/10 py-3 text-sm font-medium text-white/60 hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleUnlinkLine}
+                disabled={unlinkLoading}
+                className="flex-1 rounded-xl bg-red-600 text-white py-3 text-sm font-medium hover:bg-red-500 transition-colors disabled:opacity-50"
+              >
+                {unlinkLoading ? '処理中...' : '解除する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 解約確認モーダル (Glassmorphism) ── */}
       {showCancelModal && (
