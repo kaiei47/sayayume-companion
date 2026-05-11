@@ -65,6 +65,8 @@ function ChatPageInner() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [lineLinked, setLineLinked] = useState<boolean | null>(null);
   const [typingDelay, setTypingDelay] = useState(false);
+  const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
+  const [guestLimit, setGuestLimit] = useState<number>(10);
   const menuRef = useRef<HTMLDivElement>(null);
   const pendingToggles = useRef<Set<string>>(new Set());
   const pendingGreetingRef = useRef<string | null>(null); // greeting text to save as initial AI msg
@@ -303,6 +305,11 @@ function ChatPageInner() {
           // メッセージ制限チェック
           if (response.status === 429) {
             const errorData = await response.json();
+            // ゲスト制限: remaining情報を更新
+            if (errorData.error === 'guest_message_limit') {
+              setGuestRemaining(0);
+              if (errorData.limit) setGuestLimit(errorData.limit);
+            }
             const limitMessage: ChatMessage = {
               id: `limit-${Date.now()}`,
               role: 'assistant',
@@ -418,6 +425,12 @@ function ChatPageInner() {
                 if ((currentEvent === 'image' || currentEvent === 'done') && data.image_url) {
                   imageUrlFromStream = data.image_url;
                   setIsGeneratingImage(false);
+                }
+
+                // ゲスト残りメッセージ数
+                if (currentEvent === 'done' && data.guest_remaining !== undefined) {
+                  setGuestRemaining(data.guest_remaining);
+                  if (data.guest_limit) setGuestLimit(data.guest_limit);
                 }
 
                 if (currentEvent === 'image_failed' && data.fallback_text) {
@@ -741,10 +754,10 @@ function ChatPageInner() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-bold text-amber-400">
-              EXP MAX! ストーリーをクリアして次のレベルへ
+              EXP MAX! ストーリークリアでレベルアップ
             </p>
-            <p className="text-[10px] text-white/30 truncate">
-              「{gateStory.title}」
+            <p className="text-[11px] text-amber-300/70 truncate font-medium">
+              「{gateStory.title}」をプレイ →
             </p>
           </div>
           <div className="flex-shrink-0">
@@ -796,17 +809,48 @@ function ChatPageInner() {
         </a>
       )}
 
-      {/* ゲスト向け登録促進バナー */}
-      {isGuest && messages.length >= 2 && (
-        <div className="border-t border-white/5 bg-white/[0.02] backdrop-blur-sm px-4 py-2.5 flex items-center justify-between gap-3">
-          {messages.length >= 5 ? (
+      {/* ゲスト上限到達 — フルスクリーンオーバーレイ */}
+      {isGuest && guestRemaining !== null && guestRemaining <= 0 && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-lg bg-gradient-to-t from-[#0d0818] via-[#0d0818] to-[#0d0818]/95 rounded-t-3xl px-6 pt-8 pb-10 space-y-5 shadow-2xl border-t border-white/10">
+            <div className="text-center space-y-2">
+              <p className="text-3xl">💬</p>
+              <h3 className="text-lg font-bold text-white">{character.nameJa}がまだ話したそうにしてる...</h3>
+              <p className="text-sm text-white/50">無料登録するだけで、ずっと話せるよ</p>
+            </div>
+            <div className="space-y-2 text-[13px] text-white/60">
+              <div className="flex items-center gap-2"><span className="text-pink-400">✓</span> メッセージ無制限</div>
+              <div className="flex items-center gap-2"><span className="text-pink-400">✓</span> 会話の履歴が残る</div>
+              <div className="flex items-center gap-2"><span className="text-pink-400">✓</span> AI写真が1日5枚届く</div>
+              <div className="flex items-center gap-2"><span className="text-pink-400">✓</span> 33本のストーリーが遊べる</div>
+            </div>
+            <Link
+              href="/login?signup=1"
+              className="block w-full text-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-base font-bold py-3.5 hover:opacity-90 transition-opacity shadow-lg"
+            >
+              30秒で無料登録する
+            </Link>
+            <p className="text-center text-[10px] text-white/30">クレジットカード不要・匿名OK</p>
+          </div>
+        </div>
+      )}
+
+      {/* ゲスト向け登録促進バナー（上限到達前） */}
+      {isGuest && messages.length >= 2 && !(guestRemaining !== null && guestRemaining <= 0) && (
+        <div className={`border-t ${guestRemaining !== null && guestRemaining <= 3 ? 'border-pink-500/30 bg-pink-500/[0.05]' : 'border-white/5 bg-white/[0.02]'} backdrop-blur-sm px-4 py-2.5 flex items-center justify-between gap-3`}>
+          {guestRemaining !== null && guestRemaining <= 3 ? (
+            <p className="text-[11px] text-pink-300/80 leading-tight">
+              残り{guestRemaining}通で今日は終わり...<br />
+              <span className="text-[10px] text-white/30">登録すれば無制限 + 履歴保存 + 写真1日5枚</span>
+            </p>
+          ) : messages.length >= 5 ? (
             <p className="text-[11px] text-pink-300/70 leading-tight">
-              この会話、消えちゃうよ？<br />
-              <span className="text-[10px] text-white/30">登録すれば履歴保存 + 写真1日3枚 + ストーリー27本</span>
+              この会話、消えちゃうよ？{guestRemaining !== null && <span className="text-white/30">（残り{guestRemaining}通）</span>}<br />
+              <span className="text-[10px] text-white/30">登録すれば履歴保存 + 写真1日5枚 + ストーリー27本</span>
             </p>
           ) : (
             <p className="text-[11px] text-white/40 leading-tight">
-              {character.nameJa}との会話を保存しておく？<br />
+              {character.nameJa}との会話を保存しておく？{guestRemaining !== null && <span className="text-white/30">（残り{guestRemaining}通）</span>}<br />
               <span className="text-[10px] text-white/20">無料・30秒・クレカ不要</span>
             </p>
           )}
@@ -822,9 +866,9 @@ function ChatPageInner() {
       {/* 入力エリア */}
       <ChatInput
         onSend={sendMessage}
-        disabled={isLoading}
-        placeholder={`${character.nameJa}にメッセージ...`}
-        suggestions={suggestions}
+        disabled={isLoading || (isGuest && guestRemaining !== null && guestRemaining <= 0)}
+        placeholder={isGuest && guestRemaining !== null && guestRemaining <= 0 ? '無料登録するとメッセージ無制限♡' : `${character.nameJa}にメッセージ...`}
+        suggestions={isGuest && guestRemaining !== null && guestRemaining <= 0 ? [] : suggestions}
       />
     </div>
   );

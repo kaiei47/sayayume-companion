@@ -219,7 +219,7 @@ export default function LoginPage() {
               <div className="flex flex-col items-center gap-1 text-[11px] text-white/50">
                 <span>✓ 会話が保存されて毎日続けられる</span>
                 <span>✓ ストーリー27本 無料で全部読める</span>
-                <span>✓ AI写真 1日3枚プレゼント</span>
+                <span>✓ AI写真 1日5枚プレゼント</span>
               </div>
             </div>
           )}
@@ -443,7 +443,7 @@ export default function LoginPage() {
               </h1>
               {isSignUp && !isForgotPassword && (
                 <div className="mt-2 flex flex-col gap-0.5 text-[11px] text-white/40">
-                  <span>✓ 会話保存 &nbsp;✓ ストーリー27本 &nbsp;✓ AI写真1日3枚</span>
+                  <span>✓ 会話保存 &nbsp;✓ ストーリー27本 &nbsp;✓ AI写真1日5枚</span>
                   <span className="text-white/30">無料 &middot; 登録30秒 &middot; クレカ不要</span>
                 </div>
               )}

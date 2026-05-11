@@ -7,7 +7,7 @@ export const PLANS = {
     priceLabel: '¥0',
     features: [
       'メッセージ無制限',
-      'AI写真 1日3枚',
+      'AI写真 1日5枚',
       '親密度 Lv3まで',
       'さや & ゆめ 両方',
       '会話履歴 永続保存',
@@ -17,7 +17,7 @@ export const PLANS = {
     limits: {
       dailyMessages: -1, // unlimited
       imageGeneration: true,
-      dailyImages: 3,
+      dailyImages: 5,
       maxIntimacyLevel: 3,
       voiceMessages: false,
       maxStoryDifficulty: 1,

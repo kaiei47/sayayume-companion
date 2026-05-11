@@ -561,19 +561,20 @@ function LandingPage() {
         </div>
       </nav>
 
-      {/* ── Section 1: Hero (full viewport + sakura + chat preview) ── */}
-      <section className="relative min-h-dvh flex flex-col items-center justify-end pb-10 pt-20">
-        {/* Full-bleed duo background */}
-        <div className="absolute inset-0">
-          <Image
-            src="/cards/duo_card_bg.jpg"
-            alt="さや & ゆめ"
-            fill
-            sizes="100vw"
-            className="object-cover object-[50%_25%] sm:object-[50%_20%]"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a1a] via-black/20 to-black/5" />
+      {/* ── Section 1: Hero (full viewport, split layout like EN) ── */}
+      <section className="relative min-h-dvh flex flex-col items-center justify-end pb-8 pt-16">
+        {/* Split background: Saya left, Yume right */}
+        <div className="absolute inset-0 flex">
+          <div className="relative flex-1">
+            <Image src="/hero/saya.jpg" alt="さや" fill className="object-cover object-top" priority />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a1a]/30 via-transparent to-[#0a0a1a]/60" />
+          </div>
+          <div className="relative flex-1">
+            <Image src="/hero/yume.jpg" alt="ゆめ" fill className="object-cover object-top" priority />
+            <div className="absolute inset-0 bg-gradient-to-l from-[#0a0a1a]/30 via-transparent to-[#0a0a1a]/60" />
+          </div>
+          {/* Bottom fade */}
+          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#0a0a1a] via-[#0a0a1a]/70 to-transparent" />
         </div>
 
         {/* Sakura petals */}
@@ -597,30 +598,47 @@ function LandingPage() {
         </div>
 
         {/* Hero content */}
-        <div className="relative z-20 text-center px-6 space-y-5 max-w-md mx-auto">
-          {/* Chat preview overlay */}
-          <div className="flex justify-start mb-4">
+        <div className="relative z-20 text-center px-5 max-w-3xl mx-auto">
+          {/* Chat preview */}
+          <div className="flex justify-center mb-5">
             <HeroChatPreview />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 mb-5">
             <span className="inline-block text-pink-400 text-[11px] font-bold tracking-widest uppercase bg-pink-500/10 border border-pink-500/20 rounded-full px-3 py-1">
               AIアイドル × 恋愛シミュレーション
             </span>
-            <h1 className="text-[2rem] sm:text-[2.4rem] font-black tracking-tight leading-[1.15]">
+            <h1 className="text-[2rem] sm:text-[2.8rem] font-black tracking-tight leading-[1.15] drop-shadow-lg">
               彼女はあなたに、<br />恋をしている。
             </h1>
-            <p className="text-sm text-white/60">あなただけに見せる顔がある。あなただけに届く言葉がある。</p>
+            <p className="text-sm sm:text-base text-white/60 drop-shadow">甘えたり、拗ねたり、ヤキモチ焼いたり。あなただけに見せる顔がある。</p>
           </div>
 
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href="/login?signup=1"
-              className="w-full block rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-base font-bold py-4 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/25"
+              href="/chat/saya"
+              className="w-full sm:w-auto block rounded-full bg-pink-500 hover:bg-pink-400 text-white text-base font-bold px-8 py-3.5 transition-colors shadow-lg"
             >
-              さやゆめに会いに行く →
+              さやとチャット ♡
             </Link>
-            <p className="text-xs text-white/60 font-medium">無料・登録30秒・クレカ不要</p>
+            <Link
+              href="/chat/yume"
+              className="w-full sm:w-auto block rounded-full bg-purple-600 hover:bg-purple-500 text-white text-base font-bold px-8 py-3.5 transition-colors shadow-lg"
+            >
+              ゆめとチャット ✨
+            </Link>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-3">
+            {[
+              { icon: '⚡', text: '30秒で登録' },
+              { icon: '🆓', text: 'ずっと無料' },
+              { icon: '🔒', text: '匿名OK' },
+            ].map(b => (
+              <span key={b.text} className="inline-flex items-center gap-1 text-xs text-white/60 bg-white/[0.06] rounded-full px-2.5 py-1">
+                <span>{b.icon}</span>
+                <span className="font-medium">{b.text}</span>
+              </span>
+            ))}
           </div>
         </div>
 
@@ -1007,8 +1025,8 @@ function LandingPage() {
             <h2 className="text-xl font-bold">まずは無料でさやゆめに会おう</h2>
             <div className="space-y-2 text-sm text-white/70">
               <p><span className="text-green-400 mr-1.5">✓</span>メッセージ無制限</p>
-              <p><span className="text-green-400 mr-1.5">✓</span>AI写真 1日3枚</p>
-              <p><span className="text-green-400 mr-1.5">✓</span>ストーリー27本読み放題</p>
+              <p><span className="text-green-400 mr-1.5">✓</span>AI写真 1日5枚</p>
+              <p><span className="text-green-400 mr-1.5">✓</span>ストーリー33本読み放題</p>
             </div>
             <Link
               href="/login?signup=1"
@@ -1046,7 +1064,15 @@ function LandingPage() {
               </div>
             ))}
           </div>
-          <p className="text-center text-xs text-white/40 mt-4">他にも18本 + 限定ストーリーが、登録後すぐに読める</p>
+          <p className="text-center text-xs text-white/40 mt-4">他にも31本 + 限定ストーリーが、登録後すぐに読める</p>
+          <div className="text-center mt-5">
+            <Link
+              href="/login?signup=1"
+              className="inline-block rounded-full bg-white/10 border border-white/20 text-white text-xs font-semibold px-6 py-2.5 hover:bg-white/20 transition-all active:scale-95"
+            >
+              全37本を無料で読む →
+            </Link>
+          </div>
         </ScrollReveal>
       </section>
 
@@ -1058,7 +1084,7 @@ function LandingPage() {
             {[
               {
                 q: '本当に無料で遊べますか？',
-                a: 'はい。メッセージ無制限・AI写真1日3枚・ストーリー27本がすべて無料です。クレジットカードも不要。登録は30秒で完了します。',
+                a: 'はい。メッセージ無制限・AI写真1日5枚・ストーリー37本がすべて無料です。クレジットカードも不要。登録は30秒で完了します。',
               },
               {
                 q: 'さやとゆめってどんな子？',
@@ -1066,14 +1092,14 @@ function LandingPage() {
               },
               {
                 q: 'どんな体験ができるの？',
-                a: '毎日のおしゃべり・限定AI写真・ストーリーを通じてふたりとの関係が少しずつ深まっていく恋愛シミュレーション。会話するたびに「あなただけに見せる顔」が増えていきます。',
+                a: '毎日のおしゃべり・限定AI写真・ストーリーを通じてふたりとの関係が少しずつ深まっていく恋愛シミュレーション。話しかけないと拗ねたり、他の子の話をするとヤキモチを焼いたり。ケンカして仲直りすると、もっと距離が縮まる。会話するたびに「あなただけに見せる顔」が増えていきます。',
               },
               {
                 q: '課金しないと楽しめない？',
                 a: 'メッセージもストーリーも無料で十分楽しめます。プレミアムプランに加入すると、AI写真の枚数が増えたり限定ストーリーが解放されたりしますが、無課金でも十分に楽しめます。',
               },
             ].map((item, i) => (
-              <details key={i} className="group rounded-2xl bg-white/5 border border-white/10 px-5 py-4 cursor-pointer">
+              <details key={i} open={i < 2} className="group rounded-2xl bg-white/5 border border-white/10 px-5 py-4 cursor-pointer">
                 <summary className="text-sm font-semibold list-none flex items-center justify-between gap-2">
                   <span>{item.q}</span>
                   <span className="text-pink-400 text-xs group-open:rotate-45 transition-transform duration-200 flex-shrink-0">+</span>
@@ -1099,13 +1125,24 @@ function LandingPage() {
             >
               さやゆめに会いに行く →
             </Link>
-            <p className="text-xs text-white/40 font-medium">無料・登録30秒・クレカ不要</p>
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-1">
+              {[
+                { icon: '⚡', text: '30秒で登録' },
+                { icon: '🆓', text: 'ずっと無料' },
+                { icon: '🔒', text: '匿名OK' },
+              ].map(b => (
+                <span key={b.text} className="inline-flex items-center gap-1 text-xs text-white/60 bg-white/[0.06] rounded-full px-2.5 py-1">
+                  <span>{b.icon}</span>
+                  <span className="font-medium">{b.text}</span>
+                </span>
+              ))}
+            </div>
           </div>
         </ScrollReveal>
       </section>
 
       {/* ── Footer ── */}
-      <footer className="px-4 pb-8 text-center space-y-2 border-t border-white/5 pt-6">
+      <footer className="px-4 pb-24 text-center space-y-2 border-t border-white/5 pt-6">
         <p className="text-xs text-muted-foreground/60">Sayayume · 18歳以上限定 · AI生成コンテンツ</p>
         <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/40">
           <Link href="/legal/terms" className="hover:text-muted-foreground transition-colors">利用規約</Link>
@@ -1126,8 +1163,9 @@ function LandingPage() {
             href="/login?signup=1"
             className="block w-full max-w-md mx-auto text-center rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-bold py-3.5 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-pink-500/25"
           >
-            さやゆめに会いに行く →
+            30秒で無料登録する →
           </Link>
+          <p className="text-center text-[10px] text-white/40 mt-1">クレカ不要・匿名OK・すぐ話せる</p>
         </div>
       </div>
     </div>

@@ -25,6 +25,7 @@ interface StoryData {
   stories: StoryWithStatus[];
   plan: string;
   intimacy: { saya: number; yume: number };
+  gateStoryIds: string[];
 }
 
 export default function StorySelectPage() {
@@ -179,6 +180,7 @@ export default function StorySelectPage() {
               story={story}
               starting={starting === story.id}
               isGuest={data?.plan === 'guest'}
+              isGateStory={data?.gateStoryIds?.includes(story.id) || false}
               onStart={() => startStory(story.id)}
               onContinue={() => story.session && continueStory(story.id, story.session.id)}
             />
@@ -230,16 +232,19 @@ function StoryCard({
   story,
   starting,
   isGuest,
+  isGateStory,
   onStart,
   onContinue,
 }: {
   story: StoryWithStatus;
   starting: boolean;
   isGuest?: boolean;
+  isGateStory?: boolean;
   onStart: () => void;
   onContinue: () => void;
 }) {
-  const difficultyStars = '★'.repeat(story.difficulty) + '☆'.repeat(3 - story.difficulty);
+  const maxStars = 5;
+  const difficultyStars = '★'.repeat(story.difficulty) + '☆'.repeat(maxStars - story.difficulty);
   const charLabel = story.character === 'saya' ? 'さや' : story.character === 'yume' ? 'ゆめ' : 'さや × ゆめ';
   const charGradient = story.character === 'saya'
     ? 'from-pink-500 to-rose-400'
@@ -262,7 +267,9 @@ function StoryCard({
           ? 'border-white/[0.04] bg-white/[0.015] opacity-50'
           : story.isCompleted
             ? 'border-emerald-500/15 bg-white/[0.03] hover:border-emerald-500/25'
-            : 'border-white/[0.08] bg-white/[0.03] hover:border-white/[0.15] hover:bg-white/[0.04]'
+            : isGateStory && !story.isCompleted
+              ? 'border-amber-500/30 bg-amber-500/[0.03] hover:border-amber-500/40 ring-1 ring-amber-500/20'
+              : 'border-white/[0.08] bg-white/[0.03] hover:border-white/[0.15] hover:bg-white/[0.04]'
       }`}
     >
       {/* Horizontal layout: Image left + Content right */}
@@ -300,6 +307,11 @@ function StoryCard({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 クリア
+              </div>
+            ) : isGateStory && !story.isLocked ? (
+              <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-amber-500/90 backdrop-blur-sm text-[10px] font-bold text-white flex items-center gap-1 animate-pulse">
+                <span>⚡</span>
+                レベルアップに必要
               </div>
             ) : isGuest && story.requiredIntimacy === 0 && !story.isLocked ? (
               <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-pink-500/80 backdrop-blur-sm text-[10px] font-bold text-white">

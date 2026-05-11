@@ -13,7 +13,7 @@ import { uploadChatImage } from '@/lib/supabase/storage';
 
 const PLAN_LIMITS = {
   guest:   { imageGeneration: true, dailyImages: 3  },
-  free:    { imageGeneration: true, dailyImages: 3  },
+  free:    { imageGeneration: true, dailyImages: 5  },
   basic:   { imageGeneration: true, dailyImages: 30 },
   premium: { imageGeneration: true, dailyImages: -1 },
   vip:     { imageGeneration: true, dailyImages: -1 },

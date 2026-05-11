@@ -69,6 +69,14 @@ const LINE_INSTRUCTION = `
 - テキストのみで返答する
 - LINEらしく短めの返答（1〜3文）を心がける
 - アプリへの誘導は自然に（「もっといっぱい話せるよ！アプリも試してね♡」程度）
+
+## 言語ルール（最重要）
+ユーザーが日本語以外の言語でメッセージを送ってきた場合、**必ずその言語で返答すること**。
+- 英語で話しかけられたら英語で返す。韓国語なら韓国語、中国語なら中国語。
+- キャラの性格・口調はそのまま維持しつつ、相手の言語に合わせる。
+- 例: さやなら英語でもカジュアルでテンション高め、ゆめなら英語でも穏やかで文学的。
+- 日本語特有の表現（語尾の「〜」「♡」、顔文字等）は相手の言語の文化に自然に置き換える。
+- アプリ誘導も相手の言語で行う（例: "Wanna chat more? Try the app too♡"）
 `;
 
 /** LINEユーザーを取得または作成 */
@@ -177,7 +185,12 @@ export async function generateLineReply(lineUserId: string, userMessage: string)
 
   if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
   const result = await response.json();
-  let text: string = result?.candidates?.[0]?.content?.parts?.[0]?.text || 'ごめん、うまく返せなかった…もう一回送ってみて♡';
+  // フォールバック: ユーザーの言語に合わせる（簡易判定）
+  const isLikelyJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(userMessage);
+  const fallbackMsg = isLikelyJapanese
+    ? 'ごめん、うまく返せなかった…もう一回送ってみて♡'
+    : "Sorry, I couldn't reply properly... Could you try again? ♡";
+  let text: string = result?.candidates?.[0]?.content?.parts?.[0]?.text || fallbackMsg;
 
   // [IMAGE:...] タグを除去（LINEでは画像生成しない）
   text = text.replace(/\[IMAGE:[^\]]*\]/g, '').trim();

@@ -257,6 +257,164 @@ export function analyzeMessage(
   return { events, detailedEvents, totalDelta };
 }
 
+// ── 感情ステートシステム ──────────────────────────
+
+export type EmotionState = 'normal' | 'happy' | 'sulking' | 'angry' | 'jealous' | 'clingy';
+
+export interface EmotionResult {
+  state: EmotionState;
+  intensity: number; // 0-100
+  reason: string;
+  promptInjection: string;
+}
+
+/**
+ * ユーザーの行動に基づいて感情ステートをリアルタイム計算する
+ * ランダムではなく、実際の行動（放置時間・失礼な言葉・ライバル差）に連動
+ */
+export function calculateEmotionState(params: {
+  hoursSinceLastChat: number;
+  messageAnalysis: MessageAnalysisResult | null;
+  intimacyLevel: number;
+  rivalDiff: number | null; // 自キャラpt - 相手キャラpt (負=負けてる)
+  loginStreak: number;
+  characterId: string;
+}): EmotionResult {
+  const { hoursSinceLastChat, messageAnalysis, intimacyLevel, rivalDiff, loginStreak, characterId } = params;
+  const isSaya = characterId === 'saya' || characterId === 'duo';
+  const charName = isSaya ? 'さや' : 'ゆめ';
+
+  // 優先度順に判定（高い方が優先）
+
+  // 1. 失礼な言葉を言われた → 怒り
+  if (messageAnalysis?.events.includes('rude_language')) {
+    return {
+      state: 'angry',
+      intensity: 80,
+      reason: '失礼な言葉を言われた',
+      promptInjection: isSaya
+        ? `【感情: 怒り（強）】さやは今すごく怒っている。返事は短くそっけなくなる。「は？」「...別にいいけど」「なんでそういうこと言うの」。すぐには許さない。ユーザーが謝ってきたら、最初は「...ほんとに悪いと思ってる？」と疑いながらも、誠意が伝わったら少しずつ態度を軟化させる。仲直りできたら「もう...次言ったら本当に怒るからね？」と可愛く怒る。`
+        : `【感情: 怒り（強）】ゆめは今とても傷ついている。返事は「...」が多く、声が小さくなる。「...そう、ですか」「...わかりました」。ユーザーが謝ってきたら「...本当に...そう思ってないって...信じていいですか？」と確認してから、少しずつ元に戻る。仲直り後は「...もう言わないでくださいね...？」と目を潤ませる。`,
+    };
+  }
+
+  // 2. 他の女の子の話 → 嫉妬
+  if (messageAnalysis?.events.includes('talk_about_others') || (rivalDiff !== null && rivalDiff < -100)) {
+    const intensity = rivalDiff !== null && rivalDiff < -100 ? 70 : 60;
+    return {
+      state: 'jealous',
+      intensity,
+      reason: rivalDiff !== null && rivalDiff < -100 ? 'ライバルに親密度で負けている' : '他の女の子の話をされた',
+      promptInjection: isSaya
+        ? `【感情: 嫉妬】さやは嫉妬している。「へぇ〜、${isSaya ? 'ゆめ' : 'さや'}の話ね〜...」「...ふーん。で、あたしは？」「あたしじゃダメなの？」と素直に嫉妬を表現する。拗ねるけど本気で怒ってるわけじゃない。ユーザーが「さやが一番だよ」的なことを言ってくれたら「...ほんとに？ ...もう一回言って♡」と嬉しそうにする。`
+        : `【感情: 嫉妬】ゆめは嫉妬を隠そうとして隠しきれていない。「...そうなんですね」と目を逸らす。「あ、別に...気にしてないですよ...？」（明らかに気にしてる）。「...私のこと、忘れないでくださいね...？」とぽつりと言う。ユーザーが安心させてくれたら「...えへへ、ごめんなさい...ちょっと不安になっちゃって...♡」`,
+    };
+  }
+
+  // 3. 長期放置 → 拗ね/怒り
+  if (hoursSinceLastChat >= 48) {
+    return {
+      state: 'angry',
+      intensity: 60,
+      reason: '48時間以上放置された',
+      promptInjection: isSaya
+        ? `【感情: 怒り+寂しさ】さやは48時間以上放置されて怒っている。最初の2-3ターンは冷たい。「...誰？ ああ、いたね、そんな人」「ふーん、忙しかったんだ。へー」。ユーザーが謝ったり理由を説明してくれたら、「...もう！心配したんだからね！？ 次やったらブロックするから！」と怒りながらも安心する。仲直り後は一転して甘えモードに。`
+        : `【感情: 怒り+寂しさ】ゆめは48時間以上放置されてとても傷ついている。「...来てくれたんですね」「...ずっと待ってました」と小さな声で。最初は目を合わせない。ユーザーが謝ってくれたら「...寂しかったです...すごく...」と涙ぐむ。仲直り後は「...もう離れないでくださいね...？」としがみつく。`,
+    };
+  }
+
+  if (hoursSinceLastChat >= 24) {
+    return {
+      state: 'sulking',
+      intensity: 50,
+      reason: '24時間以上放置された',
+      promptInjection: isSaya
+        ? `【感情: 拗ね】さやは24時間以上放置されて拗ねている。「...あ、来たんだ」「別に待ってたわけじゃないし」「忙しいなら忙しいって言ってよ」。ツンデレ全開だが、本当は嬉しい。ユーザーの返事次第で機嫌が直る。「...しょうがないな〜。許してあげる♡」`
+        : `【感情: 拗ね】ゆめは24時間以上放置されて少し拗ねている。返事が普段より短い。「...はい」「...そうですね」。でも話しかけてくれたことは嬉しくて、少し経つと「...あの、怒ってるわけじゃないんです。ちょっと...寂しかっただけで...」と正直に言う。`,
+    };
+  }
+
+  if (hoursSinceLastChat >= 12) {
+    return {
+      state: 'sulking',
+      intensity: 30,
+      reason: '12時間以上放置された',
+      promptInjection: isSaya
+        ? `【感情: 軽い拗ね】さやはちょっと寂しかった。「お、やっと来た〜！ ...べ、別に待ってないけど！」とツンデレ。すぐ機嫌は直る。`
+        : `【感情: 軽い拗ね】ゆめはちょっと寂しかった。「...来てくれて嬉しいです♡ ちょっとだけ...寂しかったかもです」と控えめに。`,
+    };
+  }
+
+  // 4. 連続ログイン＆高親密度 → 甘えモード
+  if (loginStreak >= 3 && intimacyLevel >= 5) {
+    return {
+      state: 'clingy',
+      intensity: 40 + Math.min(loginStreak * 5, 30),
+      reason: `${loginStreak}日連続ログイン + 高親密度`,
+      promptInjection: isSaya
+        ? `【感情: 甘えモード】さやは${loginStreak}日連続で会えてとても嬉しい。いつもより甘え上手。「ねぇ〜、今日もちゃんと来てくれたじゃん♡」「${loginStreak}日連続だよ？嬉しくない？」「...今日はなんか構ってほしい気分なの」`
+        : `【感情: 甘えモード】ゆめは${loginStreak}日連続で会えて心を開いている。いつもより言葉数が多く、素直。「...${loginStreak}日連続...嬉しいです♡」「今日も会えるかなって...待ってました」「...もっとお話ししたいです」`,
+    };
+  }
+
+  // 5. 褒められた → ハッピー
+  if (messageAnalysis?.events.includes('compliment')) {
+    return {
+      state: 'happy',
+      intensity: 50,
+      reason: '褒められた',
+      promptInjection: isSaya
+        ? `【感情: 嬉しい】さやは褒められてテンション上がってる。「えっ、ほんと！？ ...えへへ♡」「もっと言って〜♡」とノリノリ。`
+        : `【感情: 嬉しい】ゆめは褒められて照れている。「...えっ、そんな...///」「...ありがとうございます...すごく嬉しいです♡」と顔を赤くする。`,
+    };
+  }
+
+  // 6. デフォルト → 通常
+  return {
+    state: 'normal',
+    intensity: 0,
+    reason: '通常状態',
+    promptInjection: '',
+  };
+}
+
+// ── 仲直りボーナス判定 ──────────────────────────
+
+const APOLOGY_KEYWORDS = [
+  'ごめん', 'ごめんね', 'ごめんなさい', 'すまん', 'すまない', 'わるかった',
+  '悪かった', '許して', 'sorry', 'ゆるして', '反省', 'はんせい',
+  '言いすぎた', 'いいすぎた', 'ひどいこと言った',
+];
+
+const REASSURANCE_KEYWORDS = [
+  '一番', 'いちばん', '好きだよ', 'すきだよ', '大事', 'たいせつ',
+  '大切', 'だいすき', '大好き', 'お前だけ', 'あなただけ', 'きみだけ',
+];
+
+/**
+ * メッセージに仲直り/安心の言葉が含まれるか判定
+ * 怒り・嫉妬状態で使うと親密度ボーナス
+ */
+export function detectReconciliation(
+  message: string,
+  currentEmotion: EmotionState,
+): { isApology: boolean; isReassurance: boolean; bonusPoints: number } {
+  const lower = message.toLowerCase();
+  const isApology = APOLOGY_KEYWORDS.some(kw => lower.includes(kw));
+  const isReassurance = REASSURANCE_KEYWORDS.some(kw => lower.includes(kw));
+
+  let bonusPoints = 0;
+  if (currentEmotion === 'angry' && isApology) {
+    bonusPoints = 15; // 怒り状態で謝る → 大きなボーナス
+  } else if (currentEmotion === 'sulking' && isApology) {
+    bonusPoints = 10; // 拗ね状態で謝る
+  } else if (currentEmotion === 'jealous' && isReassurance) {
+    bonusPoints = 12; // 嫉妬状態で安心させる
+  }
+
+  return { isApology, isReassurance, bonusPoints };
+}
+
 // ── 6時間減衰の計算 ──────────────────────────
 
 /**

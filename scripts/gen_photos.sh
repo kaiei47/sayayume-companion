@@ -4,12 +4,12 @@
 
 set -e
 OUT="public/references/photos"
-SAYA_REF="$HOME/ClaudeCode/sns/models/saya_collection/base_saya.jpeg"
-YUME_REF="$HOME/ClaudeCode/sns/models/yume_collection/base_yume.png"
-DUO_REF="$HOME/ClaudeCode/sns/models/duo_collection/base_new.png"
-TOOL="python3 $HOME/ClaudeCode/sns/tools/gemini_img.py"
+SAYA_REF="$HOME/ClaudeCode/projects/sayayume/sns/models/saya_collection/base_saya.jpeg"
+YUME_REF="$HOME/ClaudeCode/projects/sayayume/sns/models/yume_collection/base_yume.png"
+DUO_REF="$HOME/ClaudeCode/projects/sayayume/sns/models/duo_collection/base_new.png"
+TOOL="python3 $HOME/ClaudeCode/projects/sayayume/sns/tools/gemini_img.py"
 
-cd /Users/yoshihidemaruyama/ClaudeCode/companion
+cd /Users/yoshihidemaruyama/ClaudeCode/projects/sayayume/companion
 mkdir -p "$OUT"
 
 echo "=== さや 自撮り 4枚 ==="

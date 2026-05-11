@@ -149,7 +149,7 @@ export default function OnboardingModal({ authId, dbUserId, onComplete }: Props)
                     <span className="text-sm font-semibold text-white">Free</span>
                     <span className="text-xs text-white/40">無料</span>
                   </div>
-                  <p className="text-xs text-white/40">1日5メッセージ・デイリー写真3枚</p>
+                  <p className="text-xs text-white/40">メッセージ無制限・デイリー写真5枚</p>
                 </div>
                 <a
                   href="/pricing"

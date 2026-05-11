@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { getStory, STORIES } from '@/lib/stories';
-import { getAllIntimacy, getLevelInfo } from '@/lib/intimacy';
+import { getAllIntimacy, getLevelInfo, LEVEL_GATES } from '@/lib/intimacy';
 import { PLANS } from '@/lib/plans';
 
 function getSupabaseAdmin() {
@@ -112,7 +112,14 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return Response.json({ stories, plan, intimacy: { saya: sayaLevel, yume: yumeLevel } });
+    // 各キャラの次レベルゲートストーリーIDを収集
+    const gateStoryIds = new Set<string>();
+    for (const level of [sayaLevel + 1, yumeLevel + 1]) {
+      const gate = LEVEL_GATES[level];
+      if (gate) gateStoryIds.add(gate.storyId);
+    }
+
+    return Response.json({ stories, plan, intimacy: { saya: sayaLevel, yume: yumeLevel }, gateStoryIds: [...gateStoryIds] });
   } catch (error) {
     console.error('Story sessions API error:', error);
     return Response.json({ error: String(error) }, { status: 500 });
