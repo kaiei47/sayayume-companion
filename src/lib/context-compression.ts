@@ -12,7 +12,7 @@
  */
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
-const SUMMARY_MODEL = 'gemini-2.0-flash';
+const SUMMARY_MODEL = 'gemini-2.5-flash';
 const SUMMARY_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${SUMMARY_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // 圧縮パラメータ
@@ -82,6 +82,7 @@ ${conversationText}
         generationConfig: {
           temperature: 0.3,
           maxOutputTokens: 600,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
     });

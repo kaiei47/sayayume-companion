@@ -10,7 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getCharacter } from '@/lib/characters';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 function getSupabase() {
@@ -179,6 +179,7 @@ export async function generateLineReply(lineUserId: string, userMessage: string)
       generationConfig: {
         temperature: 0.9,
         maxOutputTokens: 300,
+        thinkingConfig: { thinkingBudget: 0 },
       },
     }),
   });

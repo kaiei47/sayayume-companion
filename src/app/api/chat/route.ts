@@ -112,7 +112,7 @@ function getRandomMood(seed: string): typeof MOODS[0] {
 }
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
 
 // プラン別の制限
@@ -819,6 +819,9 @@ export async function POST(req: NextRequest) {
                 temperature: 0.9,
                 topP: 0.95,
                 maxOutputTokens: 250,
+                // gemini-2.5系は思考モデル。thinkingをオフにしないと
+                // 思考が出力トークン枠を食い潰し返信が空/途切れになる
+                thinkingConfig: { thinkingBudget: 0 },
               },
             }),
           });
@@ -1077,7 +1080,7 @@ export async function POST(req: NextRequest) {
 
           // ── 返信サジェスト生成（Gemini Flash 非ストリーミング） ──
           try {
-            const suggestUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+            const suggestUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
             // 現在のユーザーメッセージ込みでコンテキスト構築（直近4ターン + 今のメッセージ）
             const recentTurns = [
               ...history.slice(-4),
@@ -1115,7 +1118,7 @@ ${conversationContext}
 - 3パターン: 質問系・共感系・深掘り系を混ぜる
 - JSON配列のみ: ["返答1", "返答2", "返答3"]` }]
                 }],
-                generationConfig: { temperature: 0.9, maxOutputTokens: 150 },
+                generationConfig: { temperature: 0.9, maxOutputTokens: 150, thinkingConfig: { thinkingBudget: 0 } },
               }),
             });
             if (suggestRes.ok) {

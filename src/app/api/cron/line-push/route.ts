@@ -114,13 +114,13 @@ ${nickname}さんへ${timeSlot}（${dayOfWeek}）のLINEメッセージを送り
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.9, maxOutputTokens: 150 },
+        generationConfig: { temperature: 0.9, maxOutputTokens: 150, thinkingConfig: { thinkingBudget: 0 } },
       }),
     }
   );

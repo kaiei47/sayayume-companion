@@ -11,7 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 // 抽出タスクは軽いので Flash-Lite でコスト最適化（Flash の約 50% のコスト）
-const EXTRACT_MODEL = 'gemini-2.0-flash';
+const EXTRACT_MODEL = 'gemini-2.5-flash';
 const EXTRACT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EXTRACT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // 1会話で注入する記憶の最大件数（トークン節約）
@@ -104,7 +104,7 @@ ${conversationText}
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 800 },
+        generationConfig: { temperature: 0.1, maxOutputTokens: 800, thinkingConfig: { thinkingBudget: 0 } },
       }),
     });
 
@@ -355,7 +355,7 @@ ${recentHistory}
 回答形式（要約のみ。説明不要）:`,
           }],
         }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 100 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 100, thinkingConfig: { thinkingBudget: 0 } },
       }),
     });
 

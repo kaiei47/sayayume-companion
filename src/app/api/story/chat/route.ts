@@ -22,7 +22,7 @@ const PLAN_LIMITS = {
 export const maxDuration = 60;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
 
 // ミッション判定用（非ストリーミング）
@@ -182,6 +182,7 @@ export async function POST(req: NextRequest) {
                 temperature: 0.9,
                 maxOutputTokens: 1024,
                 topP: 0.95,
+                thinkingConfig: { thinkingBudget: 0 },
               },
               safetySettings: [
                 { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -342,7 +343,7 @@ ${judgePrompt}
 ...`,
                     }],
                   }],
-                  generationConfig: { temperature: 0.1, maxOutputTokens: 100 },
+                  generationConfig: { temperature: 0.1, maxOutputTokens: 100, thinkingConfig: { thinkingBudget: 0 } },
                 }),
               });
 
