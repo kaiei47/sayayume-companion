@@ -11,7 +11,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 // 抽出タスクは軽いので Flash-Lite でコスト最適化（Flash の約 50% のコスト）
-const EXTRACT_MODEL = 'gemini-2.5-flash';
+// モデル名は環境変数で上書き可能（Gemini側のモデル廃止時に .env 1行で復旧するため）
+const EXTRACT_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash';
 const EXTRACT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EXTRACT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // 1会話で注入する記憶の最大件数（トークン節約）

@@ -22,7 +22,8 @@ const PLAN_LIMITS = {
 export const maxDuration = 60;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.5-flash';
+// モデル名は環境変数で上書き可能（Gemini側のモデル廃止時に .env 1行で復旧するため）
+const GEMINI_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
 
 // ミッション判定用（非ストリーミング）

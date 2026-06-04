@@ -12,7 +12,8 @@
  */
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
-const SUMMARY_MODEL = 'gemini-2.5-flash';
+// モデル名は環境変数で上書き可能（Gemini側のモデル廃止時に .env 1行で復旧するため）
+const SUMMARY_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash';
 const SUMMARY_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${SUMMARY_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // 圧縮パラメータ

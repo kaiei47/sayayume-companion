@@ -113,8 +113,10 @@ ${nickname}さんへ${timeSlot}（${dayOfWeek}）のLINEメッセージを送り
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
+  // モデル名は環境変数で上書き可能（Gemini側のモデル廃止時に .env 1行で復旧するため）
+  const model = process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash';
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
