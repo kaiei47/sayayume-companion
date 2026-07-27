@@ -11,7 +11,16 @@ function getSupabaseAdmin() {
   );
 }
 
+// 課金停止中フラグ（2026-07-27 プロダクト運営方針未定のため新規課金停止。再開時はfalseに）
+const BILLING_PAUSED = true;
+
 export async function POST(req: NextRequest) {
+  if (BILLING_PAUSED) {
+    return NextResponse.json(
+      { error: '現在、新規のご購入・プラン変更は一時停止しています' },
+      { status: 503 }
+    );
+  }
   try {
     // レート制限: 1分あたり5回（checkout作成はそんなに頻繁にしない）
     const clientIp = getClientIp(req);

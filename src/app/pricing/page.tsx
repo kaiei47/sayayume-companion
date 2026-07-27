@@ -8,6 +8,9 @@ import { createClient } from '@/lib/supabase/client';
 
 type PlanKey = 'free' | 'basic' | 'premium';
 
+// 課金停止中フラグ（2026-07-27 プロダクト運営方針未定のため新規課金停止。再開時はfalseに）
+const BILLING_PAUSED = true;
+
 export default function PricingPage() {
   return (
     <Suspense>
@@ -73,6 +76,8 @@ function PricingContent() {
   }, []);
 
   const handleSubscribe = async (plan: PlanKey) => {
+    if (BILLING_PAUSED) return;
+
     if (!isLoggedIn) {
       router.push('/login');
       return;
@@ -202,9 +207,15 @@ function PricingContent() {
 
           {/* Hero text */}
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-pink-500/15 border border-pink-500/20 px-4 py-1.5 text-xs font-medium text-pink-400 mb-6 backdrop-blur-sm">
-              🎉 クローズドβ限定 — 初月無料！
-            </div>
+            {BILLING_PAUSED ? (
+              <div className="inline-flex items-center gap-2 rounded-full bg-yellow-500/15 border border-yellow-500/20 px-4 py-1.5 text-xs font-medium text-yellow-400 mb-6 backdrop-blur-sm">
+                現在、有料プランの新規受付は一時停止中です
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 rounded-full bg-pink-500/15 border border-pink-500/20 px-4 py-1.5 text-xs font-medium text-pink-400 mb-6 backdrop-blur-sm">
+                🎉 クローズドβ限定 — 初月無料！
+              </div>
+            )}
             <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">
               あなたに合ったプランを選ぼう
             </h1>
@@ -283,7 +294,7 @@ function PricingContent() {
                           <span className="text-sm text-white/40 mb-1">/月</span>
                         )}
                       </div>
-                      {plan.price > 0 && !hasActiveSub && (
+                      {plan.price > 0 && !hasActiveSub && !BILLING_PAUSED && (
                         <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-pink-400 bg-pink-500/10 border border-pink-500/20 rounded-full px-2.5 py-0.5">
                           🎉 初月無料
                         </div>
@@ -346,6 +357,10 @@ function PricingContent() {
                           無料で始める →
                         </button>
                       )
+                    ) : BILLING_PAUSED ? (
+                      <div className="w-full rounded-xl py-3 text-sm font-medium text-center border border-white/10 text-white/40">
+                        新規受付停止中
+                      </div>
                     ) : (
                       <button
                         onClick={() => handleSubscribe(key)}
